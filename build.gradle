@@ -3,26 +3,8 @@ plugins {
     id 'jacoco'
     id 'org.springframework.boot' version '3.5.15'
     id 'io.spring.dependency-management' version '1.1.7'
-
-}
-
-jacoco {
-    toolVersion = '0.8.12'
-}
-
-tasks.named('test') {
-    useJUnitPlatform()
-    finalizedBy jacocoTestReport
-}
-
-tasks.named('jacocoTestReport') {
-    dependsOn test
-
-    reports {
-        xml.required = true
-        html.required = true
-        csv.required = false
-    }
+    id 'com.diffplug.spotless' version '8.7.0'
+    id 'checkstyle'
 }
 
 group = 'com.sb10.mopl'
@@ -32,8 +14,41 @@ description = 'mopl'
 java {
     sourceCompatibility = '17'
 }
+
 repositories {
     mavenCentral()
+}
+
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+spotless {
+    java {
+        target 'src/**/*.java'
+        googleJavaFormat('1.28.0')
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+checkstyle {
+    toolVersion = '12.1.2'
+    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+    ignoreFailures = false
+    maxWarnings = 0
+}
+
+tasks.withType(Checkstyle).configureEach {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'spotlessCheck'
 }
 
 dependencies {
@@ -61,4 +76,16 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+
+    finalizedBy jacocoTestReport
+}
+
+tasks.named('jacocoTestReport') {
+    dependsOn test
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
 }
