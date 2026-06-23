@@ -57,10 +57,10 @@ ENV PROJECT_NAME=mopl \
 
 # 2-6. Build Stage에서 생성된 JAR 파일 복사
 # `--chown=app:app` : 복사되는 JAR 파일의 소유자를 app 사용자와 app 그룹으로 설정
-COPY --from=builder --chown=app:app /app/build/libs/${PROJECT_NAME}-${PROJECT_VERSION}.jar ./
+COPY --from=builder --chown=app:app /app/build/libs/${PROJECT_NAME}-*.jar ./app.jar
 
 # 2-7. 컨테이너 실행 사용자를 root에서 app 사용자로 변경
 USER app
 
 # 2-8. 컨테이너가 실행될 때 실행할 명령어
-ENTRYPOINT ["sh", "-c", "exec java ${JVM_OPTS} -jar ${PROJECT_NAME}-${PROJECT_VERSION}.jar"]
+ENTRYPOINT ["sh", "-c", "exec java ${JVM_OPTS} -jar app.jar"]

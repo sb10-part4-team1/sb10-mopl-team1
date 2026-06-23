@@ -6,7 +6,7 @@ spring:
   application:
     name: mopl
   profiles:
-    active: local # 기본 실행 프로파일
+    active: ${SPRING_PROFILES_ACTIVE:local} # 기본 실행 프로파일 (환경변수가 없으면 local)
 
   config:
     import: optional:file:.env[.properties]

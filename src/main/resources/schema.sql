@@ -3,12 +3,16 @@
 -- ==========================================
 
 -- 유저 테이블
+-- [소프트 삭제 & 익명화 정책]
+-- 1. 회원 탈퇴 시 즉시 물리 삭제하지 않고 `is_deleted = true`, `deleted_at = NOW()`로 설정하여 30일간 복구 유예 기간을 가집니다.
+-- 2. 30일이 지난 후에는 개인정보 보호법 준수를 위해 PII(개인식별정보) 데이터만 비식별 랜덤값으로 업데이트(익명화)합니다.
+-- 3. 유저 Row 자체는 DB에 유지되므로, DM 메시지 등 외래키가 걸린 다른 테이블의 참조 무결성을 깨뜨리지 않습니다.
 CREATE TABLE "users" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
-    "name"               VARCHAR(50)                 NOT NULL,
-    "email"              VARCHAR(255)                NOT NULL UNIQUE,
-    "password"           VARCHAR(255)                NOT NULL,
-    "profile_image_url"  TEXT                        NULL,
+    "name"               VARCHAR(50)                 NOT NULL, -- 익명화 시 "(탈퇴한 사용자)"로 변경
+    "email"              VARCHAR(255)                NOT NULL UNIQUE, -- 중복 가입 허용을 위해 익명화 시 "deleted_uuid@mopl.com" 형태로 고유값 변경
+    "password"           VARCHAR(255)                NOT NULL, -- 익명화 시 무작위 해시값으로 변경하여 로그인 차단
+    "profile_image_url"  TEXT                        NULL, -- 익명화 시 NULL 처리
     "role"               VARCHAR(20)                 NOT NULL,
     "is_locked"          BOOLEAN      DEFAULT false  NOT NULL,
     "is_deleted"         BOOLEAN      DEFAULT false  NOT NULL,
@@ -167,6 +171,9 @@ CREATE TABLE "conversation_participants" (
 );
 
 -- DM 메시지 테이블
+-- [참조 무결성 보존]
+-- 유저 탈퇴 시 물리 삭제가 아닌 익명화(Anonymization)를 진행하므로,
+-- 발송자(sender_id)와 수신자(receiver_id)는 NOT NULL로 유지되며 ON DELETE CASCADE가 걸리지 않습니다.
 CREATE TABLE "direct_messages" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "conversation_id"    UUID                        NOT NULL,

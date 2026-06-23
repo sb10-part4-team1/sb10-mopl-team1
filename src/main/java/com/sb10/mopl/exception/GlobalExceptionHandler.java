@@ -77,7 +77,10 @@ public class GlobalExceptionHandler {
 
     Map<String, Object> details = new HashMap<>();
     for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-      details.put(fieldError.getField(), String.valueOf(fieldError.getDefaultMessage()));
+      String field = fieldError.getField();
+      String message = String.valueOf(fieldError.getDefaultMessage());
+      details.merge(
+          field, message, (existing, incoming) -> String.valueOf(existing) + "; " + incoming);
     }
 
     log.warn(
