@@ -1,1 +1,72 @@
-spring.application.name=mopl
+### 포트 번호 및 프로파일 설정 ###
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: mopl
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local} # 기본 실행 프로파일 (환경변수가 없으면 local)
+
+  config:
+    import: optional:file:.env[.properties]
+
+  batch:
+    job:
+      enabled: false # 프로젝트 실행 시 배치 잡 실행 여부
+
+    # 공통 JPA 설정 (포맷팅 등 비주얼 요소만)
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+
+  ### 프로젝트 환경 변수 설정
+mopl:
+  aws:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+    region: ${AWS_REGION:ap-northeast-2}
+
+# 로깅 레벨 설정
+logging:
+  level:
+    root: info
+    org.springframework.boot: info
+    org.springframework.web: info
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    enabled: true                  # Swagger가 백엔드 API를 분석하여 JSON/YAML 형태의 오픈API 스펙 문서(데이터)를 만들지 여부를 결정합니다.
+    path: /api-docs                # 생성된 API 문서 데이터(JSON 형식)를 확인하거나 다운로드할 수 있는 웹 주소(Endpoint) 경로를 지정합니다. (예: http://localhost:8080/api-docs)
+
+  swagger-ui:
+    enabled: true                  # 웹 브라우저에서 개발자들이 예쁘게 정렬된 UI 화면으로 API를 보고 테스트할 수 있는 'Swagger UI' 페이지를 활성화합니다.
+    path: /swagger-ui.html         # Swagger UI 화면에 접속할 때 사용하는 웹 브라우저 주소 경로를 지정합니다. (예: http://localhost:8080/swagger-ui.html)
+    groups-order: DESC             # API 그룹이 여러 개 정의되어 있을 때, 그룹 목록을 내림차순(Z-A 또는 최신순)으로 정렬합니다.
+    operations-sorter: method      # 각 컨트롤러 내부의 API(메서드)들을 GET, POST, PUT, DELETE 같은 HTTP Method 순서대로 모아서 정렬해 줍니다.
+    tags-sorter: alpha             # 대분류 격인 @Tag(컨트롤러 이름 등)들을 알파벳/가나다 순서대로 정렬하여 가나다순으로 메뉴를 보여줍니다.
+
+# Actuator 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers,prometheus
+  endpoint:
+    prometheus:
+      access: read-only  # 또는 unconditional (버전에 따라 다를 수 있음)
+    metrics:
+      access: read-only
+    health:
+      show-details: never
+
+  # Actuator info에 노출될 애플리케이션 정보
+info:
+  app:
+    name: MOPL
+    version: 1.0.0
+    java-version: 17
+    spring-boot-version: 3.5.15

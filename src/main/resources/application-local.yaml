@@ -1,0 +1,37 @@
+# ==========================================
+# 1. LOCAL 환경 (In-Memory H2)
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE # PostgreSQL 모드 활성화
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true # 웹 브라우저에서 H2 콘솔 접근 허용
+
+  sql:
+    init:
+      mode: always # 매번 시작할 때 schema.sql 실행
+
+  jpa:
+    hibernate:
+      ddl-auto: none # SQL 스크립트로 제어하므로 JPA 자동 생성은 끔
+
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# 로컬 개발용 특별 로깅 레벨 (DEBUG로 상세히 출력)
+logging:
+  level:
+    root: info
+    org.hibernate.SQL: debug # SQL 쿼리를 상세하게 보고 싶을 때
+    org.hibernate.orm.jdbc.bind: trace # 쿼리에 들어가는 파라미터(?, ?) 바인딩 값까지 보기

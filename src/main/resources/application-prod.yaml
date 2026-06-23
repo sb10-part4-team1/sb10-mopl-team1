@@ -1,0 +1,33 @@
+# ==========================================
+# 3. PROD 환경 (AWS Container / RDS PostgreSQL)
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${AWS_RDS_ENDPOINT}:5432/prod_db
+    username: ${AWS_RDS_USERNAME}
+    password: ${AWS_RDS_PASSWORD}
+
+  sql:
+    init:
+      mode: never # 운영은 절대로 schema.sql 자동 실행 금지
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # 운영 DB와 엔티티 구조가 일치하는지 검증만 수행
+    show-sql: false # 성능 저하 및 보안을 위해 쿼리 로그 완전히 차단
+    properties:
+      hibernate:
+        format_sql: false
+
+# 보안을 위해 운영 환경에서는 외부 노출 축소
+springdoc:
+  api-docs:
+    enabled: false # 운영에서는 스웨거 문서 숨김 (필요시 true 후 인증 보안 걸기)
+  swagger-ui:
+    enabled: false
