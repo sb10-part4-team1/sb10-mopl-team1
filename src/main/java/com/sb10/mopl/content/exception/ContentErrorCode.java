@@ -1,6 +1,6 @@
 package com.sb10.mopl.content.exception;
 
-import com.sb10.mopl.exception.ErrorCode;
+import com.sb10.mopl.common.exception.ErrorCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -1,6 +1,6 @@
 package com.sb10.mopl.content.exception;
 
-import com.sb10.mopl.exception.MoplException;
+import com.sb10.mopl.common.exception.MoplException;
 import java.util.Map;
 
 public class ContentException extends MoplException {
