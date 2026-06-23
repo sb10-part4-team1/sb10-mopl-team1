@@ -1,10 +1,9 @@
-package com.sb10.mopl.filter;
+package com.sb10.mopl.common.log;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -12,52 +11,16 @@ import java.util.stream.Collectors;
 /** 로그 출력 시 민감한 정보(인증 토큰, 비밀번호, 개인정보, 금융정보 등)를 마스킹 처리하는 유틸리티 클래스입니다. */
 public final class LogMaskingUtils {
 
-  private static final List<String> SENSITIVE_HEADERS =
-      Arrays.asList(
-          "authorization",
-          "proxy-authorization",
-          "cookie",
-          "set-cookie",
-          "x-api-key",
-          "x-api-token");
-
-  private static final List<String> SENSITIVE_KEYS =
-      Arrays.asList(
-          "password",
-          "passwordconfirm",
-          "password_confirm",
-          "accesstoken",
-          "access_token",
-          "refreshtoken",
-          "refresh_token",
-          "token",
-          "apikey",
-          "api_key",
-          "secret",
-          "secretkey",
-          "secret_key",
-          "clientsecret",
-          "client_secret",
-          "cardnumber",
-          "card_number",
-          "cvc",
-          "cvv",
-          "accountnumber",
-          "account_number",
-          "ssn",
-          "socialnumber",
-          "social_number",
-          "residentnumber",
-          "resident_number",
-          "phonenumber",
-          "phone_number",
-          "phone");
-
+  // JSON Body용 정규식 패턴 (문자열 값 외에 숫자, 불리언, null 매칭 포함)
   private static final Pattern SENSITIVE_JSON_PATTERN =
-      Pattern.compile("\"(?i)(" + String.join("|", SENSITIVE_KEYS) + ")\"\\s*:\\s*\"([^\"]+)\"");
+      Pattern.compile(
+          "\"(?i)("
+              + String.join("|", SensitiveKey.getKeys())
+              + ")\"\\s*:\\s*(\"[^\"]*\"|[^,\\s}]+)");
 
+  // Query Parameter 및 Form Body용 정규식 패턴
   private static final Pattern SENSITIVE_PARAM_PATTERN =
-      Pattern.compile("(?i)(" + String.join("|", SENSITIVE_KEYS) + ")=([^&]+)");
+      Pattern.compile("(?i)(" + String.join("|", SensitiveKey.getKeys()) + ")=([^&]+)");
 
   private LogMaskingUtils() {
     // 인스턴스화 방지
@@ -114,7 +77,8 @@ public final class LogMaskingUtils {
   }
 
   /**
-   * 본문 바이트 배열 내의 JSON 및 Form 파라미터 민감한 키값들을 마스킹 처리하여 문자열로 반환합니다.
+   * 본문 바이트 배열 내의 JSON 및 Form 파라미터 민감한 키값들을 마스킹 처리하여 문자열로 반환합니다. 보안 조치로 마스킹 작업을 먼저 완벽히 수행한 뒤 길이 제한을
+   * 적용합니다.
    *
    * @param content 본문 바이트 배열
    * @param encoding 문자 인코딩 방식
@@ -128,11 +92,17 @@ public final class LogMaskingUtils {
       String charEncoding =
           encoding == null || "ISO-8859-1".equalsIgnoreCase(encoding) ? "UTF-8" : encoding;
       String body = new String(content, charEncoding);
-      if (body.length() > 1024) {
-        body = body.substring(0, 1024) + "... (truncated)";
-      }
+
+      // 1) JSON 마스킹 적용 (전체 길이에 대해 수행)
       String maskedBody = SENSITIVE_JSON_PATTERN.matcher(body).replaceAll("\"$1\":\"******\"");
-      return SENSITIVE_PARAM_PATTERN.matcher(maskedBody).replaceAll("$1=******");
+      // 2) Form parameter(form-urlencoded) 형태 마스킹 적용 (전체 길이에 대해 수행)
+      String finalBody = SENSITIVE_PARAM_PATTERN.matcher(maskedBody).replaceAll("$1=******");
+
+      // 3) 마스킹이 완료된 최종 로그 문자열에 대해 길이 자르기 적용 (민감정보 부분 유출 방지)
+      if (finalBody.length() > 1024) {
+        finalBody = finalBody.substring(0, 1024) + "... (truncated)";
+      }
+      return finalBody;
     } catch (UnsupportedEncodingException e) {
       return "[Unsupported Encoding]";
     }
@@ -140,7 +110,7 @@ public final class LogMaskingUtils {
 
   /** HTTP 헤더 이름을 기준으로 특정 헤더의 민감 여부를 확인하여 마스킹합니다. */
   private static String maskHeaderValue(String name, String value) {
-    if (!SENSITIVE_HEADERS.contains(name.toLowerCase())) {
+    if (!SensitiveHeader.getNames().contains(name.toLowerCase())) {
       return value;
     }
     return name.equalsIgnoreCase("authorization") && value.toLowerCase().startsWith("bearer ")
@@ -151,6 +121,6 @@ public final class LogMaskingUtils {
   /** 특정 키가 민감한 필드인지 여부를 확인합니다. */
   private static boolean isSensitiveKey(String key) {
     String lowerKey = key.toLowerCase();
-    return SENSITIVE_KEYS.stream().anyMatch(lowerKey::contains);
+    return SensitiveKey.getKeys().stream().anyMatch(lowerKey::contains);
   }
 }
