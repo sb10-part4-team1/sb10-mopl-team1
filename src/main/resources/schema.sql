@@ -11,6 +11,8 @@ CREATE TABLE "users" (
     "profile_image_url"  TEXT                        NULL,
     "role"               VARCHAR(20)                 NOT NULL,
     "is_locked"          BOOLEAN      DEFAULT false  NOT NULL,
+    "is_deleted"         BOOLEAN      DEFAULT false  NOT NULL,
+    "deleted_at"         TIMESTAMP WITH TIME ZONE    NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL
 );
@@ -90,6 +92,8 @@ CREATE TABLE "follows" (
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     CONSTRAINT "UQ_FOLLOWS_RELATION"
         UNIQUE ("follower_id", "followee_id"),
+    CONSTRAINT "CK_FOLLOWS_SELF"
+        CHECK ("follower_id" <> "followee_id"),
     CONSTRAINT "FK_USERS_TO_FOLLOWS_FOLLOWER"
         FOREIGN KEY ("follower_id") REFERENCES "users" ("id") ON DELETE CASCADE,
     CONSTRAINT "FK_USERS_TO_FOLLOWS_FOLLOWEE"

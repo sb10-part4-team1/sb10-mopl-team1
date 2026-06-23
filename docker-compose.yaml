@@ -10,9 +10,17 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./src/main/resources/static:/usr/share/nginx/html:ro
     depends_on:
-      - app
-      - prometheus
-      - grafana
+      app:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --spider http://localhost/ || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     networks:
       - mopl-network
 
@@ -25,7 +33,7 @@ services:
       dockerfile: Dockerfile
     container_name: mopl-server
     environment:
-      - SERVER_PORT=80
+      - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
       # postgres
       - DB_HOST=${DB_HOST:-db}
@@ -43,8 +51,15 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     volumes:
       - ./.logs:/app/.logs
     networks:
@@ -59,6 +74,11 @@ services:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - mopl-postgres-data:/var/lib/postgresql/data
       - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
@@ -70,6 +90,11 @@ services:
   redis:
     image: redis:alpine
     container_name: mopl-redis
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - mopl-redis-data:/data
     networks:
@@ -95,6 +120,11 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
     volumes:
       - mopl-kafka-data:/var/lib/kafka/data
     networks:
@@ -110,6 +140,11 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.external-url=/prometheus/'
       - '--web.route-prefix=/prometheus/'
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/prometheus/-/healthy" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - mopl-prometheus-data:/prometheus
@@ -127,12 +162,18 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/grafana/api/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     volumes:
       - mopl-grafana-data:/var/lib/grafana
     networks:
       - mopl-network
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_healthy
 
 volumes:
   mopl-postgres-data:

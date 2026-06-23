@@ -2,22 +2,26 @@ package com.sb10.mopl.exception;
 
 import java.util.HashMap;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * 애플리케이션 전역에서 발생하는 예외를 가로채서 처리하는 컨트롤러 어드바이스 클래스입니다. MoplException을 비롯하여 프레임워크 수준의 바인딩 에러, JSON 형식
  * 에러, 지원하지 않는 HTTP 메서드 호출, 보안 예외 및 미처리 최상위 예외(500)를 일관된 형식으로 반환합니다.
  */
 @RestControllerAdvice
-@Slf4j
 public class GlobalExceptionHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   /**
    * MoplException 예외가 발생했을 때 적절한 HTTP 에러 응답을 반환합니다.
@@ -61,7 +65,10 @@ public class GlobalExceptionHandler {
 
   /**
    * DTO 등의 @Valid 검증이 실패했을 때 발생하는 예외를 처리합니다. 각 필드별 검증 실패 메시지를 details 맵에 담아 SYS01 코드와 함께 400 Bad
-   * Request를 반환합니다.
+   * Request를 반환합니다. 보안을 위해 원본 입력값(rejectedValue)은 응답과 로그에서 제외합니다.
+   *
+   * @param ex 발생한 MethodArgumentNotValidException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
    */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ErrorResponse> handleValidationException(
@@ -70,11 +77,7 @@ public class GlobalExceptionHandler {
 
     Map<String, Object> details = new HashMap<>();
     for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-      details.put(
-          fieldError.getField(),
-          Map.of(
-              "rejectedValue", String.valueOf(fieldError.getRejectedValue()),
-              "message", String.valueOf(fieldError.getDefaultMessage())));
+      details.put(fieldError.getField(), String.valueOf(fieldError.getDefaultMessage()));
     }
 
     log.warn(
@@ -92,6 +95,9 @@ public class GlobalExceptionHandler {
   /**
    * JSON 요청 본문 해석에 실패했을 때 (잘못된 JSON 형식 또는 역직렬화 불가) 발생하는 예외를 처리합니다. SYS02 코드와 함께 400 Bad Request를
    * 반환합니다.
+   *
+   * @param ex 발생한 HttpMessageNotReadableException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
    */
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
@@ -117,6 +123,9 @@ public class GlobalExceptionHandler {
   /**
    * 지원하지 않는 HTTP 메서드(예: POST인 데서 GET 호출)를 호출했을 때 발생하는 예외를 처리합니다. SYS03 코드와 함께 405 Method Not
    * Allowed를 반환합니다.
+   *
+   * @param ex 발생한 HttpRequestMethodNotSupportedException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
    */
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(
@@ -139,10 +148,60 @@ public class GlobalExceptionHandler {
   }
 
   /**
+   * Spring Security의 권한 거부 예외(AccessDeniedException) 발생 시 이를 처리합니다. SYS04 코드와 함께 403 Forbidden을
+   * 반환합니다.
+   *
+   * @param ex 발생한 AccessDeniedException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
+   */
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.ACCESS_DENIED;
+
+    log.warn(
+        "[AccessDeniedException] Code: {}, Message: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(), errorCode.getMessage(), Map.of("message", ex.getMessage()));
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  /**
+   * 존재하지 않는 정적 리소스 또는 핸들러 경로 요청 시 발생하는 예외를 처리합니다. SYS05 에러 코드와 함께 404 Not Found를 반환하며, 불필요한 500 에러
+   * 로그 적재를 방지합니다.
+   *
+   * @param ex 발생한 NoResourceFoundException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
+   */
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.RESOURCE_NOT_FOUND;
+
+    log.warn(
+        "[NoResourceFoundException] Code: {}, Message: {}, ResourcePath: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex.getResourcePath());
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(),
+            errorCode.getMessage(),
+            Map.of("resourcePath", String.valueOf(ex.getResourcePath())));
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  /**
    * 자바 표준 SecurityException 예외 발생 시 이를 처리합니다. SYS04 코드와 함께 403 Forbidden을 반환합니다.
    *
-   * <p>*참고: Spring Security 활성화 시 org.springframework.security.access.AccessDeniedException도 이 곳에
-   * 핸들러를 추가하거나, SecurityConfig의 AccessDeniedHandler와 연결하여 전역 통일할 수 있습니다.
+   * @param ex 발생한 SecurityException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
    */
   @ExceptionHandler(SecurityException.class)
   public ResponseEntity<ErrorResponse> handleSecurityException(SecurityException ex) {
@@ -164,6 +223,9 @@ public class GlobalExceptionHandler {
   /**
    * 다른 핸들러에서 잡지 않은 모든 최상위 예외(500 Internal Server Error)를 포괄하여 처리합니다. 에러가 외부로 날것 그대로 노출되어 보안 취약점이 되는
    * 것을 예방합니다.
+   *
+   * @param ex 발생한 Exception 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
    */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleAllException(Exception ex) {

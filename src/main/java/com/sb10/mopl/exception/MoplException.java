@@ -1,6 +1,7 @@
 package com.sb10.mopl.exception;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 
@@ -22,7 +23,10 @@ public class MoplException extends RuntimeException {
   public MoplException(ErrorCode errorCode, Map<String, Object> details) {
     super(errorCode.getMessage());
     this.errorCode = errorCode;
-    this.details = details != null ? Map.copyOf(details) : Collections.emptyMap();
+    this.details =
+        details != null
+            ? Collections.unmodifiableMap(new HashMap<>(details))
+            : Collections.emptyMap();
   }
 
   /**
@@ -35,6 +39,9 @@ public class MoplException extends RuntimeException {
   public MoplException(ErrorCode errorCode, Map<String, Object> details, Throwable cause) {
     super(errorCode.getMessage(), cause);
     this.errorCode = errorCode;
-    this.details = details != null ? Map.copyOf(details) : Collections.emptyMap();
+    this.details =
+        details != null
+            ? Collections.unmodifiableMap(new HashMap<>(details))
+            : Collections.emptyMap();
   }
 }
