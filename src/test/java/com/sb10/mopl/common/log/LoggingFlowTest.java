@@ -142,7 +142,7 @@ class LoggingFlowTest {
 
     @Test
     @DisplayName("X-Forwarded-For 헤더가 있을 때 첫 번째 IP를 올바르게 추출")
-    void getClientIp_returnFirstIp_whenXForwardedForHeaderExists() {
+    void getClientIp_returnFirstIp_whenProxyHeaderExists() {
       // given
       HttpServletRequest request = mock(HttpServletRequest.class);
       when(request.getHeader("X-Forwarded-For"))
@@ -216,8 +216,6 @@ class LoggingFlowTest {
     @DisplayName("동기식 HTTP 요청에 대해 필터 통과 시 즉시 요청/응답이 로깅되고 바디가 복사되는지 검증")
     void doFilterInternal_logImmediately_whenRequestIsSynchronous() throws Exception {
       // given
-      RequestLoggingFilter filter = new RequestLoggingFilter();
-
       MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/test");
       request.setContentType("application/json");
       request.setContent("{\"key\":\"value\"}".getBytes());
@@ -231,6 +229,8 @@ class LoggingFlowTest {
             res.getWriter().write("{\"status\":\"ok\"}");
           };
 
+      RequestLoggingFilter filter = new RequestLoggingFilter();
+
       // when
       filter.doFilter(request, response, filterChain);
 
@@ -242,8 +242,6 @@ class LoggingFlowTest {
     @DisplayName("비동기식 HTTP 요청에 대해 필터 통과 시 즉시 로깅/복사되지 않고 AsyncListener 완료 시점에 로깅 및 바디 복사가 일어나는지 검증")
     void doFilterInternal_deferLogAndCopy_whenRequestIsAsynchronous() throws Exception {
       // given
-      RequestLoggingFilter filter = new RequestLoggingFilter();
-
       MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/async-test");
       request.setContentType("application/json");
       request.setContent("{\"key\":\"value\"}".getBytes());
@@ -258,6 +256,8 @@ class LoggingFlowTest {
             res.setContentType("application/json");
             res.getWriter().write("{\"status\":\"ok\"}");
           };
+
+      RequestLoggingFilter filter = new RequestLoggingFilter();
 
       // when (비동기 서블릿 최초 디스패치 실행)
       filter.doFilter(request, response, filterChain);
