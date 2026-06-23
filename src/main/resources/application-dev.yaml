@@ -1,0 +1,30 @@
+# ==========================================
+# 2. DEV 환경 (Local Docker PostgreSQL)
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:dev_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:your_dev_password}
+
+  sql:
+    init:
+      mode: never # 도커 DB이므로 schema.sql로 매번 밀지 않음, 초기 실행 때는 always로 테이블 생성 필요
+  jpa:
+    hibernate:
+      ddl-auto: update # 엔티티 변경 사항이 있으면 DB에 자동으로 칼럼 등을 추가해 줌
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# 개발 서버용 로깅 (과한 로그는 지우고 INFO 유지)
+logging:
+  level:
+    root: info
+    org.hibernate.SQL: info
