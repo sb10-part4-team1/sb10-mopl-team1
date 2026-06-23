@@ -6,13 +6,16 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "users")
+@Table(
+    name = "users",
+    uniqueConstraints = {@UniqueConstraint(name = "UK_USERS_EMAIL", columnNames = "email")})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseUpdatableEntity {
@@ -20,17 +23,17 @@ public class User extends BaseUpdatableEntity {
   @Column(name = "name", nullable = false, length = 50)
   private String name;
 
-  @Column(name = "email", nullable = false)
+  @Column(name = "email", nullable = false, length = 255)
   private String email;
 
-  @Column(name = "password", nullable = false)
+  @Column(name = "password", nullable = false, length = 255)
   private String password;
 
-  @Column(name = "profile_image_url", nullable = false)
-  private String profile;
+  @Column(name = "profile_image_url")
+  private String profileImageUrl;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "role", nullable = false)
+  @Column(name = "role", nullable = false, length = 20)
   private UserRole role;
 
   @Column(name = "is_locked", nullable = false)
@@ -42,19 +45,42 @@ public class User extends BaseUpdatableEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  public User(String name, String email, String password, String profile, UserRole role) {
+  private User(String name, String email, String password, String profileImageUrl, UserRole role) {
     this.name = name;
     this.email = email;
     this.password = password;
-    this.profile = profile;
+    this.profileImageUrl = profileImageUrl;
     this.role = role;
     this.isLocked = false;
     this.isDeleted = false;
   }
 
-  public void delete() {
+  public static User createUser(
+      String name, String email, String password, String profileImageUrl) {
+    return new User(name, email, password, profileImageUrl, UserRole.USER);
+  }
+
+  public static User createAdmin(
+      String name, String email, String password, String profileImageUrl) {
+    return new User(name, email, password, profileImageUrl, UserRole.ADMIN);
+  }
+
+  public void changePassword(String password) {
+    this.password = password;
+  }
+
+  public void changeRole(UserRole role) {
+    this.role = role;
+  }
+
+  public void changeLocked(boolean locked) {
+    this.isLocked = locked;
+  }
+
+  public void softDelete() {
     if (this.deletedAt == null) {
       this.deletedAt = Instant.now();
     }
+    isDeleted = true;
   }
 }
