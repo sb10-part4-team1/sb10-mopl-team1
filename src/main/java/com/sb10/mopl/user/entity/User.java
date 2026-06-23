@@ -26,6 +26,7 @@ public class User extends BaseUpdatableEntity {
   @Column(name = "email", nullable = false, length = 255)
   private String email;
 
+  @Getter(AccessLevel.NONE)
   @Column(name = "password", nullable = false, length = 255)
   private String password;
 

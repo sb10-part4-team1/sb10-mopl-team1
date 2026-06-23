@@ -11,4 +11,4 @@ public record UserDto(
     String name,
     String profileImageUrl,
     UserRole role,
-    boolean locked) {}
+    Boolean locked) {}
