@@ -14,6 +14,8 @@ public class MoplException extends RuntimeException {
   private final Map<String, Object> details;
 
   /**
+   * 에러 코드와 상세 정보를 지정하여 예외를 생성합니다.
+   *
    * @param errorCode 구현체 에러 코드
    * @param details 에러에 대한 컨텍스트 및 상세 데이터 Map
    */
@@ -24,6 +26,8 @@ public class MoplException extends RuntimeException {
   }
 
   /**
+   * 에러 코드, 상세 정보 및 원인 예외를 지정하여 예외를 생성합니다.
+   *
    * @param errorCode 구현체 에러 코드
    * @param details 에러에 대한 컨텍스트 및 상세 데이터 Map
    * @param cause 상위 전파를 위해 보존할 예외 원인

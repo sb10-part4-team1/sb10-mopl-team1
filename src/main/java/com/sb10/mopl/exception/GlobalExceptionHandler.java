@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
   /**
+   * MoplException 예외가 발생했을 때 적절한 HTTP 에러 응답을 반환합니다.
+   *
    * @param ex 발생한 MoplException 인스턴스
    * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
    */
