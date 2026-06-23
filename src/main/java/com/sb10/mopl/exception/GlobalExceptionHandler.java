@@ -29,26 +29,30 @@ public class GlobalExceptionHandler {
 
     // 5xx 서버 에러 (사용자에게 내부 상세 정보를 숨김)
     if (errorCode.getHttpStatus().is5xxServerError()) {
-      log.error("[MoplException - Server Error] Code: {}, Message: {}, Details: {}",
-        errorCode.getCode(), errorCode.getMessage(), ex.getDetails(), ex);
+      log.error(
+          "[MoplException - Server Error] Code: {}, Message: {}, Details: {}",
+          errorCode.getCode(),
+          errorCode.getMessage(),
+          ex.getDetails(),
+          ex);
 
-      ErrorResponse errorResponse = new ErrorResponse(
-        errorCode.getCode(),
-        errorCode.getMessage(),
-        Map.of("message", "A system error occurred. Please contact the administrator.")
-      );
+      ErrorResponse errorResponse =
+          new ErrorResponse(
+              errorCode.getCode(),
+              errorCode.getMessage(),
+              Map.of("message", "A system error occurred. Please contact the administrator."));
       return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
     }
 
     // 4xx 클라이언트 에러 (사용자에게 디버깅/원인 파악용 상세 정보 전달)
-    log.warn("[MoplException - Client Error] Code: {}, Message: {}, Details: {}",
-      errorCode.getCode(), errorCode.getMessage(), ex.getDetails());
+    log.warn(
+        "[MoplException - Client Error] Code: {}, Message: {}, Details: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex.getDetails());
 
-    ErrorResponse errorResponse = new ErrorResponse(
-      errorCode.getCode(),
-      errorCode.getMessage(),
-      ex.getDetails()
-    );
+    ErrorResponse errorResponse =
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), ex.getDetails());
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }
@@ -59,25 +63,26 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ErrorResponse> handleValidationException(
-    MethodArgumentNotValidException ex) {
+      MethodArgumentNotValidException ex) {
     SystemErrorCode errorCode = SystemErrorCode.INVALID_INPUT_VALUE;
 
     Map<String, Object> details = new HashMap<>();
     for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-      details.put(fieldError.getField(), Map.of(
-        "rejectedValue", String.valueOf(fieldError.getRejectedValue()),
-        "message", String.valueOf(fieldError.getDefaultMessage())
-      ));
+      details.put(
+          fieldError.getField(),
+          Map.of(
+              "rejectedValue", String.valueOf(fieldError.getRejectedValue()),
+              "message", String.valueOf(fieldError.getDefaultMessage())));
     }
 
-    log.warn("[ValidationException] Code: {}, Message: {}, Details: {}",
-      errorCode.getCode(), errorCode.getMessage(), details);
+    log.warn(
+        "[ValidationException] Code: {}, Message: {}, Details: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        details);
 
-    ErrorResponse errorResponse = new ErrorResponse(
-      errorCode.getCode(),
-      errorCode.getMessage(),
-      details
-    );
+    ErrorResponse errorResponse =
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), details);
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }
@@ -88,17 +93,21 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
-    HttpMessageNotReadableException ex) {
+      HttpMessageNotReadableException ex) {
     SystemErrorCode errorCode = SystemErrorCode.INVALID_JSON_FORMAT;
 
-    log.warn("[HttpMessageNotReadableException] Code: {}, Message: {}",
-      errorCode.getCode(), errorCode.getMessage(), ex);
+    log.warn(
+        "[HttpMessageNotReadableException] Code: {}, Message: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex);
 
-    ErrorResponse errorResponse = new ErrorResponse(
-      errorCode.getCode(),
-      errorCode.getMessage(),
-      Map.of("message", "Request body parsing failed (Malformed JSON or incorrect data type)")
-    );
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(),
+            errorCode.getMessage(),
+            Map.of(
+                "message", "Request body parsing failed (Malformed JSON or incorrect data type)"));
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }
@@ -109,39 +118,43 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(
-    HttpRequestMethodNotSupportedException ex) {
+      HttpRequestMethodNotSupportedException ex) {
     SystemErrorCode errorCode = SystemErrorCode.METHOD_NOT_ALLOWED;
 
-    log.warn("[HttpRequestMethodNotSupportedException] Code: {}, Message: {}, Method: {}",
-      errorCode.getCode(), errorCode.getMessage(), ex.getMethod());
+    log.warn(
+        "[HttpRequestMethodNotSupportedException] Code: {}, Message: {}, Method: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex.getMethod());
 
-    ErrorResponse errorResponse = new ErrorResponse(
-      errorCode.getCode(),
-      errorCode.getMessage(),
-      Map.of("supportedMethods", String.valueOf(ex.getSupportedHttpMethods()))
-    );
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(),
+            errorCode.getMessage(),
+            Map.of("supportedMethods", String.valueOf(ex.getSupportedHttpMethods())));
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }
 
   /**
    * 자바 표준 SecurityException 예외 발생 시 이를 처리합니다. SYS04 코드와 함께 403 Forbidden을 반환합니다.
-   * <p>
-   * *참고: Spring Security 활성화 시 org.springframework.security.access.AccessDeniedException도 이 곳에 핸들러를
-   * 추가하거나, SecurityConfig의 AccessDeniedHandler와 연결하여 전역 통일할 수 있습니다.
+   *
+   * <p>*참고: Spring Security 활성화 시 org.springframework.security.access.AccessDeniedException도 이 곳에
+   * 핸들러를 추가하거나, SecurityConfig의 AccessDeniedHandler와 연결하여 전역 통일할 수 있습니다.
    */
   @ExceptionHandler(SecurityException.class)
   public ResponseEntity<ErrorResponse> handleSecurityException(SecurityException ex) {
     SystemErrorCode errorCode = SystemErrorCode.ACCESS_DENIED;
 
-    log.error("[SecurityException] Code: {}, Message: {}",
-      errorCode.getCode(), errorCode.getMessage(), ex);
+    log.error(
+        "[SecurityException] Code: {}, Message: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex);
 
-    ErrorResponse errorResponse = new ErrorResponse(
-      errorCode.getCode(),
-      errorCode.getMessage(),
-      Map.of("message", ex.getMessage())
-    );
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(), errorCode.getMessage(), Map.of("message", ex.getMessage()));
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }
@@ -154,14 +167,17 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleAllException(Exception ex) {
     SystemErrorCode errorCode = SystemErrorCode.INTERNAL_SERVER_ERROR;
 
-    log.error("[UnhandledException] Code: {}, Message: {}",
-      errorCode.getCode(), errorCode.getMessage(), ex);
+    log.error(
+        "[UnhandledException] Code: {}, Message: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex);
 
-    ErrorResponse errorResponse = new ErrorResponse(
-      errorCode.getCode(),
-      errorCode.getMessage(),
-      Map.of("message", "An unexpected system error occurred")
-    );
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(),
+            errorCode.getMessage(),
+            Map.of("message", "An unexpected system error occurred"));
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }
