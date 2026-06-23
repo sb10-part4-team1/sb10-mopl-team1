@@ -1,4 +1,4 @@
-package com.sb10.mopl.exception;
+package com.sb10.mopl.common.exception;
 
 import java.util.HashMap;
 import java.util.Map;
