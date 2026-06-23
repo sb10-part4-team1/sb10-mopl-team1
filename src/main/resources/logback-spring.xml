@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- 로그 경로 및 파일명 설정 -->
+    <property name="LOG_PATH" value="./.logs"/>
+    <property name="LOG_FILE_NAME" value="mopl"/>
+
+    <!-- 로컬 콘솔 로그 어펜더 (색상 지원 및 MDC 정보 포함) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} %magenta([%X{traceId:-system}]) %cyan([%X{clientIp:-local}]) [%thread] %highlight(%-5level) %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 파일 로그 어펜더 (KST 매일 자정 기준 롤링 정책) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${LOG_FILE_NAME}.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} [%X{traceId:-system}] [%X{clientIp:-local}] [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Asia/Seoul 시간대 기준 매일 자정 로그 분할(롤링) -->
+            <fileNamePattern>${LOG_PATH}/${LOG_FILE_NAME}-%d{yyyy-MM-dd, Asia/Seoul}.log</fileNamePattern>
+            <!-- 로그 보관 주기 (30일) -->
+            <maxHistory>30</maxHistory>
+            <!-- 로그 파일 전체 용량 상한선 설정 (3GB) -->
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- 프로필별 로그 전략 설정 -->
+    <!-- 1. 로컬 환경 (local) -->
+    <springProfile name="local">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        <logger name="com.sb10.mopl" level="DEBUG"/>
+    </springProfile>
+
+    <!-- 2. 도커/배포 환경 (dev, prod) -->
+    <springProfile name="dev,prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+        <logger name="com.sb10.mopl" level="INFO"/>
+    </springProfile>
+
+</configuration>
