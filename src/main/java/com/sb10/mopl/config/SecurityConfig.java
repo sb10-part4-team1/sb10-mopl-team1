@@ -22,7 +22,10 @@ public class SecurityConfig {
    */
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+    http.csrf(csrf -> csrf.disable())
+        // H2-Console 사용을 위한 헤더 설정. 추후 제거 예정
+        .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
+        .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
     return http.build();
   }
 
