@@ -5,22 +5,61 @@ import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /** 로그 출력 시 민감한 정보(인증 토큰, 비밀번호, 개인정보, 금융정보 등)를 마스킹 처리하는 유틸리티 클래스입니다. */
 public final class LogMaskingUtils {
 
+  private static final Set<String> SENSITIVE_HEADERS =
+      Set.of(
+          "authorization",
+          "proxy-authorization",
+          "cookie",
+          "set-cookie",
+          "x-api-key",
+          "x-api-token");
+
+  private static final Set<String> SENSITIVE_KEYS =
+      Set.of(
+          "password",
+          "passwordconfirm",
+          "password_confirm",
+          "accesstoken",
+          "access_token",
+          "refreshtoken",
+          "refresh_token",
+          "token",
+          "apikey",
+          "api_key",
+          "secret",
+          "secretkey",
+          "secret_key",
+          "client_secret",
+          "cardnumber",
+          "card_number",
+          "cvc",
+          "cvv",
+          "accountnumber",
+          "account_number",
+          "ssn",
+          "socialnumber",
+          "social_number",
+          "residentnumber",
+          "resident_number",
+          "phonenumber",
+          "phone_number",
+          "phone");
+
   // JSON Body용 정규식 패턴 (문자열 값 외에 숫자, 불리언, null 매칭 포함)
   private static final Pattern SENSITIVE_JSON_PATTERN =
       Pattern.compile(
-          "\"(?i)("
-              + String.join("|", SensitiveKey.getKeys())
-              + ")\"\\s*:\\s*(\"[^\"]*\"|[^,\\s}]+)");
+          "\"(?i)(" + String.join("|", SENSITIVE_KEYS) + ")\"\\s*:\\s*(\"[^\"]*\"|[^,\\s}]+)");
 
   // Query Parameter 및 Form Body용 정규식 패턴
   private static final Pattern SENSITIVE_PARAM_PATTERN =
-      Pattern.compile("(?i)(" + String.join("|", SensitiveKey.getKeys()) + ")=([^&]+)");
+      Pattern.compile("(?i)(" + String.join("|", SENSITIVE_KEYS) + ")=([^&]+)");
 
   private LogMaskingUtils() {
     // 인스턴스화 방지
@@ -49,7 +88,7 @@ public final class LogMaskingUtils {
    */
   public static String getMaskedRequestParams(HttpServletRequest request) {
     Map<String, String[]> parameterMap = request.getParameterMap();
-    if (parameterMap.isEmpty()) {
+    if (parameterMap == null || parameterMap.isEmpty()) {
       return "{}";
     }
     return parameterMap.entrySet().stream()
@@ -110,8 +149,14 @@ public final class LogMaskingUtils {
 
   /** HTTP 헤더 이름을 기준으로 특정 헤더의 민감 여부를 확인하여 마스킹합니다. */
   private static String maskHeaderValue(String name, String value) {
-    if (!SensitiveHeader.getNames().contains(name.toLowerCase())) {
+    if (name == null) {
       return value;
+    }
+    if (!SENSITIVE_HEADERS.contains(name.toLowerCase())) {
+      return value;
+    }
+    if (value == null) {
+      return "";
     }
     return name.equalsIgnoreCase("authorization") && value.toLowerCase().startsWith("bearer ")
         ? "Bearer ******"
@@ -120,7 +165,10 @@ public final class LogMaskingUtils {
 
   /** 특정 키가 민감한 필드인지 여부를 확인합니다. */
   private static boolean isSensitiveKey(String key) {
+    if (key == null) {
+      return false;
+    }
     String lowerKey = key.toLowerCase();
-    return SensitiveKey.getKeys().stream().anyMatch(lowerKey::contains);
+    return SENSITIVE_KEYS.stream().anyMatch(lowerKey::contains);
   }
 }

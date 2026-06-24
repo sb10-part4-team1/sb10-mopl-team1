@@ -27,18 +27,19 @@ public final class ClientIpExtractor {
    * @return 클라이언트 IP 주소 문자열
    */
   public static String getClientIp(HttpServletRequest request) {
+    if (request == null) {
+      return "unknown";
+    }
+
     String ip =
         IP_HEADERS.stream()
             .map(request::getHeader)
-            .filter(
-                header ->
-                    header != null && !header.isEmpty() && !"unknown".equalsIgnoreCase(header))
+            .filter(header -> header != null && !header.isBlank())
+            .map(header -> header.contains(",") ? header.split(",")[0].trim() : header.trim())
+            .filter(token -> !token.isEmpty() && !"unknown".equalsIgnoreCase(token))
             .findFirst()
             .orElse(request.getRemoteAddr());
 
-    if (ip != null && ip.contains(",")) {
-      ip = ip.split(",")[0].trim();
-    }
-    return ip;
+    return (ip == null) ? "local" : ip;
   }
 }

@@ -23,6 +23,8 @@ class LoggingAsyncListener implements AsyncListener {
   public void onComplete(AsyncEvent event) throws IOException {
     if (mdcContext != null) {
       MDC.setContextMap(mdcContext);
+    } else {
+      MDC.clear();
     }
     try {
       filter.logAndCopyResponse(requestWrapper, responseWrapper, startTime);
