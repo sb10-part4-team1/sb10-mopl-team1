@@ -109,6 +109,7 @@ CREATE TABLE "content_tags" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "content_id"         UUID                        NOT NULL,
     "tag_id"             UUID                        NOT NULL,
+    "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     CONSTRAINT "UQ_CONTENT_TAGS"
         UNIQUE ("content_id", "tag_id"),
     CONSTRAINT "FK_CONTENTS_TO_CONTENT_TAGS"
