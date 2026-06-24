@@ -125,6 +125,8 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     }
     String lower = contentType.toLowerCase();
     return lower.contains("application/json")
+        || lower.contains("+json")
+        || lower.contains("application/xml")
         || lower.contains("application/x-www-form-urlencoded")
         || lower.contains("text/plain")
         || lower.contains("text/xml");
