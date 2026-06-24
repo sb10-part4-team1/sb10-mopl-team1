@@ -24,12 +24,12 @@ public class UserService {
   public UserDto signUp(UserCreateRequest userCreateRequest) {
     String name = userCreateRequest.name();
     String email = userCreateRequest.email();
-    String password = passwordEncoder.encode(userCreateRequest.password());
 
     if (userRepository.existsByEmail(email)) {
       throw new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS, Map.of("email", email));
     }
 
+    String password = passwordEncoder.encode(userCreateRequest.password());
     User user = User.createUser(name, email, password, null);
 
     // 이메일 중복 검사 이후 동시 요청으로 DB 고유 제약 조건에 걸리는 것을 방지한다.
