@@ -12,6 +12,7 @@ import jakarta.servlet.AsyncEvent;
 import jakarta.servlet.AsyncListener;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -127,7 +128,8 @@ class LoggingFlowTest {
       String koreanText = "한글 텍스트";
 
       // when
-      String body = LogMaskingUtils.getMaskedBody(koreanText.getBytes(), "ISO-8859-1");
+      String body =
+          LogMaskingUtils.getMaskedBody(koreanText.getBytes(StandardCharsets.UTF_8), "ISO-8859-1");
 
       // then
       assertEquals(koreanText, body);
