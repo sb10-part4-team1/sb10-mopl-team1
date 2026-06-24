@@ -1,4 +1,4 @@
-package com.sb10.mopl.user.dto;
+package com.sb10.mopl.user.dto.response;
 
 import java.util.UUID;
 
