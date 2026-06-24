@@ -45,6 +45,19 @@ class LoggingFlowTest {
     }
 
     @Test
+    @DisplayName("Query Parameter 내 복합 키 마스킹 처리")
+    void maskParameters_returnMaskedQueryString_whenQueryContainsCompositeKeys() {
+      // given
+      String query = "username=admin&newPassword=secret&userToken=myToken";
+
+      // when
+      String masked = LogMaskingUtils.maskParameters(query);
+
+      // then
+      assertEquals("username=admin&newPassword=******&userToken=******", masked);
+    }
+
+    @Test
     @DisplayName("JSON 바디 내 문자열 형태의 민감 정보(비밀번호, 토큰 등)를 마스킹 처리")
     void getMaskedBody_returnMaskedJson_whenJsonContainsSensitiveStrings() {
       // given
@@ -57,6 +70,24 @@ class LoggingFlowTest {
       // then
       assertTrue(masked.contains("\"password\":\"******\""));
       assertTrue(masked.contains("\"accessToken\":\"******\""));
+      assertTrue(masked.contains("\"username\":\"admin\""));
+    }
+
+    @Test
+    @DisplayName("JSON 바디 내 복합 키 마스킹 처리")
+    void getMaskedBody_returnMaskedJson_whenJsonContainsCompositeKeys() {
+      // given
+      String json =
+          "{\"username\":\"admin\",\"newPassword\":\"secretPassword\","
+              + "\"currentPassword\":\"oldpwd\",\"userToken\":\"tokenVal\"}";
+
+      // when
+      String masked = LogMaskingUtils.getMaskedBody(json.getBytes(), "UTF-8");
+
+      // then
+      assertTrue(masked.contains("\"newPassword\":\"******\""));
+      assertTrue(masked.contains("\"currentPassword\":\"******\""));
+      assertTrue(masked.contains("\"userToken\":\"******\""));
       assertTrue(masked.contains("\"username\":\"admin\""));
     }
 

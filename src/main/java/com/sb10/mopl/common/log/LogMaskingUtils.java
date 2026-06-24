@@ -55,11 +55,13 @@ public final class LogMaskingUtils {
   // JSON Body용 정규식 패턴 (문자열 값 외에 숫자, 불리언, null 매칭 포함)
   private static final Pattern SENSITIVE_JSON_PATTERN =
       Pattern.compile(
-          "\"(?i)(" + String.join("|", SENSITIVE_KEYS) + ")\"\\s*:\\s*(\"[^\"]*\"|[^,\\s}]+)");
+          "(\"(?i)[^\"]*(?:"
+              + String.join("|", SENSITIVE_KEYS)
+              + ")[^\"]*\")\\s*:\\s*(\"[^\"]*\"|[^,\\s}]+)");
 
   // Query Parameter 및 Form Body용 정규식 패턴
   private static final Pattern SENSITIVE_PARAM_PATTERN =
-      Pattern.compile("(?i)(" + String.join("|", SENSITIVE_KEYS) + ")=([^&]+)");
+      Pattern.compile("(?i)([^&=]*(" + String.join("|", SENSITIVE_KEYS) + ")[^&=]*)=([^&\\s]+)");
 
   private LogMaskingUtils() {
     // 인스턴스화 방지
@@ -133,7 +135,7 @@ public final class LogMaskingUtils {
       String body = new String(content, charEncoding);
 
       // 1) JSON 마스킹 적용 (전체 길이에 대해 수행)
-      String maskedBody = SENSITIVE_JSON_PATTERN.matcher(body).replaceAll("\"$1\":\"******\"");
+      String maskedBody = SENSITIVE_JSON_PATTERN.matcher(body).replaceAll("$1:\"******\"");
       // 2) Form parameter(form-urlencoded) 형태 마스킹 적용 (전체 길이에 대해 수행)
       String finalBody = SENSITIVE_PARAM_PATTERN.matcher(maskedBody).replaceAll("$1=******");
 
