@@ -100,19 +100,27 @@ class ContentTest {
   }
 
   @Test
-  @DisplayName("설명이 비어 있거나 null일 시 콘텐츠 생성에 실패하고 예외를 발생시킨다")
+  @DisplayName("설명이 공백이거나 null일 시 콘텐츠 생성에 실패하고 예외를 발생시킨다")
   void create_fail_whenDescriptionIsBlank() {
-    // given null 설명 값을 지정한다
-    String description = null;
+    // given 공백, null인 설명 값을 지정한다
+    String description1 = null;
+    String description2 = "   ";
 
     // when 콘텐츠를 생성할 때
     // that 예외가 발생하고 에러 맵에 description 필드가 포함되는지 검증한다
-    ContentException ex =
+    ContentException ex1 =
         assertThrows(
             ContentException.class,
-            () -> Content.create("기생충", ContentType.MOVIE, description, "url"));
+            () -> Content.create("기생충", ContentType.MOVIE, description1, "url"));
 
-    assertEquals(ContentErrorCode.INVALID_CONTENT_DATA, ex.getErrorCode());
-    assertTrue(ex.getDetails().containsKey("description"));
+    ContentException ex2 =
+        assertThrows(
+            ContentException.class,
+            () -> Content.create("기생충", ContentType.MOVIE, description2, "url"));
+
+    assertEquals(ContentErrorCode.INVALID_CONTENT_DATA, ex1.getErrorCode());
+    assertEquals(ContentErrorCode.INVALID_CONTENT_DATA, ex2.getErrorCode());
+    assertTrue(ex1.getDetails().containsKey("description"));
+    assertTrue(ex2.getDetails().containsKey("description"));
   }
 }

@@ -27,17 +27,21 @@ class TagTest {
   }
 
   @Test
-  @DisplayName("태그 이름이 비어 있거나 공백일 시 생성에 실패하고 예외를 발생시킨다")
+  @DisplayName("태그 이름이 공백이거나 null일 시 생성에 실패하고 예외를 발생시킨다")
   void create_fail_whenNameIsBlank() {
-    // given 태그 이름에 공백을 준다
-    String name = "   ";
+    // given 태그 이름에 null, 공백을 준다
+    String name1 = null;
+    String name2 = "   ";
 
     // when 태그를 생성할 때
     // that 예외가 발생하며 에러 맵에 name 필드가 포함되는지 검증한다
-    ContentException ex = assertThrows(ContentException.class, () -> Tag.create(name));
+    ContentException ex1 = assertThrows(ContentException.class, () -> Tag.create(name1));
+    ContentException ex2 = assertThrows(ContentException.class, () -> Tag.create(name2));
 
-    assertEquals(ContentErrorCode.INVALID_CONTENT_DATA, ex.getErrorCode());
-    assertTrue(ex.getDetails().containsKey("name"));
+    assertEquals(ContentErrorCode.INVALID_CONTENT_DATA, ex1.getErrorCode());
+    assertEquals(ContentErrorCode.INVALID_CONTENT_DATA, ex2.getErrorCode());
+    assertTrue(ex1.getDetails().containsKey("name"));
+    assertTrue(ex2.getDetails().containsKey("name"));
   }
 
   @Test

@@ -1,6 +1,9 @@
 package com.sb10.mopl.content.entity;
 
 import com.sb10.mopl.common.entity.BaseEntity;
+import com.sb10.mopl.common.validation.DomainValidator;
+import com.sb10.mopl.content.exception.ContentErrorCode;
+import com.sb10.mopl.content.exception.ContentException;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -32,14 +35,20 @@ public class ContentTag extends BaseEntity {
   private Tag tag;
 
   private ContentTag(Content content, Tag tag) {
+    validate(content, tag);
     this.content = content;
     this.tag = tag;
-    if (content != null) {
-      content.getContentTags().add(this);
-    }
+    content.getContentTags().add(this);
   }
 
   public static ContentTag create(Content content, Tag tag) {
     return new ContentTag(content, tag);
+  }
+
+  private static void validate(Content content, Tag tag) {
+    DomainValidator.start()
+        .check(content == null, "content", "콘텐츠는 필수 항목입니다.")
+        .check(tag == null, "tag", "태그는 필수 항목입니다.")
+        .orThrow(details -> new ContentException(ContentErrorCode.INVALID_CONTENT_DATA, details));
   }
 }
