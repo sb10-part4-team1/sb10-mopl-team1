@@ -34,7 +34,7 @@ public class Content extends BaseUpdatableEntity {
   @Column(name = "description", nullable = false, columnDefinition = "TEXT")
   private String description;
 
-  @Column(name = "thumbnail_url", columnDefinition = "TEXT")
+  @Column(name = "thumbnail_url", nullable = false, columnDefinition = "TEXT")
   private String thumbnailUrl;
 
   @Column(name = "average_rating", nullable = false)
@@ -54,7 +54,7 @@ public class Content extends BaseUpdatableEntity {
   private List<ContentTag> contentTags = new ArrayList<>();
 
   private Content(String title, ContentType type, String description, String thumbnailUrl) {
-    validate(title, type, description);
+    validate(title, type, description, thumbnailUrl);
     this.title = title;
     this.type = type;
     this.description = description;
@@ -66,12 +66,17 @@ public class Content extends BaseUpdatableEntity {
     return new Content(title, type, description, thumbnailUrl);
   }
 
-  private static void validate(String title, ContentType type, String description) {
+  private static void validate(
+      String title, ContentType type, String description, String thumbnailUrl) {
     DomainValidator.start()
         .check(title == null || title.isBlank(), "title", "제목은 비어 있을 수 없습니다.")
         .check(title != null && title.length() > 100, "title", "제목은 100자를 초과할 수 없습니다.")
         .check(type == null, "type", "콘텐츠 형식은 필수 항목입니다.")
         .check(description == null || description.isBlank(), "description", "설명은 비어 있을 수 없습니다.")
+        .check(
+            thumbnailUrl == null || thumbnailUrl.isBlank(),
+            "thumbnailUrl",
+            "썸네일 URL은 비어 있을 수 없습니다.")
         .orThrow(details -> new ContentException(ContentErrorCode.INVALID_CONTENT_DATA, details));
   }
 }

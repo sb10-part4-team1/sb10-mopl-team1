@@ -40,3 +40,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Uploaded static assets ###
+src/main/resources/static/uploads/*
+!src/main/resources/static/uploads/.gitkeep
+
