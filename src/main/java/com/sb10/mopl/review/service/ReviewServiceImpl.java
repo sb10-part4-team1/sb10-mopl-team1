@@ -5,6 +5,7 @@ package com.sb10.mopl.review.service;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.exception.ContentErrorCode;
 import com.sb10.mopl.content.exception.ContentException;
+import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.review.dto.ReviewCreateRequest;
 import com.sb10.mopl.review.dto.ReviewDto;
 import com.sb10.mopl.review.entity.Review;
