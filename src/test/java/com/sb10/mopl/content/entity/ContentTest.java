@@ -123,4 +123,27 @@ class ContentTest {
     assertTrue(ex1.getDetails().containsKey("description"));
     assertTrue(ex2.getDetails().containsKey("description"));
   }
+
+  @Test
+  @DisplayName("썸네일 URL이 공백이거나 null일 시 콘텐츠 생성에 실패하고 예외를 발생시킨다")
+  void create_fail_whenThumbnailUrlIsBlank() {
+    // given 공백, null인 url 값을 지정한다
+    String url1 = null;
+    String url2 = "   ";
+
+    // when 콘텐츠를 생성할 때
+    // that 예외가 발생하고 에러 맵에 url 필드가 포함되는지 검증한다
+    ContentException ex1 =
+        assertThrows(
+            ContentException.class, () -> Content.create("기생충", ContentType.MOVIE, "설명", url1));
+
+    ContentException ex2 =
+        assertThrows(
+            ContentException.class, () -> Content.create("기생충", ContentType.MOVIE, "설명", url2));
+
+    assertEquals(ContentErrorCode.INVALID_CONTENT_DATA, ex1.getErrorCode());
+    assertEquals(ContentErrorCode.INVALID_CONTENT_DATA, ex2.getErrorCode());
+    assertTrue(ex1.getDetails().containsKey("thumbnailUrl"));
+    assertTrue(ex2.getDetails().containsKey("thumbnailUrl"));
+  }
 }
