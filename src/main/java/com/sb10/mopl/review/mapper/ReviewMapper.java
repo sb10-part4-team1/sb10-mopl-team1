@@ -1,29 +1,23 @@
 package com.sb10.mopl.review.mapper;
 
 import com.sb10.mopl.content.entity.Content;
-import com.sb10.mopl.review.dto.ReviewAuthorDto;
 import com.sb10.mopl.review.dto.ReviewCreateRequest;
 import com.sb10.mopl.review.dto.ReviewDto;
 import com.sb10.mopl.review.entity.Review;
 import com.sb10.mopl.user.entity.User;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class ReviewMapper {
+@Mapper(componentModel = "spring")
+public interface ReviewMapper {
 
-  public Review toEntity(ReviewCreateRequest request, Content targetContent, User user) {
-    return new Review(targetContent, user, request.content(), request.rating());
-  }
+  @Mapping(source = "targetContent", target = "targetContent")
+  Review toEntity(ReviewCreateRequest request, Content targetContent, User user);
 
-  public ReviewDto toDto(Review review) {
-    return new ReviewDto(
-        review.getId(),
-        review.getTargetContent().getId(),
-        new ReviewAuthorDto(
-            review.getUser().getId(),
-            review.getUser().getName(),
-            review.getUser().getProfileImageUrl()),
-        review.getContent(),
-        review.getRating());
-  }
+  @Mapping(source = "targetContent.id", target = "contentId")
+  @Mapping(source = "user.id", target = "author.userId")
+  @Mapping(source = "user.name", target = "author.name")
+  @Mapping(source = "user.profileImageUrl", target = "author.profileImageUrl")
+  @Mapping(source = "content", target = "text")
+  ReviewDto toDto(Review review);
 }

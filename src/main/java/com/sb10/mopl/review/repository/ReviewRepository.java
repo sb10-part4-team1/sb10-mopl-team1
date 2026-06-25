@@ -12,7 +12,16 @@ import org.springframework.data.repository.query.Param;
 
 public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
-  boolean existsByTargetContentIdAndUserId(UUID contentId, UUID userId);
+  @Query("""
+    SELECT COUNT(r) > 0
+    FROM Review r
+    WHERE r.targetContent.id = :contentId
+      AND r.user.id = :userId
+    """)
+  boolean existsByTargetContentIdAndUserId(
+    @Param("contentId") UUID contentId,
+    @Param("userId") UUID userId
+  );
 
   Optional<Review> findByTargetContentIdAndUserId(UUID contentId, UUID userId);
 
@@ -35,5 +44,10 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
       @Param("idAfter") UUID idAfter,
       Pageable pageable);
 
-  long countByTargetContentId(UUID contentId);
+  @Query("""
+    SELECT COUNT(r)
+    FROM Review r
+    WHERE r.targetContent.id = :contentId
+    """)
+  long countByTargetContentId(@Param("contentId") UUID contentId);
 }
