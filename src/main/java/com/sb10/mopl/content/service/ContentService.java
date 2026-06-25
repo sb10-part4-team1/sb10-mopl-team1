@@ -12,6 +12,7 @@ import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.mapper.ContentMapper;
 import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.content.repository.TagRepository;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,6 @@ public class ContentService {
   private final TagRepository tagRepository;
   private final ContentMapper contentMapper;
   private final ImageStorageService imageStorageService;
-  private final TagService tagService;
 
   @Transactional
   public ContentDto createContent(ContentCreateRequest request, MultipartFile thumbnail) {
@@ -131,14 +131,35 @@ public class ContentService {
             .filter(name -> !currentlyMappedNames.contains(name))
             .collect(Collectors.toSet());
 
+    // 새로 추가해야 할 태그 중 이미 DB에 존재하는 태그를 제외하고 DB에 저장
+    // existingTags -> 이미 DB에 존재하는 태그들
+    // newTags -> 새로운 태그에서 이미 DB에 존재하지 않아 생성해야 하는 태그들
     if (!unmappedNames.isEmpty()) {
-      List<Tag> tagsToMap;
+      List<Tag> existingTags = tagRepository.findAllByNameIn(unmappedNames);
+      Set<String> existingNames =
+          existingTags.stream().map(Tag::getName).collect(Collectors.toSet());
+
+      List<Tag> newTags =
+          unmappedNames.stream()
+              .filter(name -> !existingNames.contains(name))
+              .map(Tag::create)
+              .toList();
+
+      List<Tag> savedNewTags;
       try {
-        tagsToMap = tagService.getOrCreateTags(unmappedNames);
+        savedNewTags =
+            newTags.isEmpty()
+                ? List.of()
+                : tagRepository.saveAll(newTags); // 새로운 태그가 비어 있지 않다면 DB에 저장
       } catch (DataIntegrityViolationException e) {
-        // 동시성 이슈 발생 시, 이미 다른 트랜잭션에서 생성한 태그를 안전하게 재조회
-        tagsToMap = tagRepository.findAllByNameIn(unmappedNames);
+        throw new ContentException(
+            ContentErrorCode.DUPLICATE_TAG_NAME,
+            Map.of("tags", newTags.stream().map(Tag::getName).toList()),
+            e);
       }
+
+      List<Tag> tagsToMap = new ArrayList<>(existingTags); // DB에 존재하는 태그 추가
+      tagsToMap.addAll(savedNewTags); // 새로 추가된 태그 추가
 
       tagsToMap.forEach(tag -> ContentTag.create(content, tag)); // 태그와 연관관계 생성
     }
