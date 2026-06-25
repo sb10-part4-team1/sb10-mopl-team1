@@ -222,7 +222,7 @@ CREATE TABLE IF NOT EXISTS "content_reviews" (
     "content_id"         UUID                        NOT NULL,
     "user_id"            UUID                        NOT NULL,
     "content"            TEXT                        NOT NULL,
-    "rating"             NUMERIC(2,1)                NOT NULL,
+    "rating"             INT                         NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     CONSTRAINT "UQ_CONTENT_REVIEWS_USER"
