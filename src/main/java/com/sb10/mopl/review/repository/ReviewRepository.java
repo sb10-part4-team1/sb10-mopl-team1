@@ -1,11 +1,11 @@
 package com.sb10.mopl.review.repository;
 
 import com.sb10.mopl.review.entity.Review;
-import java.awt.print.Pageable;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

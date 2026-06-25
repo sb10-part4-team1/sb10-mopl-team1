@@ -18,6 +18,7 @@ import com.sb10.mopl.user.repository.UserRepository;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,14 +55,20 @@ public class ReviewServiceImpl implements ReviewService {
 
     // 이미 해당 콘텐츠에 리뷰를 작성했는지 검증
     if (reviewRepository.existsByTargetContentIdAndUserId(contentId, userId)) {
-
       throw new ReviewException(
           ReviewErrorCode.REVIEW_ALREADY_EXISTS, Map.of("contentId", contentId, "userId", userId));
     }
 
     Review review = reviewMapper.toEntity(request, content, user);
-    Review savedReview = reviewRepository.save(review);
 
-    return reviewMapper.toDto(savedReview);
+    try {
+      Review savedReview = reviewRepository.save(review);
+      return reviewMapper.toDto(savedReview);
+    } catch (DataIntegrityViolationException e) {
+      throw new ReviewException(
+          ReviewErrorCode.REVIEW_ALREADY_EXISTS,
+          Map.of("contentId", contentId, "userId", userId),
+          e);
+    }
   }
 }

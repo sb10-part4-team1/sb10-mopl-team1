@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -23,8 +22,8 @@ public class ReviewController {
   private final ReviewService reviewService;
 
   @PostMapping
-  @ResponseStatus(HttpStatus.CREATED)
   public ResponseEntity<ReviewDto> create(
+      // TODO: 인증 구현 완료 후 X-USER-ID 헤더 대신 SecurityContext/JWT Principal에서 사용자 ID를 조회하도록 변경
       @Valid @RequestBody ReviewCreateRequest request, @RequestHeader("X-USER-ID") UUID userId) {
     ReviewDto response = reviewService.create(request, userId);
 
