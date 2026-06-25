@@ -20,14 +20,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @Table(
-  name = "content_reviews",
-  uniqueConstraints = {
-    @UniqueConstraint(
-      name = "UQ_CONTENT_REVIEWS_USER",
-      columnNames = {"content_id","user_id"}
-    )
-  }
-)
+    name = "content_reviews",
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "UQ_CONTENT_REVIEWS_USER",
+          columnNames = {"content_id", "user_id"})
+    })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Review extends BaseUpdatableEntity {
 
@@ -50,27 +48,26 @@ public class Review extends BaseUpdatableEntity {
   @Column(name = "rating", nullable = false)
   private Integer rating;
 
-
-  private static void validateCreate(Content targetContent, User user, String content, Integer rating) {
+  private static void validateCreate(
+      Content targetContent, User user, String content, Integer rating) {
     DomainValidator.start()
-      .check(targetContent == null, "contentId", "리뷰 대상 콘텐츠는 필수입니다.")
-      .check(user == null, "userId", "리뷰 작성자는 필수입니다.")
-      .check(content == null || content.isBlank(), "content", "리뷰 내용은 필수입니다.")
-      .check(rating == null, "rating", "평점은 필수입니다.")
-      .check(rating != null && (rating < 1 || rating > 5), "rating", "평점은 1점 이상 5점 이하이어야 합니다.")
-      .orThrow(details -> new ReviewException(ReviewErrorCode.INVALID_REVIEW_VALUE, details));
+        .check(targetContent == null, "contentId", "리뷰 대상 콘텐츠는 필수입니다.")
+        .check(user == null, "userId", "리뷰 작성자는 필수입니다.")
+        .check(content == null || content.isBlank(), "content", "리뷰 내용은 필수입니다.")
+        .check(rating == null, "rating", "평점은 필수입니다.")
+        .check(rating != null && (rating < 1 || rating > 5), "rating", "평점은 1점 이상 5점 이하이어야 합니다.")
+        .orThrow(details -> new ReviewException(ReviewErrorCode.INVALID_REVIEW_VALUE, details));
   }
 
   private static void validateUpdate(String content, Integer rating) {
     DomainValidator.start()
-      .check(content == null || content.isBlank(), "content", "리뷰 내용은 필수입니다.")
-      .check(rating == null, "rating", "평점은 필수입니다.")
-      .check(rating != null && (rating < 1 || rating > 5), "rating", "평점은 1점 이상 5점 이하이어야 합니다.")
-      .orThrow(details -> new ReviewException(ReviewErrorCode.INVALID_REVIEW_VALUE, details));
+        .check(content == null || content.isBlank(), "content", "리뷰 내용은 필수입니다.")
+        .check(rating == null, "rating", "평점은 필수입니다.")
+        .check(rating != null && (rating < 1 || rating > 5), "rating", "평점은 1점 이상 5점 이하이어야 합니다.")
+        .orThrow(details -> new ReviewException(ReviewErrorCode.INVALID_REVIEW_VALUE, details));
   }
 
-
-  public Review (Content targetContent, User user, String content, Integer rating){
+  public Review(Content targetContent, User user, String content, Integer rating) {
     validateCreate(targetContent, user, content, rating);
     this.targetContent = targetContent;
     this.user = user;
@@ -78,10 +75,9 @@ public class Review extends BaseUpdatableEntity {
     this.rating = rating;
   }
 
-  public void update (String content, Integer rating){
+  public void update(String content, Integer rating) {
     validateUpdate(content, rating);
     this.content = content;
     this.rating = rating;
   }
-
 }

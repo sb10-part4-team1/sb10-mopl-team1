@@ -12,11 +12,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
-  boolean existsByTargetContent_IdAndUser_Id(UUID contentId, UUID userId);
+  boolean existsByTargetContentIdAndUserId(UUID contentId, UUID userId);
 
-  Optional<Review> findByTargetContent_IdAndUser_Id(UUID contentId, UUID userId);
+  Optional<Review> findByTargetContentIdAndUserId(UUID contentId, UUID userId);
 
-  @Query("""
+  @Query(
+      """
       SELECT r
       FROM Review r
       JOIN FETCH r.user u
@@ -29,12 +30,10 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
       ORDER BY r.createdAt DESC, r.id ASC
       """)
   List<Review> findAllByCursorDesc(
-    @Param("contentId") UUID contentId,
-    @Param("cursor") Instant cursor,
-    @Param("idAfter") UUID idAfter,
-    Pageable pageable
-  );
+      @Param("contentId") UUID contentId,
+      @Param("cursor") Instant cursor,
+      @Param("idAfter") UUID idAfter,
+      Pageable pageable);
 
-  long countByTargetContent_Id(UUID contentId);
-
+  long countByTargetContentId(UUID contentId);
 }

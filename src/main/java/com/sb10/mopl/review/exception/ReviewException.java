@@ -9,11 +9,7 @@ public class ReviewException extends MoplException {
     super(errorCode, details);
   }
 
-  public ReviewException(
-    ReviewErrorCode errorCode,
-    Map<String, Object> details,
-    Throwable cause
-  ) {
+  public ReviewException(ReviewErrorCode errorCode, Map<String, Object> details, Throwable cause) {
     super(errorCode, details, cause);
   }
 }

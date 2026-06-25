@@ -1,7 +1,5 @@
 package com.sb10.mopl.review.service;
 
-
-
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.exception.ContentErrorCode;
 import com.sb10.mopl.content.exception.ContentException;
@@ -26,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class ReviewServiceImpl implements ReviewService{
+public class ReviewServiceImpl implements ReviewService {
 
   private final ReviewRepository reviewRepository;
   private final ReviewMapper reviewMapper;
@@ -39,26 +37,26 @@ public class ReviewServiceImpl implements ReviewService{
     UUID contentId = request.contentId();
 
     // 리뷰 대상 콘텐츠 존재 여부 검증
-    Content content = contentRepository.findById(contentId)
-      .orElseThrow(() -> new ContentException(
-        ContentErrorCode.CONTENT_NOT_FOUND,
-        Map.of("contentId", contentId)
-      ));
+    Content content =
+        contentRepository
+            .findById(contentId)
+            .orElseThrow(
+                () ->
+                    new ContentException(
+                        ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId)));
 
     // 리뷰 작성자 존재 여부 검증
-    User user = userRepository.findById(userId)
-      .orElseThrow(() -> new UserException(
-        UserErrorCode.USER_NOT_FOUND,
-        Map.of("userId", userId)
-      ));
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(
+                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", userId)));
 
     // 이미 해당 콘텐츠에 리뷰를 작성했는지 검증
-    if(reviewRepository.existsByTargetContent_IdAndUser_Id(contentId, userId)) {
+    if (reviewRepository.existsByTargetContentIdAndUserId(contentId, userId)) {
 
       throw new ReviewException(
-        ReviewErrorCode.REVIEW_ALREADY_EXISTS,
-        Map.of("contentId", contentId, "userId", userId)
-      );
+          ReviewErrorCode.REVIEW_ALREADY_EXISTS, Map.of("contentId", contentId, "userId", userId));
     }
 
     Review review = reviewMapper.toEntity(request, content, user);
@@ -66,5 +64,4 @@ public class ReviewServiceImpl implements ReviewService{
 
     return reviewMapper.toDto(savedReview);
   }
-
 }

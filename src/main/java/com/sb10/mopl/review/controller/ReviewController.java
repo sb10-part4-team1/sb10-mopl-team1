@@ -25,12 +25,9 @@ public class ReviewController {
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   public ResponseEntity<ReviewDto> create(
-    @Valid @RequestBody ReviewCreateRequest request,
-    @RequestHeader("X-USER-ID") UUID userId
-  ) {
+      @Valid @RequestBody ReviewCreateRequest request, @RequestHeader("X-USER-ID") UUID userId) {
     ReviewDto response = reviewService.create(request, userId);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
-
 }

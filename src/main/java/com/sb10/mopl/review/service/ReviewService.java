@@ -7,5 +7,4 @@ import java.util.UUID;
 public interface ReviewService {
 
   ReviewDto create(ReviewCreateRequest request, UUID userId);
-
 }

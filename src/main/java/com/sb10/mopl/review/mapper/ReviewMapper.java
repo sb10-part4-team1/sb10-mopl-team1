@@ -12,25 +12,18 @@ import org.springframework.stereotype.Component;
 public class ReviewMapper {
 
   public Review toEntity(ReviewCreateRequest request, Content targetContent, User user) {
-    return new Review(
-      targetContent,
-      user,
-      request.content(),
-      request.rating()
-    );
+    return new Review(targetContent, user, request.content(), request.rating());
   }
 
   public ReviewDto toDto(Review review) {
     return new ReviewDto(
-      review.getId(),
-      review.getTargetContent().getId(),
-      new ReviewAuthorDto(
-        review.getUser().getId(),
-        review.getUser().getName(),
-        review.getUser().getProfileImageUrl()
-      ),
-      review.getContent(),
-      review.getRating()
-    );
+        review.getId(),
+        review.getTargetContent().getId(),
+        new ReviewAuthorDto(
+            review.getUser().getId(),
+            review.getUser().getName(),
+            review.getUser().getProfileImageUrl()),
+        review.getContent(),
+        review.getRating());
   }
-  }
+}
