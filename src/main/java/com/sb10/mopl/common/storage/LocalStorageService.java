@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
-@Profile({"local", "default"})
+@Profile({"local", "default", "test"})
 public class LocalStorageService implements ImageStorageService {
 
   private static final String UPLOAD_DIR = "src/main/resources/static/uploads";
