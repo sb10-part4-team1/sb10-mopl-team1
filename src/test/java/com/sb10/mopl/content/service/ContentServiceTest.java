@@ -100,6 +100,31 @@ class ContentServiceTest {
   }
 
   @Test
+  @DisplayName("썸네일 업로드 결과가 공백 문자열인 경우 디폴트 썸네일 경로를 제공하며 생성을 수행한다")
+  void createContent_successWithFallback_whenThumbnailUploadReturnsBlank() {
+    // given: 썸네일 업로드 결과가 공백("   ")을 리턴하는 목 시나리오 설정
+    ContentCreateRequest request =
+        new ContentCreateRequest(ContentType.SPORT, "축구 중계", "하이라이트", Collections.emptyList());
+
+    MockMultipartFile thumbnailFile =
+        new MockMultipartFile("thumbnail", "test.jpg", "image/jpeg", "bytes".getBytes());
+
+    when(imageStorageService.upload(thumbnailFile)).thenReturn("   ");
+    when(contentRepository.save(any(Content.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    // when: 서비스 레이어 호출
+    ContentDto result = contentService.createContent(request, thumbnailFile);
+
+    // then: 업로드 결과가 공백이어도 디폴트 이미지 경로인 "/uploads/default-thumbnail.png"로 세팅되는지 확인
+    assertThat(result).isNotNull();
+    assertThat(result.type()).isEqualTo("SPORT");
+    assertThat(result.title()).isEqualTo("축구 중계");
+    assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
+    verify(tagRepository, never()).saveAll(anyCollection());
+  }
+
+  @Test
   @DisplayName("썸네일 파일이 null이면 기본 썸네일 경로를 사용하여 콘텐츠 생성에 성공한다")
   void createContent_successWithFallback_whenThumbnailIsNull() {
     // given: 썸네일이 null인 요청 구성
