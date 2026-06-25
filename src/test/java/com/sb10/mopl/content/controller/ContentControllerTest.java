@@ -3,6 +3,7 @@ package com.sb10.mopl.content.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -192,5 +193,18 @@ class ContentControllerTest {
 
     // then: 400 Bad Request 응답 코드를 확인
     resultActions.andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("SYS01"));
+  }
+
+  @Test
+  @DisplayName("콘텐츠 삭제 요청이 유효하면 204 No Content를 반환한다")
+  void delete_returnNoContent_whenIdIsValid() throws Exception {
+    // given: 임의의 콘텐츠 ID 설정
+    UUID mockId = UUID.randomUUID();
+
+    // when: 콘텐츠 삭제 API 호출
+    var resultActions = mockMvc.perform(delete("/api/content/" + mockId));
+
+    // then: 204 No Content 응답 확인
+    resultActions.andExpect(status().isNoContent());
   }
 }
