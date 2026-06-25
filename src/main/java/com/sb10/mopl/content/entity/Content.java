@@ -79,4 +79,28 @@ public class Content extends BaseUpdatableEntity {
             "썸네일 URL은 비어 있을 수 없습니다.")
         .orThrow(details -> new ContentException(ContentErrorCode.INVALID_CONTENT_DATA, details));
   }
+
+  public void update(String title, String description, String thumbnailUrl) {
+    validate(title, this.type, description, thumbnailUrl);
+    this.title = title;
+    this.description = description;
+    this.thumbnailUrl = thumbnailUrl;
+  }
+
+  public void updateStatistics(double averageRating, int reviewCount) {
+    DomainValidator.start()
+        .check(
+            averageRating < 0.0 || averageRating > 5.0, "averageRating", "평점은 0.0에서 5.0 사이여야 합니다.")
+        .check(reviewCount < 0, "reviewCount", "리뷰 수는 0 이상이어야 합니다.")
+        .orThrow(details -> new ContentException(ContentErrorCode.INVALID_CONTENT_DATA, details));
+    this.averageRating = averageRating;
+    this.reviewCount = reviewCount;
+  }
+
+  public void updateWatcherCount(long watcherCount) {
+    DomainValidator.start()
+        .check(watcherCount < 0, "watcherCount", "시청자 수는 0 이상이어야 합니다.")
+        .orThrow(details -> new ContentException(ContentErrorCode.INVALID_CONTENT_DATA, details));
+    this.watcherCount = watcherCount;
+  }
 }
