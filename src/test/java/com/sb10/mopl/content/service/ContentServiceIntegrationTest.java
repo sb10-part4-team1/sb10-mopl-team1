@@ -8,10 +8,12 @@ import com.sb10.mopl.content.dto.ContentCreateRequest;
 import com.sb10.mopl.content.dto.ContentDto;
 import com.sb10.mopl.content.dto.ContentUpdateRequest;
 import com.sb10.mopl.content.entity.Content;
+import com.sb10.mopl.content.entity.ContentTag;
 import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.content.entity.Tag;
 import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.content.repository.TagRepository;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,18 +22,23 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 @DisplayName("ContentService 통합 테스트")
 class ContentServiceIntegrationTest {
 
   @Autowired private ContentService contentService;
   @Autowired private TagRepository tagRepository;
   @Autowired private ContentRepository contentRepository;
+  @Autowired private EntityManager em;
   @MockitoBean private ImageStorageService imageStorageService;
+
+  @org.junit.jupiter.api.AfterEach
+  void cleanUp() {
+    contentRepository.deleteAll();
+    tagRepository.deleteAll();
+  }
 
   @Test
   @DisplayName("기존 태그와 신규 태그가 혼합되어 있을 때 신규 태그만 실제로 저장된다")
@@ -63,8 +70,12 @@ class ContentServiceIntegrationTest {
     assertThat(sfTagInDb.getId()).isEqualTo(existingTag.getId());
 
     // 저장된 컨텐츠가 생성되었고 연관된 태그 관계가 정상적으로 설정되었는지 검증
-    Content contentInDb = contentRepository.findById(result.id()).orElseThrow();
-    assertThat(contentInDb.getContentTags()).hasSize(2);
+    List<ContentTag> contentTags =
+        em.createQuery(
+                "select ct from ContentTag ct where ct.content.id = :contentId", ContentTag.class)
+            .setParameter("contentId", result.id())
+            .getResultList();
+    assertThat(contentTags).hasSize(2);
   }
 
   @Test
@@ -121,8 +132,12 @@ class ContentServiceIntegrationTest {
     assertThat(updated.tags()).containsExactlyInAnyOrder("SF", "액션");
 
     // DB 상에 content_tags 매핑도 SF와 액션 단 2개만 맺어져 있는지 검증
-    Content contentInDb = contentRepository.findById(updated.id()).orElseThrow();
-    assertThat(contentInDb.getContentTags()).hasSize(2);
+    List<ContentTag> contentTags =
+        em.createQuery(
+                "select ct from ContentTag ct where ct.content.id = :contentId", ContentTag.class)
+            .setParameter("contentId", updated.id())
+            .getResultList();
+    assertThat(contentTags).hasSize(2);
 
     // DB에 저장된 전체 태그 개수 검증 ("SF" 1개, "액션" 1개 총 2개여야 하며, 중복 생성되지 않았는지 확인)
     List<Tag> allTags = tagRepository.findAll();

@@ -2,7 +2,7 @@ package com.sb10.mopl.content.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,11 +41,13 @@ class ContentServiceTest {
   @Mock private ContentRepository contentRepository;
   @Mock private TagRepository tagRepository;
   @Mock private ImageStorageService imageStorageService;
+  @Mock private TagService tagService;
 
   @BeforeEach
   void setUp() {
     contentService =
-        new ContentService(contentRepository, tagRepository, contentMapper, imageStorageService);
+        new ContentService(
+            contentRepository, tagRepository, contentMapper, imageStorageService, tagService);
   }
 
   @Test
@@ -59,11 +61,10 @@ class ContentServiceTest {
         new MockMultipartFile("thumbnail", "test.jpg", "image/jpeg", "bytes".getBytes());
 
     when(imageStorageService.upload(thumbnailFile)).thenReturn("/uploads/test.jpg");
-    when(tagRepository.findAllByNameIn(anyCollection())).thenReturn(Collections.emptyList());
 
     Tag sfTag = Tag.create("SF");
     Tag thrillerTag = Tag.create("스릴러");
-    when(tagRepository.saveAll(anyCollection())).thenReturn(List.of(sfTag, thrillerTag));
+    when(tagService.getOrCreateTags(anySet())).thenReturn(List.of(sfTag, thrillerTag));
 
     when(contentRepository.save(any(Content.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
@@ -77,7 +78,7 @@ class ContentServiceTest {
     assertThat(result.title()).isEqualTo("인셉션");
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/test.jpg");
     assertThat(result.tags()).containsExactlyInAnyOrder("SF", "스릴러");
-    verify(tagRepository).saveAll(anyCollection());
+    verify(tagService).getOrCreateTags(anySet());
   }
 
   @Test
@@ -102,7 +103,7 @@ class ContentServiceTest {
     assertThat(result.type()).isEqualTo("SPORT");
     assertThat(result.title()).isEqualTo("축구 중계");
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
-    verify(tagRepository, never()).saveAll(anyCollection());
+    verify(tagService, never()).getOrCreateTags(anySet());
   }
 
   @Test
@@ -127,7 +128,7 @@ class ContentServiceTest {
     assertThat(result.type()).isEqualTo("SPORT");
     assertThat(result.title()).isEqualTo("축구 중계");
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
-    verify(tagRepository, never()).saveAll(anyCollection());
+    verify(tagService, never()).getOrCreateTags(anySet());
   }
 
   @Test
@@ -186,8 +187,7 @@ class ContentServiceTest {
 
     Tag sfTag = Tag.create("SF");
     Tag actionTag = Tag.create("액션");
-    when(tagRepository.findAllByNameIn(anyCollection())).thenReturn(List.of(sfTag));
-    when(tagRepository.saveAll(anyCollection())).thenReturn(List.of(actionTag));
+    when(tagService.getOrCreateTags(anySet())).thenReturn(List.of(sfTag, actionTag));
 
     // when: 서비스 레이어의 콘텐츠 수정 기능 실행
     ContentDto result = contentService.updateContent(contentId, request, thumbnailFile);
@@ -297,5 +297,37 @@ class ContentServiceTest {
     // when & then: 음수값 위반 예외 검증
     Assertions.assertThrows(
         ContentException.class, () -> contentService.updateWatcherCount(contentId, -1L));
+  }
+
+  @Test
+  @DisplayName("태그 저장 중 동시성 제약 조건 예외가 발생하면 기존 DB 태그를 재조회하여 콘텐츠 생성에 성공한다")
+  void createContent_successWithFallback_whenTagServiceThrowsException() {
+    // given: DTO, Mock 파일 준비 및 tagService가 DataIntegrityViolationException을 발생시키도록 목 스터빙
+    ContentCreateRequest request =
+        new ContentCreateRequest(ContentType.MOVIE, "인셉션", "SF 영화", List.of("SF"));
+    MockMultipartFile thumbnailFile =
+        new MockMultipartFile("thumbnail", "test.jpg", "image/jpeg", "bytes".getBytes());
+
+    when(imageStorageService.upload(thumbnailFile)).thenReturn("/uploads/test.jpg");
+
+    // TagService 호출 시 예외를 던지도록 설정
+    when(tagService.getOrCreateTags(anySet()))
+        .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Duplicate key"));
+
+    // 예외 캐치 후 tagRepository에서 조회할 태그 모킹
+    Tag sfTag = Tag.create("SF");
+    when(tagRepository.findAllByNameIn(anySet())).thenReturn(List.of(sfTag));
+
+    when(contentRepository.save(any(Content.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    // when: 서비스 레이어의 콘텐츠 생성 기능 실행
+    ContentDto result = contentService.createContent(request, thumbnailFile);
+
+    // then: 예외를 정상 복구하고 DB 조회 데이터로 태그 연관관계가 설정되어 생성에 성공하는지 검증
+    assertThat(result).isNotNull();
+    assertThat(result.tags()).containsExactly("SF");
+    verify(tagService).getOrCreateTags(anySet());
+    verify(tagRepository).findAllByNameIn(anySet());
   }
 }
