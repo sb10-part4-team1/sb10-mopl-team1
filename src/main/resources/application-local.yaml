@@ -25,9 +25,6 @@ spring:
       ddl-auto: none # SQL 스크립트로 제어하므로 JPA 자동 생성은 끔
 
     show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
 
 # 로컬 개발용 특별 로깅 레벨 (DEBUG로 상세히 출력)
 logging:

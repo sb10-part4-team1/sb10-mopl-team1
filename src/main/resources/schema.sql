@@ -7,7 +7,7 @@
 -- 1. 회원 탈퇴 시 즉시 물리 삭제하지 않고 `is_deleted = true`, `deleted_at = NOW()`로 설정하여 30일간 복구 유예 기간을 가집니다.
 -- 2. 30일이 지난 후에는 개인정보 보호법 준수를 위해 PII(개인식별정보) 데이터만 비식별 랜덤값으로 업데이트(익명화)합니다.
 -- 3. 유저 Row 자체는 DB에 유지되므로, DM 메시지 등 외래키가 걸린 다른 테이블의 참조 무결성을 깨뜨리지 않습니다.
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "name"               VARCHAR(50)                 NOT NULL, -- 익명화 시 "(탈퇴한 사용자)"로 변경
     "email"              VARCHAR(255)                NOT NULL UNIQUE, -- 중복 가입 허용을 위해 익명화 시 "deleted_uuid@mopl.com" 형태로 고유값 변경
@@ -22,12 +22,12 @@ CREATE TABLE "users" (
 );
 
 -- 컨텐츠 테이블
-CREATE TABLE "contents" (
+CREATE TABLE IF NOT EXISTS "contents" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "title"              VARCHAR(100)                NOT NULL,
     "type"               VARCHAR(20)                 NOT NULL,
     "description"        TEXT                        NOT NULL,
-    "thumbnail_url"      TEXT                        NULL,
+    "thumbnail_url"      TEXT                        NOT NULL,
     "average_rating"     NUMERIC(2,1) DEFAULT 0.0    NOT NULL,
     "review_count"       INT                         NOT NULL,
     "watcher_count"      BIGINT                      NOT NULL,
@@ -36,14 +36,14 @@ CREATE TABLE "contents" (
 );
 
 -- 태그 테이블
-CREATE TABLE "tags" (
+CREATE TABLE IF NOT EXISTS "tags" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "name"               VARCHAR(100)                NOT NULL UNIQUE,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL
 );
 
 -- 대화방 테이블
-CREATE TABLE "conversations" (
+CREATE TABLE IF NOT EXISTS "conversations" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL
@@ -54,7 +54,7 @@ CREATE TABLE "conversations" (
 -- ==========================================
 
 -- 임시 비밀번호 테이블
-CREATE TABLE "temporary_passwords" (
+CREATE TABLE IF NOT EXISTS "temporary_passwords" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "user_id"            UUID                        NOT NULL UNIQUE,
     "password"           VARCHAR(255)                NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE "temporary_passwords" (
 );
 
 -- 토큰 테이블
-CREATE TABLE "refresh_tokens" (
+CREATE TABLE IF NOT EXISTS "refresh_tokens" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "user_id"            UUID                        NOT NULL,
     "token"              TEXT                        NOT NULL UNIQUE,
@@ -76,7 +76,7 @@ CREATE TABLE "refresh_tokens" (
 );
 
 -- 소셜 계정 테이블 (소셜 정보는 복합 유니크이므로 하단 배치)
-CREATE TABLE "social_accounts" (
+CREATE TABLE IF NOT EXISTS "social_accounts" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "user_id"            UUID                        NOT NULL,
     "provider"           VARCHAR(20)                 NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE "social_accounts" (
 );
 
 -- 팔로우 테이블 (복합 유니크 하단 배치)
-CREATE TABLE "follows" (
+CREATE TABLE IF NOT EXISTS "follows" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "follower_id"        UUID                        NOT NULL,
     "followee_id"        UUID                        NOT NULL,
@@ -105,7 +105,7 @@ CREATE TABLE "follows" (
 );
 
 -- 컨텐츠-태그 매핑 테이블 (복합 유니크 하단 배치)
-CREATE TABLE "content_tags" (
+CREATE TABLE IF NOT EXISTS "content_tags" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "content_id"         UUID                        NOT NULL,
     "tag_id"             UUID                        NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE "content_tags" (
 );
 
 -- 재생목록 테이블
-CREATE TABLE "playlists" (
+CREATE TABLE IF NOT EXISTS "playlists" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "owner_id"           UUID                        NOT NULL,
     "title"              VARCHAR(255)                NOT NULL,
@@ -131,7 +131,7 @@ CREATE TABLE "playlists" (
 );
 
 -- 재생목록-컨텐츠 매핑 테이블 (복합 유니크 하단 배치)
-CREATE TABLE "playlist_contents" (
+CREATE TABLE IF NOT EXISTS "playlist_contents" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "playlist_id"        UUID                        NOT NULL,
     "content_id"         UUID                        NOT NULL,
@@ -145,7 +145,7 @@ CREATE TABLE "playlist_contents" (
 );
 
 -- 재생목록 구독 테이블 (복합 유니크 하단 배치)
-CREATE TABLE "playlist_subscriptions" (
+CREATE TABLE IF NOT EXISTS "playlist_subscriptions" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "playlist_id"        UUID                        NOT NULL,
     "subscriber_id"      UUID                        NOT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE "playlist_subscriptions" (
 );
 
 -- 대화방 참여자 테이블 (복합 PK이므로 컬럼 라인에서 분리 후 정렬)
-CREATE TABLE "conversation_participants" (
+CREATE TABLE IF NOT EXISTS "conversation_participants" (
     "conversation_id"    UUID                        NOT NULL,
     "user_id"            UUID                        NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
@@ -175,7 +175,7 @@ CREATE TABLE "conversation_participants" (
 -- [참조 무결성 보존]
 -- 유저 탈퇴 시 물리 삭제가 아닌 익명화(Anonymization)를 진행하므로,
 -- 발송자(sender_id)와 수신자(receiver_id)는 NOT NULL로 유지되며 ON DELETE CASCADE가 걸리지 않습니다.
-CREATE TABLE "direct_messages" (
+CREATE TABLE IF NOT EXISTS "direct_messages" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "conversation_id"    UUID                        NOT NULL,
     "sender_id"          UUID                        NOT NULL,
@@ -192,7 +192,7 @@ CREATE TABLE "direct_messages" (
 );
 
 -- 알림 테이블
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "user_id"            UUID                        NOT NULL,
     "title"              VARCHAR(255)                NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE "notifications" (
 );
 
 -- 시청 세션 테이블
-CREATE TABLE "watching_session" (
+CREATE TABLE IF NOT EXISTS "watching_session" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "watcher_id"         UUID                        NOT NULL,
@@ -217,7 +217,7 @@ CREATE TABLE "watching_session" (
 );
 
 -- 컨텐츠 리뷰 테이블 (복합 유니크 하단 배치)
-CREATE TABLE "content_reviews" (
+CREATE TABLE IF NOT EXISTS "content_reviews" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
     "content_id"         UUID                        NOT NULL,
     "user_id"            UUID                        NOT NULL,
@@ -237,26 +237,26 @@ CREATE TABLE "content_reviews" (
 -- ==========================================
 -- 성능 최적화를 위한 조회용 인덱스 (INDEX)
 -- ==========================================
-CREATE INDEX "IDX_REFRESH_TOKENS_USER"
+CREATE INDEX IF NOT EXISTS "IDX_REFRESH_TOKENS_USER"
     ON "refresh_tokens" ("user_id");
 
-CREATE INDEX "IDX_FOLLOWS_FOLLOWEE"
+CREATE INDEX IF NOT EXISTS "IDX_FOLLOWS_FOLLOWEE"
     ON "follows" ("followee_id");
 
-CREATE INDEX "IDX_CONTENT_TAGS_TAG"
+CREATE INDEX IF NOT EXISTS "IDX_CONTENT_TAGS_TAG"
     ON "content_tags" ("tag_id");
 
-CREATE INDEX "IDX_CONV_PARTICIPANTS_USER"
+CREATE INDEX IF NOT EXISTS "IDX_CONV_PARTICIPANTS_USER"
     ON "conversation_participants" ("user_id");
 
-CREATE INDEX "IDX_DM_CONVERSATION_TIME"
+CREATE INDEX IF NOT EXISTS "IDX_DM_CONVERSATION_TIME"
     ON "direct_messages" ("conversation_id", "created_at");
 
-CREATE INDEX "IDX_NOTIFICATIONS_USER_READ"
+CREATE INDEX IF NOT EXISTS "IDX_NOTIFICATIONS_USER_READ"
     ON "notifications" ("user_id", "is_read");
 
-CREATE INDEX "IDX_WATCHING_SESSION_WATCHER"
+CREATE INDEX IF NOT EXISTS "IDX_WATCHING_SESSION_WATCHER"
     ON "watching_session" ("watcher_id");
 
-CREATE INDEX "IDX_CONTENTS_CREATED_AT"
+CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_CREATED_AT"
     ON "contents" ("created_at");

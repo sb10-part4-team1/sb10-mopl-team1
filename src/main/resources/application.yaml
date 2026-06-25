@@ -15,12 +15,16 @@ spring:
     job:
       enabled: false # 프로젝트 실행 시 배치 잡 실행 여부
 
-    # 공통 JPA 설정 (포맷팅 등 비주얼 요소만)
+    # 공통 JPA 설정 (포맷팅 및 성능 최적화 배치 크기 지정)
   jpa:
     properties:
       hibernate:
         format_sql: true
         highlight_sql: true
+        jdbc:
+          batch_size: 100
+        order_inserts: true
+        order_updates: true
 
   ### 프로젝트 환경 변수 설정
 mopl:
