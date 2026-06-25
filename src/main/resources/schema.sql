@@ -222,7 +222,7 @@ CREATE TABLE IF NOT EXISTS "content_reviews" (
     "content_id"         UUID                        NOT NULL,
     "user_id"            UUID                        NOT NULL,
     "content"            TEXT                        NOT NULL,
-    "rating"             INT                         NOT NULL CHECK ("rating" BETWEEN 1 AND 5),
+    "rating"             INT                         NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     CONSTRAINT "UQ_CONTENT_REVIEWS_USER"
@@ -232,7 +232,7 @@ CREATE TABLE IF NOT EXISTS "content_reviews" (
     CONSTRAINT "FK_USERS_TO_CONTENT_REVIEWS"
         FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE,
     CONSTRAINT "CK_CONTENT_REVIEWS_RATING"
-    CHECK ("rating" BETWEEN 1 AND 5)
+        CHECK ("rating" BETWEEN 1 AND 5)
 );
 
 
