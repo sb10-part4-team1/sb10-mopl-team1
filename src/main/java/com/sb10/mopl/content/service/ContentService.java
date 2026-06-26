@@ -90,6 +90,16 @@ public class ContentService {
     return contentMapper.toDto(content);
   }
 
+  @Transactional
+  public void deleteContent(UUID id) {
+    Content content =
+        contentRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ContentException(ContentErrorCode.CONTENT_NOT_FOUND, Map.of("id", id)));
+    contentRepository.delete(content);
+  }
+
   private String uploadThumbnailOrKeep(MultipartFile thumbnail, String currentThumbnailUrl) {
     if (thumbnail == null || thumbnail.isEmpty()) {
       return currentThumbnailUrl;
