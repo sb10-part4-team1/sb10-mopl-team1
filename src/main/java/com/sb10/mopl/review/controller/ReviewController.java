@@ -1,5 +1,6 @@
 package com.sb10.mopl.review.controller;
 
+import com.sb10.mopl.common.pagination.CursorPageRequest;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.review.dto.ReviewCreateRequest;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -37,15 +39,11 @@ public class ReviewController {
   @GetMapping
   public ResponseEntity<CursorPageResponse<ReviewDto>> findAll(
       @RequestParam(required = false) UUID contentId,
-      @RequestParam(required = false) String cursor,
-      @RequestParam(required = false) UUID idAfter,
-      @RequestParam Integer limit,
-      @RequestParam String sortBy,
-      @RequestParam SortDirection sortDirection) {
+      @Valid @ModelAttribute CursorPageRequest pageRequest) {
 
     // 리뷰 목록을 커서 페이지네이션 방식으로 조회
     CursorPageResponse<ReviewDto> response =
-        reviewService.findAll(contentId, cursor, idAfter, limit, sortBy, sortDirection);
+        reviewService.findAll(contentId, pageRequest.cursor(), pageRequest.idAfter(), pageRequest.limit(), pageRequest.sortBy(), pageRequest.sortDirection());
 
     return ResponseEntity.ok(response);
   }
