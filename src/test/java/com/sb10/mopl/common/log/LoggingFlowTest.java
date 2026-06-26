@@ -22,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
+import org.springframework.mock.web.MockAsyncContext;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -299,8 +300,7 @@ class LoggingFlowTest {
       assertEquals("", response.getContentAsString());
 
       // when: 비동기 작업 완료(onComplete) 이벤트 시뮬레이션
-      org.springframework.mock.web.MockAsyncContext asyncContext =
-          (org.springframework.mock.web.MockAsyncContext) request.getAsyncContext();
+      MockAsyncContext asyncContext = (MockAsyncContext) request.getAsyncContext();
       assertNotNull(asyncContext);
 
       // 등록된 리스너를 가져와 완료 이벤트 전송
