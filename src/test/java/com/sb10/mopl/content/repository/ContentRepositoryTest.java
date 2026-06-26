@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.config.JpaAuditingConfig;
+import com.sb10.mopl.config.QuerydslConfig;
 import com.sb10.mopl.content.dto.ContentSearchRequest;
 import com.sb10.mopl.content.dto.ContentSortBy;
 import com.sb10.mopl.content.entity.Content;
@@ -11,6 +12,7 @@ import com.sb10.mopl.content.entity.ContentTag;
 import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.content.entity.Tag;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,11 +21,12 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @DataJpaTest
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(JpaAuditingConfig.class)
+@Import({JpaAuditingConfig.class, QuerydslConfig.class})
 class ContentRepositoryTest {
 
   @Autowired private ContentRepository contentRepository;
@@ -156,13 +159,16 @@ class ContentRepositoryTest {
     // given: 생성 순서대로 A, B, C 저장 (createdAt 순서: A < B < C)
     Content contentA = Content.create("인셉션", ContentType.MOVIE, "SF 영화", "/uploads/test.jpg");
     contentRepository.save(contentA);
+    ReflectionTestUtils.setField(contentA, "createdAt", Instant.now().minusSeconds(10));
 
     Content contentB = Content.create("인터스텔라", ContentType.MOVIE, "우주 SF 영화", "/uploads/test.jpg");
     contentRepository.save(contentB);
+    ReflectionTestUtils.setField(contentB, "createdAt", Instant.now().minusSeconds(5));
 
     Content contentC =
         Content.create("시그널", ContentType.TV_SERIES, "타임슬립 드라마", "/uploads/test.jpg");
     contentRepository.save(contentC);
+    ReflectionTestUtils.setField(contentC, "createdAt", Instant.now());
 
     em.flush();
     em.clear();
