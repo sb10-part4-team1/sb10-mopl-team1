@@ -2,7 +2,6 @@ package com.sb10.mopl.review.controller;
 
 import com.sb10.mopl.common.pagination.CursorPageRequest;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
-import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.review.dto.ReviewCreateRequest;
 import com.sb10.mopl.review.dto.ReviewDto;
 import com.sb10.mopl.review.service.ReviewService;
@@ -43,7 +42,13 @@ public class ReviewController {
 
     // 리뷰 목록을 커서 페이지네이션 방식으로 조회
     CursorPageResponse<ReviewDto> response =
-        reviewService.findAll(contentId, pageRequest.cursor(), pageRequest.idAfter(), pageRequest.limit(), pageRequest.sortBy(), pageRequest.sortDirection());
+        reviewService.findAll(
+            contentId,
+            pageRequest.cursor(),
+            pageRequest.idAfter(),
+            pageRequest.limit(),
+            pageRequest.sortBy(),
+            pageRequest.sortDirection());
 
     return ResponseEntity.ok(response);
   }

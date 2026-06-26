@@ -1,6 +1,5 @@
 package com.sb10.mopl.review.service;
 
-
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.content.entity.Content;
@@ -80,9 +79,9 @@ public class ReviewServiceImpl implements ReviewService {
     } catch (DataIntegrityViolationException e) {
       // 동시 요청으로 유니크 제약이 발생한 경우 중복 리뷰 예외로 변환
       throw new ReviewException(
-        ReviewErrorCode.REVIEW_ALREADY_EXISTS,
-        Map.of("contentId", contentId, "userId", userId),
-        e);
+          ReviewErrorCode.REVIEW_ALREADY_EXISTS,
+          Map.of("contentId", contentId, "userId", userId),
+          e);
     }
   }
 
@@ -111,16 +110,15 @@ public class ReviewServiceImpl implements ReviewService {
     return toCursorPageResponse(reviews, contentId, limit, sortBy, sortDirection);
   }
 
-  private void validateFindAllRequest(String cursor, UUID idAfter, Integer limit, String sortBy, SortDirection sortDirection) {
+  private void validateFindAllRequest(
+      String cursor, UUID idAfter, Integer limit, String sortBy, SortDirection sortDirection) {
     // 커서와 idAfter는 함께 전달
     boolean hasCursor = cursor != null && !cursor.isBlank();
     boolean hasIdAfter = idAfter != null;
 
     if (hasCursor != hasIdAfter) {
       throw new ReviewException(
-        ReviewErrorCode.INVALID_REVIEW_VALUE,
-        Map.of("cursor", "cursor와 idAfter는 함께 전달되어야 합니다.")
-      );
+          ReviewErrorCode.INVALID_REVIEW_VALUE, Map.of("cursor", "cursor와 idAfter는 함께 전달되어야 합니다."));
     }
 
     // 정렬 기준이 createdAt인지 검증
@@ -139,8 +137,8 @@ public class ReviewServiceImpl implements ReviewService {
     // 요청 limit이 유효한지 검증
     if (limit == null || limit <= 0 || limit > MAX_REVIEW_PAGE_LIMIT) {
       throw new ReviewException(
-        ReviewErrorCode.INVALID_REVIEW_VALUE,
-        Map.of("limit", "limit은 1 이상 " + MAX_REVIEW_PAGE_LIMIT + " 이하여야 합니다."));
+          ReviewErrorCode.INVALID_REVIEW_VALUE,
+          Map.of("limit", "limit은 1 이상 " + MAX_REVIEW_PAGE_LIMIT + " 이하여야 합니다."));
     }
   }
 
@@ -176,7 +174,8 @@ public class ReviewServiceImpl implements ReviewService {
     List<ReviewDto> data = pageReviews.stream().map(reviewMapper::toDto).toList();
 
     // 다음 페이지 요청에 사용할 마지막 리뷰 추출
-    Review lastReview = hasNext && !pageReviews.isEmpty() ? pageReviews.get(pageReviews.size() - 1) : null;
+    Review lastReview =
+        hasNext && !pageReviews.isEmpty() ? pageReviews.get(pageReviews.size() - 1) : null;
 
     // 전체 리뷰 개수 조회
     long totalCount =
