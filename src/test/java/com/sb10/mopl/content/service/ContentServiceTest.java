@@ -464,4 +464,48 @@ class ContentServiceTest {
     assertThat(result.nextIdAfter()).isEqualTo(content2.getId());
     assertThat(result.totalCount()).isEqualTo(3L);
   }
+
+  @Test
+  @DisplayName("목록 조회 시 평점 정렬(rate)을 사용하고 데이터가 limit을 초과하면, nextCursor가 마지막 아이템의 평점 수치 문자열로 반환된다")
+  void searchContents_successWithRatingSortCursor_whenDataExceedsLimit() {
+    // given: 데이터 및 평점 설정
+    Content content1 = Content.create("콘텐츠1", ContentType.MOVIE, "설명1", "/uploads/1.jpg");
+    Content content2 = Content.create("콘텐츠2", ContentType.MOVIE, "설명2", "/uploads/2.jpg");
+    Content content3 = Content.create("콘텐츠3", ContentType.MOVIE, "설명3", "/uploads/3.jpg");
+
+    ReflectionTestUtils.setField(content1, "id", UUID.randomUUID());
+    content1.updateStatistics(4.5, 10);
+    ReflectionTestUtils.setField(content2, "id", UUID.randomUUID());
+    content2.updateStatistics(4.0, 5);
+    ReflectionTestUtils.setField(content3, "id", UUID.randomUUID());
+    content3.updateStatistics(3.5, 2);
+
+    // limit=2로 평점 내림차순(rate DESC) 조회 요청 구성
+    ContentSearchRequest request =
+        new ContentSearchRequest(
+            ContentType.MOVIE,
+            null,
+            null,
+            null,
+            null,
+            2,
+            SortDirection.DESCENDING,
+            ContentSortBy.rate);
+
+    when(contentRepository.findAllByCondition(request))
+        .thenReturn(List.of(content1, content2, content3));
+    when(contentRepository.countContents(request)).thenReturn(3L);
+
+    // when: 서비스 레이어 목록 조회 호출
+    CursorPageResponse<ContentDto> result = contentService.findAll(request);
+
+    // then: 슬라이싱 결과 및 nextCursor 검증
+    assertThat(result).isNotNull();
+    assertThat(result.data()).hasSize(2);
+    assertThat(result.hasNext()).isTrue();
+    assertThat(result.nextIdAfter()).isEqualTo(content2.getId());
+    // nextCursor는 1페이지의 마지막 아이템(content2)의 평점 수치 문자열("4.0")이어야 함
+    assertThat(result.nextCursor()).isEqualTo(String.valueOf(4.0));
+    assertThat(result.totalCount()).isEqualTo(3L);
+  }
 }
