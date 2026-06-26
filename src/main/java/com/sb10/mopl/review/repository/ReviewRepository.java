@@ -22,20 +22,28 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
   boolean existsByTargetContentIdAndUserId(
       @Param("contentId") UUID contentId, @Param("userId") UUID userId);
 
-  Optional<Review> findByTargetContentIdAndUserId(UUID contentId, UUID userId);
+  @Query(
+      """
+    SELECT r
+    FROM Review r
+    WHERE r.targetContent.id = :contentId
+      AND r.user.id = :userId
+      """)
+  Optional<Review> findByTargetContentIdAndUserId(
+      @Param("contentId") UUID contentId, @Param("userId") UUID userId);
 
   @Query(
       """
-      SELECT r
-      FROM Review r
-      JOIN FETCH r.user u
-      WHERE (:contentId IS NULL OR r.targetContent.id = :contentId)
-        AND (
-          :cursor IS NULL
-          OR r.createdAt < :cursor
-          OR (r.createdAt = :cursor AND r.id > :idAfter)
-        )
-      ORDER BY r.createdAt DESC, r.id ASC
+    SELECT r
+    FROM Review r
+    JOIN FETCH r.user u
+    WHERE (:contentId IS NULL OR r.targetContent.id = :contentId)
+      AND (
+        :cursor IS NULL
+        OR r.createdAt < :cursor
+        OR (:idAfter IS NOT NULL AND r.createdAt = :cursor AND r.id > :idAfter)
+      )
+    ORDER BY r.createdAt DESC, r.id ASC
       """)
   List<Review> findAllByCursorDesc(
       @Param("contentId") UUID contentId,
