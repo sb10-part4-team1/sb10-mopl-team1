@@ -320,4 +320,33 @@ class ContentServiceTest {
             ContentException.class, () -> contentService.createContent(request, thumbnailFile));
     assertThat(exception.getErrorCode()).isEqualTo(ContentErrorCode.DUPLICATE_TAG_NAME);
   }
+
+  @Test
+  @DisplayName("존재하는 콘텐츠 ID로 삭제 요청 시 삭제에 성공한다")
+  void deleteContent_success_whenIdIsValid() {
+    // given: 존재하는 임의의 콘텐츠 ID 및 조회 모킹 설정
+    UUID contentId = UUID.randomUUID();
+    Content content = Content.create("인셉션", ContentType.MOVIE, "SF 영화", "/uploads/test.jpg");
+    when(contentRepository.findById(contentId)).thenReturn(Optional.of(content));
+
+    // when: 서비스 레이어 삭제 호출
+    contentService.deleteContent(contentId);
+
+    // then: repository의 delete 호출 확인
+    verify(contentRepository).delete(content);
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 콘텐츠 ID로 삭제 요청 시 CONTENT_NOT_FOUND 예외가 발생한다")
+  void deleteContent_fail_whenIdIsInvalid() {
+    // given: 존재하지 않는 임의의 ID 구성
+    UUID invalidId = UUID.randomUUID();
+    when(contentRepository.findById(invalidId)).thenReturn(Optional.empty());
+
+    // when & then: 삭제 호출 시 ContentException이 발생하는지 및 에러 코드가 CONTENT_NOT_FOUND인지 확인
+    ContentException exception =
+        Assertions.assertThrows(
+            ContentException.class, () -> contentService.deleteContent(invalidId));
+    assertThat(exception.getErrorCode()).isEqualTo(ContentErrorCode.CONTENT_NOT_FOUND);
+  }
 }

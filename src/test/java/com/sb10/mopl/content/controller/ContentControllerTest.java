@@ -2,7 +2,9 @@ package com.sb10.mopl.content.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,9 +15,12 @@ import com.sb10.mopl.content.dto.ContentCreateRequest;
 import com.sb10.mopl.content.dto.ContentDto;
 import com.sb10.mopl.content.dto.ContentUpdateRequest;
 import com.sb10.mopl.content.entity.ContentType;
+import com.sb10.mopl.content.exception.ContentErrorCode;
+import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.service.ContentService;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -192,5 +197,35 @@ class ContentControllerTest {
 
     // then: 400 Bad Request 응답 코드를 확인
     resultActions.andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("SYS01"));
+  }
+
+  @Test
+  @DisplayName("콘텐츠 삭제 요청이 유효하면 204 No Content를 반환한다")
+  void delete_returnNoContent_whenIdIsValid() throws Exception {
+    // given: 임의의 콘텐츠 ID 설정
+    UUID mockId = UUID.randomUUID();
+
+    // when: 콘텐츠 삭제 API 호출
+    var resultActions = mockMvc.perform(delete("/api/content/" + mockId));
+
+    // then: 204 No Content 응답 확인
+    resultActions.andExpect(status().isNoContent());
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 콘텐츠 삭제 요청 시 404 Not Found를 반환한다")
+  void delete_returnNotFound_whenContentDoesNotExist() throws Exception {
+    // given: 임의의 콘텐츠 ID 설정
+    UUID mockId = UUID.randomUUID();
+
+    // when: 콘텐츠 삭제 API 호출
+    doThrow(new ContentException(ContentErrorCode.CONTENT_NOT_FOUND, Map.of("id", mockId)))
+        .when(contentService)
+        .deleteContent(mockId);
+
+    var resultActions = mockMvc.perform(delete("/api/content/" + mockId));
+
+    // then: 404 No Content 응답 확인
+    resultActions.andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("CT01"));
   }
 }

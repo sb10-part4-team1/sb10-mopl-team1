@@ -12,6 +12,7 @@ import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.content.entity.Tag;
 import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.content.repository.TagRepository;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class ContentServiceIntegrationTest {
   @Autowired private ContentService contentService;
   @Autowired private TagRepository tagRepository;
   @Autowired private ContentRepository contentRepository;
+  @Autowired private EntityManager em;
   @MockitoBean private ImageStorageService imageStorageService;
 
   @Test
@@ -157,5 +159,35 @@ class ContentServiceIntegrationTest {
     assertThat(contentInDb.getAverageRating()).isEqualTo(4.2);
     assertThat(contentInDb.getReviewCount()).isEqualTo(24);
     assertThat(contentInDb.getWatcherCount()).isEqualTo(750L);
+  }
+
+  @Test
+  @DisplayName("콘텐츠 삭제 시 연관된 매핑 데이터(태그 매핑 등)도 DB 레벨에서 CASCADE로 함께 연쇄 삭제된다")
+  void deleteContent_successAndCascadesDeleted_whenDataIsValid() {
+    // given: 태그를 포함한 콘텐츠를 생성 및 저장
+    ContentCreateRequest createRequest =
+        new ContentCreateRequest(ContentType.MOVIE, "인셉션", "SF 영화", List.of("SF", "스릴러"));
+    MockMultipartFile thumbnailFile =
+        new MockMultipartFile("thumbnail", "test.jpg", "image/jpeg", "bytes".getBytes());
+    when(imageStorageService.upload(thumbnailFile)).thenReturn("/uploads/test.jpg");
+
+    ContentDto created = contentService.createContent(createRequest, thumbnailFile);
+
+    // 태그 테이블에 태그가 정상 저장되었고 관계도 맺어졌는지 사전 검증
+    assertThat(tagRepository.findAllByNameIn(List.of("SF", "스릴러"))).hasSize(2);
+
+    // when: 콘텐츠 삭제 로직 호출
+    contentService.deleteContent(created.id());
+
+    // then: 콘텐츠가 DB에서 정상적으로 삭제되었는지 확인
+    assertThat(contentRepository.findById(created.id())).isEmpty();
+
+    // DB 상에 content_tags 매핑도 CASCADE로 함께 연쇄 삭제되었는지 검증
+    // (JPA 연관관계 lazy loading 검증을 피하기 위해 JPQL로 DB에 데이터가 완전히 없는지 직접 조회)
+    java.util.List<?> contentTags =
+        em.createQuery("select ct from ContentTag ct where ct.content.id = :contentId")
+            .setParameter("contentId", created.id())
+            .getResultList();
+    assertThat(contentTags).isEmpty();
   }
 }
