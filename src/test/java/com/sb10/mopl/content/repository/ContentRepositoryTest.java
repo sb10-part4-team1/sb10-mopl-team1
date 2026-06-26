@@ -51,8 +51,6 @@ class ContentRepositoryTest {
   void findAllByCondition_success_withFiltersAndSortingAndCursor() {
     // given: 테스트용 콘텐츠 데이터 및 태그 직접 관계 설정 저장
     Tag sf = tagRepository.save(Tag.create("SF"));
-    Tag action = tagRepository.save(Tag.create("액션"));
-    Tag drama = tagRepository.save(Tag.create("드라마"));
 
     Content contentA = Content.create("인셉션", ContentType.MOVIE, "SF 영화", "/uploads/test.jpg");
     ContentTag.create(contentA, sf);
@@ -60,6 +58,7 @@ class ContentRepositoryTest {
     contentA.updateStatistics(4.5, 10);
     contentA.updateWatcherCount(300L);
 
+    Tag action = tagRepository.save(Tag.create("액션"));
     Content contentB = Content.create("인터스텔라", ContentType.MOVIE, "우주 SF 영화", "/uploads/test.jpg");
     ContentTag.create(contentB, sf);
     ContentTag.create(contentB, action);
@@ -67,6 +66,7 @@ class ContentRepositoryTest {
     contentB.updateStatistics(4.0, 5);
     contentB.updateWatcherCount(500L);
 
+    Tag drama = tagRepository.save(Tag.create("드라마"));
     Content contentC =
         Content.create("시그널", ContentType.TV_SERIES, "타임슬립 드라마", "/uploads/test.jpg");
     ContentTag.create(contentC, drama);

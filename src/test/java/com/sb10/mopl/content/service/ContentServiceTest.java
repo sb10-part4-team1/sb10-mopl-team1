@@ -424,18 +424,6 @@ class ContentServiceTest {
   @Test
   @DisplayName("목록 조회 시 가져온 데이터 개수가 limit을 초과하면, 마지막 초과 데이터는 응답에서 제외되고 hasNext가 true로 반환된다")
   void searchContents_successWithSlicing_whenDataExceedsLimit() {
-    // given: limit=2로 요청
-    ContentSearchRequest request =
-        new ContentSearchRequest(
-            ContentType.MOVIE,
-            null,
-            null,
-            null,
-            null,
-            2,
-            SortDirection.DESCENDING,
-            ContentSortBy.CREATED_AT);
-
     // Repository가 limit + 1개인 3개의 데이터를 반환하도록 모킹
     Content content1 = Content.create("콘텐츠1", ContentType.MOVIE, "설명1", "/uploads/1.jpg");
     Content content2 = Content.create("콘텐츠2", ContentType.MOVIE, "설명2", "/uploads/2.jpg");
@@ -447,6 +435,18 @@ class ContentServiceTest {
     ReflectionTestUtils.setField(content2, "createdAt", Instant.now().plusSeconds(1));
     ReflectionTestUtils.setField(content3, "id", UUID.randomUUID());
     ReflectionTestUtils.setField(content3, "createdAt", Instant.now().plusSeconds(2));
+
+    // given: limit=2로 요청
+    ContentSearchRequest request =
+        new ContentSearchRequest(
+            ContentType.MOVIE,
+            null,
+            null,
+            null,
+            null,
+            2,
+            SortDirection.DESCENDING,
+            ContentSortBy.CREATED_AT);
 
     when(contentRepository.findAllByCondition(request))
         .thenReturn(List.of(content1, content2, content3));
