@@ -26,6 +26,12 @@ spring:
         order_inserts: true
         order_updates: true
 
+  # timeout 설정
+  mvc:
+    async:
+      request-timeout: 0
+
+
   ### 프로젝트 환경 변수 설정
 mopl:
   aws:
