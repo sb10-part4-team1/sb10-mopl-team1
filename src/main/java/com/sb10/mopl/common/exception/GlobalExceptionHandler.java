@@ -95,7 +95,7 @@ public class GlobalExceptionHandler {
                     + Arrays.toString(tme.getRequiredType().getEnumConstants())
                     + ")";
           } else {
-            message = pae.getMostSpecificCause().getMessage();
+            message = "올바르지 않은 형식입니다.";
           }
         } catch (Exception ignored) {
           // PropertyAccessException으로 unwrapping할 수 없는 오류인 경우, 기본 에러 메시지(defaultMessage)로 폴백합니다.

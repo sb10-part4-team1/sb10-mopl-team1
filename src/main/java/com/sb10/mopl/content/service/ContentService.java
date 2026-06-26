@@ -133,7 +133,7 @@ public class ContentService {
       Content lastContent = resultContents.get(resultContents.size() - 1);
       nextCursor =
           switch (request.sortBy()) {
-            case watcherCount -> String.valueOf(lastContent.getWatcherCount());
+            case watcherCount -> lastContent.getWatcherCount() + "_" + lastContent.getReviewCount();
             case createdAt -> lastContent.getCreatedAt().toString();
             case rate -> String.valueOf(lastContent.getAverageRating());
           };

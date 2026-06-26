@@ -14,11 +14,9 @@ import com.sb10.mopl.content.dto.ContentSearchRequest;
 import com.sb10.mopl.content.dto.ContentSortBy;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentType;
-import com.sb10.mopl.content.exception.ContentErrorCode;
-import com.sb10.mopl.content.exception.ContentException;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 
@@ -96,34 +94,36 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
         .exists();
   }
 
-  /** 커서 기반 페이지네이션의 핵심 Where 조건절을 생성합니다. - 이전에 받아온 마지막 데이터의 고유 ID(idAfter)가 존재할 때만 작동합니다. */
+  /**
+   * 커서 기반 페이지네이션의 핵심 Where 조건절을 생성합니다. - 이전에 받아온 마지막 데이터의 고유 ID(idAfter)와 정렬 기준값(cursor) 스냅샷이 존재할
+   * 때만 작동합니다.
+   */
   private BooleanExpression cursorCondition(ContentSearchRequest request) {
-    // 1. 이전 페이지의 마지막 아이템 ID가 없는 첫 페이지 조회인 경우 커서 조건 적용 안 함
-    if (request.idAfter() == null) {
+    // 1. 이전 페이지의 마지막 아이템 ID 또는 커서 스냅샷이 없는 첫 페이지 조회인 경우 커서 조건 적용 안 함
+    if (request.idAfter() == null || request.cursor() == null || request.cursor().isBlank()) {
       return null;
-    }
-
-    // 2. 기준점이 되는 이전 페이지의 마지막 콘텐츠 엔티티 정보를 데이터베이스에서 먼저 조회
-    Content cursorContent = em.find(Content.class, request.idAfter());
-    if (cursorContent == null) {
-      throw new ContentException(ContentErrorCode.CONTENT_NOT_FOUND, Map.of());
     }
 
     boolean isAsc = request.sortDirection() == SortDirection.ASCENDING;
     ContentSortBy sortBy = request.sortBy();
+    UUID cursorId = request.idAfter();
 
-    // 3. 각 정렬 케이스별 커서 조건식을 깔끔하게 매핑하여 반환
+    // 2. 각 정렬 케이스별로 클라이언트가 제공한 cursor(스냅샷) 문자열을 안전하게 파싱하여 바인딩
     return switch (sortBy) {
-      case watcherCount -> getPopularCursorExpression(cursorContent, isAsc);
-      case createdAt ->
-          createCursorExpression(
-              content.createdAt, cursorContent.getCreatedAt(), isAsc, cursorContent.getId());
-      case rate ->
-          createNumberCursorExpression(
-              content.averageRating,
-              cursorContent.getAverageRating(),
-              isAsc,
-              cursorContent.getId());
+      case watcherCount -> {
+        String[] parts = request.cursor().split("_");
+        long cursorWatcher = Long.parseLong(parts[0]);
+        int cursorReview = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+        yield getPopularCursorExpression(cursorWatcher, cursorReview, cursorId, isAsc);
+      }
+      case createdAt -> {
+        Instant cursorTime = Instant.parse(request.cursor());
+        yield createCursorExpression(content.createdAt, cursorTime, isAsc, cursorId);
+      }
+      case rate -> {
+        double cursorRate = Double.parseDouble(request.cursor());
+        yield createNumberCursorExpression(content.averageRating, cursorRate, isAsc, cursorId);
+      }
     };
   }
 
@@ -131,11 +131,8 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
    * 인기순(POPULAR) 정렬 기준의 3중 복합 커서 조건식을 분기 및 생성합니다. - 1순위: 시청자 수 (watcherCount) - 2순위: 리뷰 수
    * (reviewCount) - 3순위: 고유 ID (id)
    */
-  private BooleanExpression getPopularCursorExpression(Content cursorContent, boolean isAsc) {
-    long cursorWatcher = cursorContent.getWatcherCount();
-    int cursorReview = cursorContent.getReviewCount();
-    UUID cursorId = cursorContent.getId();
-
+  private BooleanExpression getPopularCursorExpression(
+      long cursorWatcher, int cursorReview, UUID cursorId, boolean isAsc) {
     if (isAsc) {
       // 인기 오름차순(ASC) : 시청자 수가 크거나, (시청자 수는 같고 리뷰가 많거나), (둘 다 같고 ID가 크거나)
       return content

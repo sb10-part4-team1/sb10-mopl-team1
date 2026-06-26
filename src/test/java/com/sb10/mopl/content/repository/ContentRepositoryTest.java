@@ -143,7 +143,7 @@ class ContentRepositoryTest {
             null,
             null,
             null,
-            String.valueOf(lastItem.getWatcherCount()),
+            lastItem.getWatcherCount() + "_" + lastItem.getReviewCount(),
             lastItem.getId(),
             2,
             SortDirection.DESCENDING,
