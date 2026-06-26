@@ -223,10 +223,9 @@ class ContentControllerTest {
         .when(contentService)
         .deleteContent(mockId);
 
-    var resultActions =
-        mockMvc.perform(delete("/api/content/" + mockId)).andExpect(status().isNotFound());
+    var resultActions = mockMvc.perform(delete("/api/content/" + mockId));
 
     // then: 204 No Content 응답 확인
-    resultActions.andExpect(status().isNotFound());
+    resultActions.andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("CT01"));
   }
 }
