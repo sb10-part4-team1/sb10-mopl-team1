@@ -87,6 +87,7 @@ public class GlobalExceptionHandler {
           PropertyAccessException pae = fieldError.unwrap(PropertyAccessException.class);
           message = pae.getMostSpecificCause().getMessage();
         } catch (Exception ignored) {
+          // PropertyAccessException으로 unwrapping할 수 없는 오류인 경우, 기본 에러 메시지(defaultMessage)로 폴백합니다.
         }
       }
 
