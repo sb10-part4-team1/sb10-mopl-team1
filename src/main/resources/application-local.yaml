@@ -26,6 +26,10 @@ spring:
 
     show-sql: true
 
+mopl:
+  jwt:
+    secret: mopl-local-only-jwt-secret-key-should-not-be-used-in-production
+
 # 로컬 개발용 특별 로깅 레벨 (DEBUG로 상세히 출력)
 logging:
   level:
