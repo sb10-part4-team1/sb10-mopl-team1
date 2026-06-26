@@ -1,8 +1,10 @@
 package com.sb10.mopl.content.service;
 
+import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.storage.ImageStorageService;
 import com.sb10.mopl.content.dto.ContentCreateRequest;
 import com.sb10.mopl.content.dto.ContentDto;
+import com.sb10.mopl.content.dto.ContentSearchRequest;
 import com.sb10.mopl.content.dto.ContentUpdateRequest;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentTag;
@@ -38,7 +40,7 @@ public class ContentService {
   private final ImageStorageService imageStorageService;
 
   @Transactional
-  public ContentDto createContent(ContentCreateRequest request, MultipartFile thumbnail) {
+  public ContentDto create(ContentCreateRequest request, MultipartFile thumbnail) {
     String thumbnailUrl = uploadThumbnailOrKeep(thumbnail, DEFAULT_THUMBNAIL_URL);
 
     Content content =
@@ -52,7 +54,7 @@ public class ContentService {
   }
 
   @Transactional
-  public ContentDto updateContent(UUID id, ContentUpdateRequest request, MultipartFile thumbnail) {
+  public ContentDto update(UUID id, ContentUpdateRequest request, MultipartFile thumbnail) {
     Content content =
         contentRepository
             .findById(id)
@@ -91,13 +93,55 @@ public class ContentService {
   }
 
   @Transactional
-  public void deleteContent(UUID id) {
+  public void delete(UUID id) {
     Content content =
         contentRepository
             .findById(id)
             .orElseThrow(
                 () -> new ContentException(ContentErrorCode.CONTENT_NOT_FOUND, Map.of("id", id)));
     contentRepository.delete(content);
+  }
+
+  public ContentDto find(UUID id) {
+    Content content =
+        contentRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ContentException(ContentErrorCode.CONTENT_NOT_FOUND, Map.of("id", id)));
+    return contentMapper.toDto(content);
+  }
+
+  public CursorPageResponse<ContentDto> findAll(ContentSearchRequest request) {
+    // 1. 데이터 조회 및 개수 카운트
+    List<Content> contents = contentRepository.findAllByCondition(request);
+    long totalCount = contentRepository.countContents(request);
+
+    // 2. 다음 페이지 존재 여부 확인
+    int limit = request.limit() != null ? request.limit() : 20;
+    boolean hasNext = contents.size() > limit;
+
+    // 3. limit 개수만큼 컨텐츠 슬라이싱
+    List<Content> resultContents = hasNext ? contents.subList(0, limit) : contents;
+
+    // 4. 컨텐츠를 매퍼를 이용해 dto응답으로 변환
+    List<ContentDto> dtos = resultContents.stream().map(contentMapper::toDto).toList();
+
+    // 5. 마지막 컨텐츠의 id값과 생성 일자를 추출
+    UUID nextIdAfter = (hasNext && !dtos.isEmpty()) ? dtos.get(dtos.size() - 1).id() : null;
+    String nextCursor =
+        (hasNext && !resultContents.isEmpty())
+            ? resultContents.get(resultContents.size() - 1).getCreatedAt().toString()
+            : null;
+
+    // 6. 페이지네이션 응답 객체 구성
+    return new CursorPageResponse<>(
+        dtos,
+        nextCursor,
+        nextIdAfter,
+        hasNext,
+        totalCount,
+        request.sortBy().name(),
+        request.sortDirection());
   }
 
   private String uploadThumbnailOrKeep(MultipartFile thumbnail, String currentThumbnailUrl) {
