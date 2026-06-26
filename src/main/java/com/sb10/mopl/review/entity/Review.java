@@ -40,44 +40,44 @@ public class Review extends BaseUpdatableEntity {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  // 리뷰 본문 (코멘트, 메시지, 바디)
+  // 리뷰 본문
   @Column(name = "content", nullable = false, columnDefinition = "TEXT")
-  private String content;
+  private String text;
 
   // 리뷰 평점
   @Column(name = "rating", nullable = false)
   private Integer rating;
 
   private static void validateCreate(
-      Content targetContent, User user, String content, Integer rating) {
+      Content targetContent, User user, String text, Integer rating) {
     DomainValidator.start()
         .check(targetContent == null, "contentId", "리뷰 대상 콘텐츠는 필수입니다.")
         .check(user == null, "userId", "리뷰 작성자는 필수입니다.")
-        .check(content == null || content.isBlank(), "content", "리뷰 내용은 필수입니다.")
+        .check(text == null || text.isBlank(), "text", "리뷰 내용은 필수입니다.")
         .check(rating == null, "rating", "평점은 필수입니다.")
         .check(rating != null && (rating < 1 || rating > 5), "rating", "평점은 1점 이상 5점 이하이어야 합니다.")
         .orThrow(details -> new ReviewException(ReviewErrorCode.INVALID_REVIEW_VALUE, details));
   }
 
-  private static void validateUpdate(String content, Integer rating) {
+  private static void validateUpdate(String text, Integer rating) {
     DomainValidator.start()
-        .check(content == null || content.isBlank(), "content", "리뷰 내용은 필수입니다.")
+        .check(text == null || text.isBlank(), "text", "리뷰 내용은 필수입니다.")
         .check(rating == null, "rating", "평점은 필수입니다.")
         .check(rating != null && (rating < 1 || rating > 5), "rating", "평점은 1점 이상 5점 이하이어야 합니다.")
         .orThrow(details -> new ReviewException(ReviewErrorCode.INVALID_REVIEW_VALUE, details));
   }
 
-  public Review(Content targetContent, User user, String content, Integer rating) {
-    validateCreate(targetContent, user, content, rating);
+  public Review(Content targetContent, User user, String text, Integer rating) {
+    validateCreate(targetContent, user, text, rating);
     this.targetContent = targetContent;
     this.user = user;
-    this.content = content;
+    this.text = text;
     this.rating = rating;
   }
 
-  public void update(String content, Integer rating) {
-    validateUpdate(content, rating);
-    this.content = content;
+  public void update(String text, Integer rating) {
+    validateUpdate(text, rating);
+    this.text = text;
     this.rating = rating;
   }
 }

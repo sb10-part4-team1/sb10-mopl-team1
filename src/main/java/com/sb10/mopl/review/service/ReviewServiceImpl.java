@@ -8,6 +8,7 @@ import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.review.dto.ReviewCreateRequest;
 import com.sb10.mopl.review.dto.ReviewDto;
+import com.sb10.mopl.review.dto.ReviewUpdateRequest;
 import com.sb10.mopl.review.entity.Review;
 import com.sb10.mopl.review.exception.ReviewErrorCode;
 import com.sb10.mopl.review.exception.ReviewException;
@@ -108,6 +109,50 @@ public class ReviewServiceImpl implements ReviewService {
 
     // 조회 결과를 커서 페이지 응답으로 변환
     return toCursorPageResponse(reviews, contentId, limit, sortBy, sortDirection);
+  }
+
+  @Override
+  @Transactional
+  public ReviewDto update(UUID reviewId, ReviewUpdateRequest request, UUID userId) {
+    // 리뷰 자체 존재 여부 검증
+    Review review =
+        reviewRepository
+            .findById(reviewId)
+            .orElseThrow(
+                () ->
+                    new ReviewException(
+                        ReviewErrorCode.REVIEW_NOT_FOUND, Map.of("reviewId", reviewId)));
+    // 리뷰 작성자 권한 검증
+    if (!review.getUser().getId().equals(userId)) {
+      throw new ReviewException(
+          ReviewErrorCode.UNAUTHORIZED_REVIEW_ACCESS,
+          Map.of("reviewId", reviewId, "userId", userId));
+    }
+    // 리뷰 업데이트
+    review.update(request.text(), request.rating());
+
+    return reviewMapper.toDto(review);
+  }
+
+  @Override
+  @Transactional
+  public void delete(UUID reviewId, UUID userId) {
+    // 리뷰 자체 존재 여부 검증
+    Review review =
+        reviewRepository
+            .findById(reviewId)
+            .orElseThrow(
+                () ->
+                    new ReviewException(
+                        ReviewErrorCode.REVIEW_NOT_FOUND, Map.of("reviewId", reviewId)));
+
+    if (!review.getUser().getId().equals(userId)) {
+      throw new ReviewException(
+          ReviewErrorCode.UNAUTHORIZED_REVIEW_ACCESS,
+          Map.of("reviewId", reviewId, "userId", userId));
+    }
+
+    reviewRepository.delete(review);
   }
 
   private void validateFindAllRequest(

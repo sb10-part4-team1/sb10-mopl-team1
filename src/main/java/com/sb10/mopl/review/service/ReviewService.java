@@ -4,6 +4,7 @@ import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.review.dto.ReviewCreateRequest;
 import com.sb10.mopl.review.dto.ReviewDto;
+import com.sb10.mopl.review.dto.ReviewUpdateRequest;
 import java.util.UUID;
 
 public interface ReviewService {
@@ -18,4 +19,8 @@ public interface ReviewService {
       Integer limit,
       String sortBy,
       SortDirection sortDirection);
+
+  ReviewDto update(UUID reviewId, ReviewUpdateRequest request, UUID userId);
+
+  void delete(UUID reviewId, UUID userId);
 }
