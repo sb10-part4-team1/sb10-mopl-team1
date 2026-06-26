@@ -19,3 +19,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none # SQL 스크립트로 제어하므로 JPA 자동 생성은 끔
+
+mopl:
+  jwt:
+    secret: mopl-test-only-jwt-secret-key-at-least-32-bytes
+    access-token-expiration: PT1H
