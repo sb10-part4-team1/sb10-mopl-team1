@@ -225,7 +225,7 @@ class ContentControllerTest {
 
     var resultActions = mockMvc.perform(delete("/api/content/" + mockId));
 
-    // then: 204 No Content 응답 확인
+    // then: 404 No Content 응답 확인
     resultActions.andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("CT01"));
   }
 }
