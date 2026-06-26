@@ -14,6 +14,7 @@ public class SseMessageRepository {
 
   private final ConcurrentLinkedDeque<UUID> eventIdQueue = new ConcurrentLinkedDeque<>();
   private final Map<UUID, SseMessage> messages = new ConcurrentHashMap<>();
+
   @Value("${sse.event-queue-capacity:100}")
   private int eventQueueCapacity;
 
@@ -28,11 +29,11 @@ public class SseMessageRepository {
 
   public List<SseMessage> findAllByEventIdAfterAndReceiverId(UUID eventId, UUID receiverId) {
     return eventIdQueue.stream()
-      .dropWhile(data -> !data.equals(eventId))
-      .skip(1)
-      .map(messages::get)
-      .filter(sseMessage -> sseMessage.isReceivable(receiverId))
-      .toList();
+        .dropWhile(data -> !data.equals(eventId))
+        .skip(1)
+        .map(messages::get)
+        .filter(sseMessage -> sseMessage.isReceivable(receiverId))
+        .toList();
   }
 
   private void makeAvailableCapacity() {

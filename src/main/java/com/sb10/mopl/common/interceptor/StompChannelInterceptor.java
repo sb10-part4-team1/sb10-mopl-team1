@@ -15,8 +15,8 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
   @Override
   public Message<?> preSend(Message<?> message, MessageChannel channel) {
-    StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message,
-      StompHeaderAccessor.class);
+    StompHeaderAccessor accessor =
+        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
     if (StompCommand.CONNECT.equals(accessor.getCommand())) {
       String sessionId = accessor.getSessionId();
@@ -30,4 +30,3 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     return message;
   }
 }
-

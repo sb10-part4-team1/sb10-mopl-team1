@@ -19,9 +19,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   @Override
   public void registerStompEndpoints(StompEndpointRegistry registry) {
     // 엔드포인트 정의
-    registry.addEndpoint("/ws")
-      .setAllowedOriginPatterns("*") // fixme: 운영 단계에서 수정 필요
-      .withSockJS(); // SockJS fallback 지원
+    registry
+        .addEndpoint("/ws")
+        .setAllowedOriginPatterns("*") // fixme: 운영 단계에서 수정 필요
+        .withSockJS(); // SockJS fallback 지원
   }
 
   @Override

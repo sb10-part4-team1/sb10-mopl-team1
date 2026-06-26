@@ -28,37 +28,41 @@ public class SseService {
   public SseEmitter connect(UUID receiverId, UUID lastEventId) {
     SseEmitter sseEmitter = new SseEmitter(timeout);
 
-    sseEmitter.onCompletion(() -> {
-      log.debug("sse on onCompletion");
-      sseEmitterRepository.remove(receiverId, sseEmitter);
-    });
-    sseEmitter.onTimeout(() -> {
-      log.debug("sse on onTimeout");
-      sseEmitterRepository.remove(receiverId, sseEmitter);
-    });
-    sseEmitter.onError((ex) -> {
-      log.debug("sse on onError");
-      sseEmitterRepository.remove(receiverId, sseEmitter);
-    });
+    sseEmitter.onCompletion(
+        () -> {
+          log.debug("sse on onCompletion");
+          sseEmitterRepository.remove(receiverId, sseEmitter);
+        });
+    sseEmitter.onTimeout(
+        () -> {
+          log.debug("sse on onTimeout");
+          sseEmitterRepository.remove(receiverId, sseEmitter);
+        });
+    sseEmitter.onError(
+        (ex) -> {
+          log.debug("sse on onError");
+          sseEmitterRepository.remove(receiverId, sseEmitter);
+        });
 
     sseEmitterRepository.save(receiverId, sseEmitter);
 
     Optional.ofNullable(lastEventId)
-      .ifPresentOrElse(
-        id -> {
-          sseMessageRepository.findAllByEventIdAfterAndReceiverId(id, receiverId)
-            .forEach(sseMessage -> {
-              try {
-                sseEmitter.send(sseMessage.toEvent());
-              } catch (IOException e) {
-                log.error(e.getMessage(), e);
-              }
+        .ifPresentOrElse(
+            id -> {
+              sseMessageRepository
+                  .findAllByEventIdAfterAndReceiverId(id, receiverId)
+                  .forEach(
+                      sseMessage -> {
+                        try {
+                          sseEmitter.send(sseMessage.toEvent());
+                        } catch (IOException e) {
+                          log.error(e.getMessage(), e);
+                        }
+                      });
+            },
+            () -> {
+              ping(sseEmitter);
             });
-        },
-        () -> {
-          ping(sseEmitter);
-        }
-      );
 
     return sseEmitter;
   }
@@ -66,47 +70,48 @@ public class SseService {
   public void send(Collection<UUID> receiverIds, String eventName, Object data) {
     SseMessage message = sseMessageRepository.save(SseMessage.create(receiverIds, eventName, data));
     Set<DataWithMediaType> event = message.toEvent();
-    sseEmitterRepository.findAllByReceiverIdsIn(receiverIds)
-      .forEach(sseEmitter -> {
-        try {
-          sseEmitter.send(event);
-        } catch (IOException e) {
-          log.error(e.getMessage(), e);
-        }
-      });
+    sseEmitterRepository
+        .findAllByReceiverIdsIn(receiverIds)
+        .forEach(
+            sseEmitter -> {
+              try {
+                sseEmitter.send(event);
+              } catch (IOException e) {
+                log.error(e.getMessage(), e);
+              }
+            });
   }
 
   public void broadcast(String eventName, Object data) {
     SseMessage message = sseMessageRepository.save(SseMessage.createBroadcast(eventName, data));
     Set<DataWithMediaType> event = message.toEvent();
-    sseEmitterRepository.findAll()
-      .forEach(sseEmitter -> {
-        try {
-          sseEmitter.send(event);
-        } catch (IOException e) {
-          log.error(e.getMessage(), e);
-        }
-      });
+    sseEmitterRepository
+        .findAll()
+        .forEach(
+            sseEmitter -> {
+              try {
+                sseEmitter.send(event);
+              } catch (IOException e) {
+                log.error(e.getMessage(), e);
+              }
+            });
   }
 
   @Scheduled(fixedDelay = 1000 * 60 * 30)
   public void cleanUp() {
-    sseEmitterRepository.findAll()
-      .stream().filter(sseEmitter -> !ping(sseEmitter))
-      .forEach(
-        sseEmitter -> sseEmitter.completeWithError(new RuntimeException("sse ping failed")));
+    sseEmitterRepository.findAll().stream()
+        .filter(sseEmitter -> !ping(sseEmitter))
+        .forEach(
+            sseEmitter -> sseEmitter.completeWithError(new RuntimeException("sse ping failed")));
   }
 
   private boolean ping(SseEmitter sseEmitter) {
     try {
-      sseEmitter.send(SseEmitter.event()
-        .name("ping")
-        .build());
+      sseEmitter.send(SseEmitter.event().name("ping").build());
       return true;
     } catch (IOException e) {
       log.error("Failed to send ping event", e);
       return false;
     }
   }
-
 }

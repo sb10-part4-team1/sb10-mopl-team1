@@ -19,15 +19,14 @@ public class SseController {
   private static final long TIMEOUT = 60L * 60L * 1000L;
 
   private final SseService sseService;
-  //  private final SseService
 
+  //  private final SseService
 
   // TODO: 추후 인증 로직 추가에 따라 수정 필요
   @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public SseEmitter subscribe(
-    //    @AuthenticationPrincipal UserDetails userDetails,
-    @RequestParam(value = "LastEventId", required = false) UUID lastEventId
-  ) {
+      //    @AuthenticationPrincipal UserDetails userDetails,
+      @RequestParam(value = "LastEventId", required = false) UUID lastEventId) {
 
     //    UUID userId = userDetails.getUserDto().id();
 

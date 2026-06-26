@@ -20,25 +20,14 @@ public class SseMessage {
   private String eventName;
   private Object eventData;
 
-  public static SseMessage create(Collection<UUID> receiverIds, String eventName,
-    Object eventData) {
+  public static SseMessage create(
+      Collection<UUID> receiverIds, String eventName, Object eventData) {
     return new SseMessage(
-      UUID.randomUUID(),
-      new HashSet<>(receiverIds),
-      false,
-      eventName,
-      eventData
-    );
+        UUID.randomUUID(), new HashSet<>(receiverIds), false, eventName, eventData);
   }
 
   public static SseMessage createBroadcast(String eventName, Object eventData) {
-    return new SseMessage(
-      UUID.randomUUID(),
-      new HashSet<>(),
-      true,
-      eventName,
-      eventData
-    );
+    return new SseMessage(UUID.randomUUID(), new HashSet<>(), true, eventName, eventData);
   }
 
   public boolean isReceivable(UUID receiverId) {
@@ -46,10 +35,6 @@ public class SseMessage {
   }
 
   public Set<DataWithMediaType> toEvent() {
-    return SseEmitter.event()
-      .id(eventId.toString())
-      .name(eventName)
-      .data(eventData)
-      .build();
+    return SseEmitter.event().id(eventId.toString()).name(eventName).data(eventData).build();
   }
 }
