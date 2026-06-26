@@ -1,10 +1,12 @@
 package com.sb10.mopl.common.exception;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.PropertyAccessException;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -85,7 +87,16 @@ public class GlobalExceptionHandler {
       if (fieldError.isBindingFailure()) {
         try {
           PropertyAccessException pae = fieldError.unwrap(PropertyAccessException.class);
-          message = pae.getMostSpecificCause().getMessage();
+          if (pae instanceof TypeMismatchException tme
+              && tme.getRequiredType() != null
+              && tme.getRequiredType().isEnum()) {
+            message =
+                "지원하지 않는 값입니다. (선택 가능한 값: "
+                    + Arrays.toString(tme.getRequiredType().getEnumConstants())
+                    + ")";
+          } else {
+            message = pae.getMostSpecificCause().getMessage();
+          }
         } catch (Exception ignored) {
           // PropertyAccessException으로 unwrapping할 수 없는 오류인 경우, 기본 에러 메시지(defaultMessage)로 폴백합니다.
         }

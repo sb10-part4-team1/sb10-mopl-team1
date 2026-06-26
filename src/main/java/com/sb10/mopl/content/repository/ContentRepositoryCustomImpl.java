@@ -14,19 +14,19 @@ import com.sb10.mopl.content.dto.ContentSearchRequest;
 import com.sb10.mopl.content.dto.ContentSortBy;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentType;
+import com.sb10.mopl.content.exception.ContentErrorCode;
+import com.sb10.mopl.content.exception.ContentException;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
 
   private final JPAQueryFactory queryFactory;
   private final EntityManager em;
-
-  public ContentRepositoryCustomImpl(EntityManager em) {
-    this.em = em;
-    this.queryFactory = new JPAQueryFactory(em);
-  }
 
   /**
    * 조건 필터링 및 정렬 기준에 부합하는 콘텐츠의 목록을 슬라이스(Slice) 단위로 조회합니다. 메인 쿼리를 직관적이고 선언적으로 배치하여 전체 구조 파악이 용이합니다.
@@ -106,7 +106,7 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
     // 2. 기준점이 되는 이전 페이지의 마지막 콘텐츠 엔티티 정보를 데이터베이스에서 먼저 조회
     Content cursorContent = em.find(Content.class, request.idAfter());
     if (cursorContent == null) {
-      return null;
+      throw new ContentException(ContentErrorCode.CONTENT_NOT_FOUND, Map.of());
     }
 
     boolean isAsc = request.sortDirection() == SortDirection.ASCENDING;
@@ -114,11 +114,11 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
 
     // 3. 각 정렬 케이스별 커서 조건식을 깔끔하게 매핑하여 반환
     return switch (sortBy) {
-      case POPULAR -> getPopularCursorExpression(cursorContent, isAsc);
-      case CREATED_AT ->
+      case watcherCount -> getPopularCursorExpression(cursorContent, isAsc);
+      case createdAt ->
           createCursorExpression(
               content.createdAt, cursorContent.getCreatedAt(), isAsc, cursorContent.getId());
-      case RATING ->
+      case rate ->
           createNumberCursorExpression(
               content.averageRating,
               cursorContent.getAverageRating(),
@@ -229,18 +229,18 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
     boolean isAsc = request.sortDirection() == SortDirection.ASCENDING;
     ContentSortBy sortBy = request.sortBy();
 
-    if (sortBy == ContentSortBy.POPULAR) {
+    if (sortBy == ContentSortBy.watcherCount) {
       return new OrderSpecifier<?>[] {
         isAsc ? content.watcherCount.asc() : content.watcherCount.desc(),
         isAsc ? content.reviewCount.asc() : content.reviewCount.desc(),
         isAsc ? content.id.asc() : content.id.desc()
       };
-    } else if (sortBy == ContentSortBy.CREATED_AT) {
+    } else if (sortBy == ContentSortBy.createdAt) {
       return new OrderSpecifier<?>[] {
         isAsc ? content.createdAt.asc() : content.createdAt.desc(),
         isAsc ? content.id.asc() : content.id.desc()
       };
-    } else if (sortBy == ContentSortBy.RATING) {
+    } else if (sortBy == ContentSortBy.rate) {
       return new OrderSpecifier<?>[] {
         isAsc ? content.averageRating.asc() : content.averageRating.desc(),
         isAsc ? content.id.asc() : content.id.desc()

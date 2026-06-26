@@ -87,7 +87,7 @@ class ContentRepositoryTest {
             null,
             10,
             SortDirection.DESCENDING,
-            ContentSortBy.CREATED_AT);
+            ContentSortBy.createdAt);
     List<Content> resType = contentRepository.findAllByCondition(reqType);
     assertThat(resType).hasSize(2);
     assertThat(resType).extracting(Content::getTitle).containsExactlyInAnyOrder("인셉션", "인터스텔라");
@@ -96,7 +96,7 @@ class ContentRepositoryTest {
     // 2) 필터 테스트: keywordLike = "영화"
     ContentSearchRequest reqKeyword =
         new ContentSearchRequest(
-            null, "영화", null, null, null, 10, SortDirection.DESCENDING, ContentSortBy.CREATED_AT);
+            null, "영화", null, null, null, 10, SortDirection.DESCENDING, ContentSortBy.createdAt);
     List<Content> resKeyword = contentRepository.findAllByCondition(reqKeyword);
     assertThat(resKeyword).hasSize(2);
     assertThat(resKeyword).extracting(Content::getTitle).containsExactlyInAnyOrder("인셉션", "인터스텔라");
@@ -112,7 +112,7 @@ class ContentRepositoryTest {
             null,
             10,
             SortDirection.DESCENDING,
-            ContentSortBy.CREATED_AT);
+            ContentSortBy.createdAt);
     List<Content> resTags = contentRepository.findAllByCondition(reqTags);
     assertThat(resTags).hasSize(2);
     assertThat(resTags).extracting(Content::getTitle).containsExactlyInAnyOrder("인터스텔라", "시그널");
@@ -123,7 +123,7 @@ class ContentRepositoryTest {
     // limit = 2로 조회 시 다음 페이지 여부를 알기 위해 3개 조회
     ContentSearchRequest reqPopularPage1 =
         new ContentSearchRequest(
-            null, null, null, null, null, 2, SortDirection.DESCENDING, ContentSortBy.POPULAR);
+            null, null, null, null, null, 2, SortDirection.DESCENDING, ContentSortBy.watcherCount);
     List<Content> resPopularPage1 = contentRepository.findAllByCondition(reqPopularPage1);
     assertThat(resPopularPage1).hasSize(3);
     assertThat(resPopularPage1.get(0).getTitle()).isEqualTo("인터스텔라");
@@ -140,11 +140,11 @@ class ContentRepositoryTest {
             null,
             null,
             null,
-            lastItem.getCreatedAt().toString(),
+            String.valueOf(lastItem.getWatcherCount()),
             lastItem.getId(),
             2,
             SortDirection.DESCENDING,
-            ContentSortBy.POPULAR);
+            ContentSortBy.watcherCount);
     List<Content> resPopularPage2 = contentRepository.findAllByCondition(reqPopularPage2);
     assertThat(resPopularPage2).hasSize(1);
     assertThat(resPopularPage2.get(0).getTitle()).isEqualTo("시그널");
@@ -170,7 +170,7 @@ class ContentRepositoryTest {
     // 첫 페이지 조회 (limit = 2) -> 오름차순이므로 A -> B -> C 순서. A, B가 첫 페이지
     ContentSearchRequest reqPage1 =
         new ContentSearchRequest(
-            null, null, null, null, null, 2, SortDirection.ASCENDING, ContentSortBy.CREATED_AT);
+            null, null, null, null, null, 2, SortDirection.ASCENDING, ContentSortBy.createdAt);
     List<Content> resPage1 = contentRepository.findAllByCondition(reqPage1);
     assertThat(resPage1).hasSize(3); // hasNext를 위해 3개 로드
     assertThat(resPage1.get(0).getTitle()).isEqualTo("인셉션");
@@ -189,7 +189,7 @@ class ContentRepositoryTest {
             lastItem.getId(),
             2,
             SortDirection.ASCENDING,
-            ContentSortBy.CREATED_AT);
+            ContentSortBy.createdAt);
     List<Content> resPage2 = contentRepository.findAllByCondition(reqPage2);
     assertThat(resPage2).hasSize(1);
     assertThat(resPage2.get(0).getTitle()).isEqualTo("시그널");
@@ -218,7 +218,7 @@ class ContentRepositoryTest {
     // 첫 페이지 조회 (limit = 2) -> 내림차순 정렬: C(4.8) -> A(4.5) -> B(4.0) 순서. C, A가 첫 페이지
     ContentSearchRequest reqPage1 =
         new ContentSearchRequest(
-            null, null, null, null, null, 2, SortDirection.DESCENDING, ContentSortBy.RATING);
+            null, null, null, null, null, 2, SortDirection.DESCENDING, ContentSortBy.rate);
     List<Content> resPage1 = contentRepository.findAllByCondition(reqPage1);
     assertThat(resPage1).hasSize(3); // hasNext를 위해 3개 로드
     assertThat(resPage1.get(0).getTitle()).isEqualTo("시그널");
@@ -237,7 +237,7 @@ class ContentRepositoryTest {
             lastItem.getId(),
             2,
             SortDirection.DESCENDING,
-            ContentSortBy.RATING);
+            ContentSortBy.rate);
     List<Content> resPage2 = contentRepository.findAllByCondition(reqPage2);
     assertThat(resPage2).hasSize(1);
     assertThat(resPage2.get(0).getTitle()).isEqualTo("인터스텔라");

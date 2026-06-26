@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sb10.mopl.common.exception.GlobalExceptionHandler;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
+import com.sb10.mopl.common.pagination.SortDirectionConverter;
 import com.sb10.mopl.content.dto.ContentCreateRequest;
 import com.sb10.mopl.content.dto.ContentDto;
 import com.sb10.mopl.content.dto.ContentUpdateRequest;
@@ -43,7 +44,7 @@ import org.springframework.test.web.servlet.MockMvc;
       SecurityAutoConfiguration.class,
       SecurityFilterAutoConfiguration.class
     })
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SortDirectionConverter.class})
 class ContentControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -277,7 +278,7 @@ class ContentControllerTest {
             mockId, "MOVIE", "인셉션", "SF 영화", "/uploads/test.jpg", List.of("SF"), 0.0, 0, 0L);
     CursorPageResponse<ContentDto> mockSlice =
         new CursorPageResponse<>(
-            List.of(mockResponse), null, null, false, 1L, "CREATED_AT", SortDirection.DESCENDING);
+            List.of(mockResponse), null, null, false, 1L, "createdAt", SortDirection.DESCENDING);
 
     when(contentService.findAll(any())).thenReturn(mockSlice);
 
@@ -285,7 +286,7 @@ class ContentControllerTest {
     var resultActions =
         mockMvc.perform(
             get("/api/content")
-                .param("sortBy", "CREATED_AT")
+                .param("sortBy", "createdAt")
                 .param("limit", "10")
                 .param("sortDirection", "DESC"));
 
@@ -305,5 +306,41 @@ class ContentControllerTest {
 
     // then: 400 Bad Request 확인
     resultActions.andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("SYS01"));
+  }
+
+  @Test
+  @DisplayName("목록 조회 요청 시 정렬 기준(sortBy)에 잘못된 값이 입력되면 400 Bad Request와 상세 에러 메시지를 반환한다")
+  void findAll_returnBadRequest_whenSortByIsInvalid() throws Exception {
+    // when: API 호출 (sortBy 파라미터가 유효하지 않은 값)
+    var resultActions =
+        mockMvc.perform(get("/api/content").param("sortBy", "UNKNOWN").param("limit", "10"));
+
+    // then: 400 Bad Request 및 details.sortBy 에러 메시지 검증
+    resultActions
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"))
+        .andExpect(
+            jsonPath("$.details.sortBy")
+                .value("지원하지 않는 값입니다. (선택 가능한 값: [watcherCount, createdAt, rate])"));
+  }
+
+  @Test
+  @DisplayName("목록 조회 요청 시 정렬 방향(sortDirection)에 잘못된 값이 입력되면 400 Bad Request와 상세 에러 메시지를 반환한다")
+  void findAll_returnBadRequest_whenSortDirectionIsInvalid() throws Exception {
+    // when: API 호출 (sortDirection 파라미터가 유효하지 않은 값)
+    var resultActions =
+        mockMvc.perform(
+            get("/api/content")
+                .param("sortBy", "createdAt")
+                .param("limit", "10")
+                .param("sortDirection", "DOWN"));
+
+    // then: 400 Bad Request 및 details.sortDirection 에러 메시지 검증
+    resultActions
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"))
+        .andExpect(
+            jsonPath("$.details.sortDirection")
+                .value("지원하지 않는 값입니다. (선택 가능한 값: [ASCENDING, DESCENDING])"));
   }
 }

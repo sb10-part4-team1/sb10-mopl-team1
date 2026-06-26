@@ -126,12 +126,18 @@ public class ContentService {
     // 4. 컨텐츠를 매퍼를 이용해 dto응답으로 변환
     List<ContentDto> dtos = resultContents.stream().map(contentMapper::toDto).toList();
 
-    // 5. 마지막 컨텐츠의 id값과 생성 일자를 추출
+    // 5. 마지막 컨텐츠의 id값과 정렬 기준에 맞는 커서 값을 추출
     UUID nextIdAfter = (hasNext && !dtos.isEmpty()) ? dtos.get(dtos.size() - 1).id() : null;
-    String nextCursor =
-        (hasNext && !resultContents.isEmpty())
-            ? resultContents.get(resultContents.size() - 1).getCreatedAt().toString()
-            : null;
+    String nextCursor = null;
+    if (hasNext && !resultContents.isEmpty()) {
+      Content lastContent = resultContents.get(resultContents.size() - 1);
+      nextCursor =
+          switch (request.sortBy()) {
+            case watcherCount -> String.valueOf(lastContent.getWatcherCount());
+            case createdAt -> lastContent.getCreatedAt().toString();
+            case rate -> String.valueOf(lastContent.getAverageRating());
+          };
+    }
 
     // 6. 페이지네이션 응답 객체 구성
     return new CursorPageResponse<>(

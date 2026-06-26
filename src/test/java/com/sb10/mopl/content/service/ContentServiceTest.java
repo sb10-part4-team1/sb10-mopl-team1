@@ -404,7 +404,7 @@ class ContentServiceTest {
             null,
             10,
             SortDirection.DESCENDING,
-            ContentSortBy.CREATED_AT);
+            ContentSortBy.createdAt);
     Content content1 = Content.create("인셉션", ContentType.MOVIE, "SF 영화", "/uploads/test.jpg");
     Content content2 = Content.create("인셉션 2", ContentType.MOVIE, "SF 영화 2", "/uploads/test2.jpg");
     when(contentRepository.findAllByCondition(request)).thenReturn(List.of(content1, content2));
@@ -446,7 +446,7 @@ class ContentServiceTest {
             null,
             2,
             SortDirection.DESCENDING,
-            ContentSortBy.CREATED_AT);
+            ContentSortBy.createdAt);
 
     when(contentRepository.findAllByCondition(request))
         .thenReturn(List.of(content1, content2, content3));
