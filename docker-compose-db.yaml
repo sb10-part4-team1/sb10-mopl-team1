@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mopl-db
+    ports:
+      - "15432:5432" # 외부 접속용 포트 매핑 (로컬 DB 충돌 방지를 위해 호스트 포트를 15432로 우회)
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mopl-postgres-data:/var/lib/postgresql/data
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
+    networks:
+      - mopl-network
+
+volumes:
+  mopl-postgres-data:
+
+networks:
+  mopl-network:
+    driver: bridge
