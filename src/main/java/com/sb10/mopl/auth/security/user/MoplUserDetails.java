@@ -26,7 +26,7 @@ public class MoplUserDetails implements UserDetails {
     this.createdAt = user.getCreatedAt();
     this.email = user.getEmail();
     this.name = user.getName();
-    this.encodedPassword = user.getEncodedPassword();
+    this.encodedPassword = user.passwordHash();
     this.profileImageUrl = user.getProfileImageUrl();
     this.role = user.getRole();
     this.locked = user.isLocked();

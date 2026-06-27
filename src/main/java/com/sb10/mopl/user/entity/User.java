@@ -66,7 +66,7 @@ public class User extends BaseUpdatableEntity {
     return new User(name, email, password, profileImageUrl, UserRole.ADMIN);
   }
 
-  public String getEncodedPassword() {
+  public String passwordHash() {
     return password;
   }
 
