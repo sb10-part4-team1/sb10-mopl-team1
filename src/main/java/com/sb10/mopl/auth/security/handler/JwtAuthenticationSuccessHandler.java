@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -34,6 +35,9 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
     response.setStatus(HttpServletResponse.SC_OK);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+    response.setHeader(HttpHeaders.PRAGMA, "no-cache");
+    response.setDateHeader(HttpHeaders.EXPIRES, 0);
 
     JwtDto jwtDto = new JwtDto(userDto, jwtProvider.createAccessToken(userDetails));
     objectMapper.writeValue(response.getWriter(), jwtDto);
