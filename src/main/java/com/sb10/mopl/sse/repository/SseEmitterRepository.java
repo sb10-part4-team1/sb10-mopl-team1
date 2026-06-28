@@ -12,41 +12,29 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Repository
 public class SseEmitterRepository {
 
-  private final Map<UUID, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+  private final Map<UUID, List<SseEmitter>> emitterMap = new ConcurrentHashMap<>();
 
-  public SseEmitter save(UUID receiverId, SseEmitter emitter) {
-    emitters.compute(
-        receiverId,
-        (key, emitters) -> {
-          if (emitters == null) {
-            return new CopyOnWriteArrayList<>(List.of(emitter));
-          } else {
-            emitters.add(emitter);
-            return emitters;
-          }
-        });
-
-    return emitter;
+  public void add(UUID receiverId, SseEmitter emitter) {
+    emitterMap.computeIfAbsent(receiverId, k -> new CopyOnWriteArrayList<>()).add(emitter);
   }
 
   public List<SseEmitter> findAllByReceiverIdsIn(Collection<UUID> receiverIds) {
-    return emitters.entrySet().stream()
-        .filter(entry -> receiverIds.contains(entry.getKey()))
-        .map(Map.Entry::getValue)
-        .flatMap(Collection::stream)
-        .toList();
+    return receiverIds.stream()
+      .map(id -> emitterMap.getOrDefault(id, List.of()))
+      .flatMap(Collection::stream)
+      .toList();
   }
 
   public List<SseEmitter> findAll() {
-    return emitters.values().stream().flatMap(Collection::stream).toList();
+    return emitterMap.values().stream().flatMap(Collection::stream).toList();
   }
 
   public void remove(UUID receiverId, SseEmitter sseEmitter) {
-    emitters.computeIfPresent(
-        receiverId,
-        (key, emitters) -> {
-          emitters.remove(sseEmitter);
-          return emitters.isEmpty() ? null : emitters;
-        });
+    emitterMap.computeIfPresent(
+      receiverId,
+      (key, emitters) -> {
+        emitters.remove(sseEmitter);
+        return emitters.isEmpty() ? null : emitters;
+      });
   }
 }

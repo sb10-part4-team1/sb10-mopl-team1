@@ -44,7 +44,7 @@ public class SseService {
         sseEmitterRepository.remove(receiverId, sseEmitter);
       });
 
-    sseEmitterRepository.save(receiverId, sseEmitter);
+    sseEmitterRepository.add(receiverId, sseEmitter);
 
     Optional.ofNullable(lastEventId)
       .ifPresentOrElse(
