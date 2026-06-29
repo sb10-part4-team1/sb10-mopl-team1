@@ -20,10 +20,10 @@ public class SseEmitterRepository {
 
   public List<SseEmitter> findAllByReceiverIdsIn(Collection<UUID> receiverIds) {
     return receiverIds.stream()
-      .map(emitterMap::get)
-      .filter(java.util.Objects::nonNull)
-      .flatMap(Collection::stream)
-      .toList();
+        .map(emitterMap::get)
+        .filter(java.util.Objects::nonNull)
+        .flatMap(Collection::stream)
+        .toList();
   }
 
   public List<SseEmitter> findAll() {
@@ -32,10 +32,10 @@ public class SseEmitterRepository {
 
   public void remove(UUID receiverId, SseEmitter sseEmitter) {
     emitterMap.computeIfPresent(
-      receiverId,
-      (key, emitters) -> {
-        emitters.remove(sseEmitter);
-        return emitters.isEmpty() ? null : emitters;
-      });
+        receiverId,
+        (key, emitters) -> {
+          emitters.remove(sseEmitter);
+          return emitters.isEmpty() ? null : emitters;
+        });
   }
 }
