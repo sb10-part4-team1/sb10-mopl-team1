@@ -109,6 +109,11 @@ class EmailPasswordAuthenticationFilterTest {
             () -> filter.attemptAuthentication(request, new MockHttpServletResponse()));
 
     assertTrue(exception.getDetails().get("username").toString().contains("; "));
+    String message = exception.getDetails().get("username").toString();
+    assertAll(
+        () -> assertTrue(message.contains("first")),
+        () -> assertTrue(message.contains("second")),
+        () -> assertTrue(message.contains("; ")));
   }
 
   @Test
