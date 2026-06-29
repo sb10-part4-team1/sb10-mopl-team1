@@ -27,10 +27,17 @@ import com.sb10.mopl.review.repository.ReviewRepository;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,12 +62,26 @@ class ReviewServiceImplTest {
 
   @InjectMocks private ReviewServiceImpl reviewService;
 
+  private static ValidatorFactory validatorFactory;
+  private static Validator validator;
+
   private UUID contentId;
   private UUID userId;
   private UUID reviewId;
   private Content content;
   private User user;
   private Review review;
+
+  @BeforeAll
+  static void setUpValidator() {
+    validatorFactory = Validation.buildDefaultValidatorFactory();
+    validator = validatorFactory.getValidator();
+  }
+
+  @AfterAll
+  static void tearDownValidator() {
+    validatorFactory.close();
+  }
 
   @BeforeEach
   void setUp() {
@@ -164,6 +185,62 @@ class ReviewServiceImplTest {
         .isInstanceOf(ReviewException.class)
         .extracting("errorCode")
         .isEqualTo(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
+  }
+
+  @Test
+  @DisplayName("리뷰 - 생성 실패 - 평점이 1점 미만")
+  void createRequest_fail_ratingLessThanMin() {
+    // given
+    ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋은 콘텐츠입니다.", 0);
+
+    // when
+    Set<ConstraintViolation<ReviewCreateRequest>> violations = validator.validate(request);
+
+    // then
+    assertThat(violations)
+        .anyMatch(violation -> violation.getPropertyPath().toString().equals("rating"));
+  }
+
+  @Test
+  @DisplayName("리뷰 - 생성 실패 - 평점이 5점 초과")
+  void createRequest_fail_ratingGreaterThanMax() {
+    // given
+    ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋은 콘텐츠입니다.", 6);
+
+    // when
+    Set<ConstraintViolation<ReviewCreateRequest>> violations = validator.validate(request);
+
+    // then
+    assertThat(violations)
+        .anyMatch(violation -> violation.getPropertyPath().toString().equals("rating"));
+  }
+
+  @Test
+  @DisplayName("리뷰 - 생성 실패 - 의견이 비어 있음")
+  void createRequest_fail_blankText() {
+    // given
+    ReviewCreateRequest request = new ReviewCreateRequest(contentId, " ", 5);
+
+    // when
+    Set<ConstraintViolation<ReviewCreateRequest>> violations = validator.validate(request);
+
+    // then
+    assertThat(violations)
+        .anyMatch(violation -> violation.getPropertyPath().toString().equals("text"));
+  }
+
+  @Test
+  @DisplayName("리뷰 - 수정 실패 - 의견이 비어 있음")
+  void updateRequest_fail_blankText() {
+    // given
+    ReviewUpdateRequest request = new ReviewUpdateRequest(" ", 5);
+
+    // when
+    Set<ConstraintViolation<ReviewUpdateRequest>> violations = validator.validate(request);
+
+    // then
+    assertThat(violations)
+        .anyMatch(violation -> violation.getPropertyPath().toString().equals("text"));
   }
 
   @Test
