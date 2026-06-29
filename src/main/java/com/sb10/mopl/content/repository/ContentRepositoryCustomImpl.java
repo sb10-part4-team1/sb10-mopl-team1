@@ -117,8 +117,11 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
       return switch (sortBy) {
         case watcherCount -> {
           String[] parts = request.cursor().split("_");
+          if (parts.length != 2) {
+            throw new NumberFormatException("인기순 커서 포맷이 올바르지 않습니다.");
+          }
           long cursorWatcher = Long.parseLong(parts[0]);
-          int cursorReview = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+          int cursorReview = Integer.parseInt(parts[1]);
           yield getPopularCursorExpression(cursorWatcher, cursorReview, cursorId, isAsc);
         }
         case createdAt -> {
