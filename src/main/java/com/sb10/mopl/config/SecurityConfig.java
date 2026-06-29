@@ -28,6 +28,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -79,7 +80,8 @@ public class SecurityConfig {
       HttpSecurity http,
       JwtAuthenticationFilter jwtAuthenticationFilter,
       EmailPasswordAuthenticationFilter emailPasswordAuthenticationFilter,
-      AuthenticationEntryPoint authenticationEntryPoint)
+      AuthenticationEntryPoint authenticationEntryPoint,
+      AccessDeniedHandler accessDeniedHandler)
       throws Exception {
     // 이번 PR 범위에서는 CSRF 발급/검증을 아직 구현하지 않음. 추후 구현 예정
     http.csrf(AbstractHttpConfigurer::disable)
@@ -107,7 +109,11 @@ public class SecurityConfig {
                     .permitAll())
         .exceptionHandling(
             exceptionHandling ->
-                exceptionHandling.authenticationEntryPoint(authenticationEntryPoint))
+                exceptionHandling
+                    // 인증 정보가 없거나 유효하지 않은 요청은 401 응답으로 처리
+                    .authenticationEntryPoint(authenticationEntryPoint)
+                    // 인증은 되었지만 필요한 권한이 부족한 요청은 403 응답으로 처리
+                    .accessDeniedHandler(accessDeniedHandler))
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAt(emailPasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
