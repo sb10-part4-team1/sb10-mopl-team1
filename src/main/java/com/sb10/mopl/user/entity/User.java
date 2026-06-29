@@ -66,6 +66,10 @@ public class User extends BaseUpdatableEntity {
     return new User(name, email, password, profileImageUrl, UserRole.ADMIN);
   }
 
+  public String passwordHash() {
+    return password;
+  }
+
   public void changePassword(String password) {
     this.password = password;
   }
