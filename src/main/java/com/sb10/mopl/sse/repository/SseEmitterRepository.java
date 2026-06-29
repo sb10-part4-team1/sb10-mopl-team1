@@ -20,7 +20,8 @@ public class SseEmitterRepository {
 
   public List<SseEmitter> findAllByReceiverIdsIn(Collection<UUID> receiverIds) {
     return receiverIds.stream()
-      .map(id -> emitterMap.getOrDefault(id, List.of()))
+      .map(emitterMap::get)
+      .filter(java.util.Objects::nonNull)
       .flatMap(Collection::stream)
       .toList();
   }
