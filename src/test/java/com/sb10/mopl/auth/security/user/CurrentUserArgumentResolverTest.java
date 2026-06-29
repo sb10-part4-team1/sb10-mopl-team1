@@ -31,11 +31,13 @@ class CurrentUserArgumentResolverTest {
   }
 
   @Test
-  @DisplayName("현재 사용자 애너테이션이 붙은 인증 사용자 파라미터를 지원한다")
+  @DisplayName("현재 사용자 애너테이션이 붙은 인증 사용자 파라미터만 지원한다")
   void supportsParameter_success_whenCurrentUserAuthenticatedUser() throws Exception {
     assertTrue(
         resolver.supportsParameter(parameter("requiredCurrentUser", AuthenticatedUser.class)));
     assertFalse(resolver.supportsParameter(parameter("unsupportedType", String.class)));
+    assertFalse(
+        resolver.supportsParameter(parameter("plainAuthenticatedUser", AuthenticatedUser.class)));
   }
 
   @Test
@@ -73,6 +75,25 @@ class CurrentUserArgumentResolverTest {
   @Test
   @DisplayName("필수 현재 사용자는 인증 정보가 없으면 인증 예외를 던진다")
   void resolveArgument_fail_whenAuthenticationIsMissing() throws Exception {
+    MoplException exception =
+        assertThrows(
+            MoplException.class,
+            () ->
+                resolver.resolveArgument(
+                    parameter("requiredCurrentUser", AuthenticatedUser.class), null, null, null));
+
+    assertEquals(AuthErrorCode.AUTHENTICATION_FAILED, exception.getErrorCode());
+    assertEquals("Authentication is required.", exception.getDetails().get("message"));
+  }
+
+  @Test
+  @DisplayName("인증 객체가 있지만 인증되지 않은 상태이면 인증 예외를 던진다")
+  void resolveArgument_fail_whenAuthenticationIsNotAuthenticated() throws Exception {
+    AuthenticatedUser currentUser =
+        new AuthenticatedUser(UUID.randomUUID(), "current-user@example.com", UserRole.USER);
+    SecurityContextHolder.getContext()
+        .setAuthentication(UsernamePasswordAuthenticationToken.unauthenticated(currentUser, null));
+
     MoplException exception =
         assertThrows(
             MoplException.class,
@@ -130,5 +151,7 @@ class CurrentUserArgumentResolverTest {
     void optionalCurrentUser(@CurrentUser(required = false) AuthenticatedUser currentUser) {}
 
     void unsupportedType(@CurrentUser String currentUser) {}
+
+    void plainAuthenticatedUser(AuthenticatedUser currentUser) {}
   }
 }
