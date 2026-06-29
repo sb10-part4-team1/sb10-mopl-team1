@@ -79,6 +79,29 @@ class AuthorizationPolicyIntegrationTest {
   }
 
   @Test
+  @DisplayName("일반 사용자는 권한 변경 API 호출 시 403을 받는다")
+  void rolePatch_returnsForbidden_whenUserRequestsAdminRoleEndpoint() throws Exception {
+    String accessToken = accessToken(saveUser(UserRole.USER, "user-role@example.com"));
+    UUID userId = UUID.randomUUID();
+
+    mockMvc
+        .perform(
+            patch("/api/users/{userId}/role", userId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("SYS04"));
+  }
+
+  @Test
+  @DisplayName("비로그인 사용자는 계정 잠금 API 호출 시 401을 받는다")
+  void lockedPatch_returnsUnauthorized_whenAnonymousUserRequestsLockedEndpoint() throws Exception {
+    mockMvc
+        .perform(patch("/api/users/{userId}/locked", UUID.randomUUID()))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("AUTH01"));
+  }
+
+  @Test
   @DisplayName("관리자는 사용자 목록 조회, 권한 변경, 계정 잠금 API에 접근할 수 있다")
   void adminApi_returnsOk_whenAdminRequestsUserManagementEndpoints() throws Exception {
     String accessToken = accessToken(saveUser(UserRole.ADMIN, "admin@example.com"));
