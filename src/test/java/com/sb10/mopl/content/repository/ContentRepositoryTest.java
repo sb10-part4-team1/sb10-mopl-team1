@@ -1,6 +1,7 @@
 package com.sb10.mopl.content.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.config.JpaAuditingConfig;
@@ -11,6 +12,8 @@ import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentTag;
 import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.content.entity.Tag;
+import com.sb10.mopl.content.exception.ContentErrorCode;
+import com.sb10.mopl.content.exception.ContentException;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
@@ -247,5 +250,26 @@ class ContentRepositoryTest {
     List<Content> resPage2 = contentRepository.findAllByCondition(reqPage2);
     assertThat(resPage2).hasSize(1);
     assertThat(resPage2.get(0).getTitle()).isEqualTo("인터스텔라");
+  }
+
+  @Test
+  @DisplayName("목록 조회 시 조작/손상된 cursor 입력 시 ContentException(INVALID_CURSOR_VALUE)이 발생한다")
+  void findAllByCondition_throwContentException_whenCursorIsMalformed() {
+    // given: 비정상적으로 조작된 cursor를 가진 요청 객체 구성 (인기 정렬에서 숫자가 아닌 문자열 "invalid" 전달)
+    ContentSearchRequest request =
+        new ContentSearchRequest(
+            null,
+            null,
+            null,
+            "invalid_cursor",
+            java.util.UUID.randomUUID(),
+            10,
+            SortDirection.DESCENDING,
+            ContentSortBy.watcherCount);
+
+    // when & then: 리포지토리 조회 실행 시 ContentException 예외가 발생하는지 검증
+    assertThatThrownBy(() -> contentRepository.findAllByCondition(request))
+        .isInstanceOf(ContentException.class)
+        .hasFieldOrPropertyWithValue("errorCode", ContentErrorCode.INVALID_CURSOR_VALUE);
   }
 }
