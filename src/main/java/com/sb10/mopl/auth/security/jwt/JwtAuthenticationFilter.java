@@ -117,7 +117,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     return UsernamePasswordAuthenticationToken.authenticated(
         authenticatedUser,
         null,
-        List.of(new SimpleGrantedAuthority("ROLE_" + authenticatedUser.roleName())));
+        List.of(new SimpleGrantedAuthority(authenticatedUser.authorityName())));
   }
 
   private void writeAuthenticationFailure(HttpServletResponse response, String message)
