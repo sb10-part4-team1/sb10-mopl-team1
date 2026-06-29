@@ -11,13 +11,13 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ReviewMapper {
 
-  @Mapping(source = "targetContent", target = "targetContent")
-  Review toEntity(ReviewCreateRequest request, Content targetContent, User user);
+  default Review toEntity(ReviewCreateRequest request, Content targetContent, User user) {
+    return new Review(targetContent, user, request.text(), request.rating());
+  }
 
   @Mapping(source = "targetContent.id", target = "contentId")
   @Mapping(source = "user.id", target = "author.userId")
   @Mapping(source = "user.name", target = "author.name")
   @Mapping(source = "user.profileImageUrl", target = "author.profileImageUrl")
-  @Mapping(source = "content", target = "text")
   ReviewDto toDto(Review review);
 }
