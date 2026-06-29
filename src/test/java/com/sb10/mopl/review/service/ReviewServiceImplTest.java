@@ -230,6 +230,20 @@ class ReviewServiceImplTest {
   }
 
   @Test
+  @DisplayName("리뷰 - 수정 실패 - 평점이 1점 미만")
+  void updateRequest_fail_ratingLessThanMin() {
+    // given
+    ReviewUpdateRequest request = new ReviewUpdateRequest("수정된 리뷰", 0);
+
+    // when
+    Set<ConstraintViolation<ReviewUpdateRequest>> violations = validator.validate(request);
+
+    // then
+    assertThat(violations)
+        .anyMatch(violation -> violation.getPropertyPath().toString().equals("rating"));
+  }
+
+  @Test
   @DisplayName("리뷰 - 수정 실패 - 의견이 비어 있음")
   void updateRequest_fail_blankText() {
     // given
