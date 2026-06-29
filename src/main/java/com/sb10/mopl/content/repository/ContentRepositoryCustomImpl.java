@@ -14,9 +14,13 @@ import com.sb10.mopl.content.dto.ContentSearchRequest;
 import com.sb10.mopl.content.dto.ContentSortBy;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentType;
+import com.sb10.mopl.content.exception.ContentErrorCode;
+import com.sb10.mopl.content.exception.ContentException;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 
@@ -108,29 +112,31 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
     ContentSortBy sortBy = request.sortBy();
     UUID cursorId = request.idAfter();
 
-    // 2. 각 정렬 케이스별로 클라이언트가 제공한 cursor(스냅샷) 문자열을 안전하게 파싱하여 바인딩
-    return switch (sortBy) {
-      case watcherCount -> {
-        String[] parts = request.cursor().split("_");
-        long cursorWatcher = Long.parseLong(parts[0]);
-        int cursorReview = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
-        yield getPopularCursorExpression(cursorWatcher, cursorReview, cursorId, isAsc);
-      }
-      case createdAt -> {
-        Instant cursorTime = Instant.parse(request.cursor());
-        yield createCursorExpression(content.createdAt, cursorTime, isAsc, cursorId);
-      }
-      case rate -> {
-        double cursorRate = Double.parseDouble(request.cursor());
-        yield createNumberCursorExpression(content.averageRating, cursorRate, isAsc, cursorId);
-      }
-    };
+    // 2. 각 정렬 케이스별로 클라이언트가 제공한 cursor(스냅샷) 문자열을 파싱하여 바인딩
+    try {
+      return switch (sortBy) {
+        case watcherCount -> {
+          String[] parts = request.cursor().split("_");
+          long cursorWatcher = Long.parseLong(parts[0]);
+          int cursorReview = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+          yield getPopularCursorExpression(cursorWatcher, cursorReview, cursorId, isAsc);
+        }
+        case createdAt -> {
+          Instant cursorTime = Instant.parse(request.cursor());
+          yield createCursorExpression(content.createdAt, cursorTime, isAsc, cursorId);
+        }
+        case rate -> {
+          double cursorRate = Double.parseDouble(request.cursor());
+          yield createNumberCursorExpression(content.averageRating, cursorRate, isAsc, cursorId);
+        }
+      };
+    } catch (NumberFormatException | DateTimeParseException | ArrayIndexOutOfBoundsException e) {
+      throw new ContentException(
+          ContentErrorCode.INVALID_CURSOR_VALUE, Map.of("cursor", request.cursor()), e);
+    }
   }
 
-  /**
-   * 인기순(POPULAR) 정렬 기준의 3중 복합 커서 조건식을 분기 및 생성합니다. - 1순위: 시청자 수 (watcherCount) - 2순위: 리뷰 수
-   * (reviewCount) - 3순위: 고유 ID (id)
-   */
+  /** 인기순(POPULAR) 정렬 기준의 3중 복합 커서 조건식을 분기 및 생성합니다. - 1순위: 시청자 수 - 2순위: 리뷰 수 - 3순위: 고유 ID (id) */
   private BooleanExpression getPopularCursorExpression(
       long cursorWatcher, int cursorReview, UUID cursorId, boolean isAsc) {
     if (isAsc) {
@@ -164,16 +170,7 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
     }
   }
 
-  /**
-   * 일반 비교형 컬럼(예: 날짜인 createdAt)을 기준으로 복합 커서 조건식을 생성하는 제네릭 헬퍼 메서드입니다.
-   *
-   * @param path 정렬 기준이 되는 Querydsl의 컬럼 경로 (예: content.createdAt)
-   * @param cursorVal 커서 엔티티가 가진 해당 컬럼의 실제 값 (예: cursorContent.getCreatedAt())
-   * @param isAsc 오름차순 여부
-   * @param cursorId 커서 엔티티의 고유 ID (UUID)
-   * @param <T> Comparable을 구현한 비교 가능한 타입 (Instant 등)
-   * @return Querydsl Where 절에 들어갈 BooleanExpression 조건식
-   */
+  // 일반 비교형 컬럼(예: 날짜인 createdAt)을 기준으로 복합 커서 조건식을 생성하는 제네릭 헬퍼 메서드입니다.
   private <T extends Comparable<?>> BooleanExpression createCursorExpression(
       ComparableExpression<T> path, T cursorVal, boolean isAsc, UUID cursorId) {
     if (isAsc) {
@@ -189,17 +186,7 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
     }
   }
 
-  /**
-   * 숫자형 컬럼(예: 평점인 averageRating 등)을 기준으로 복합 커서 조건식을 생성하는 제네릭 헬퍼 메서드입니다. Querydsl의 타입 계층상
-   * 숫자(Number)와 일반 비교형(Comparable)의 gt/lt 구조가 달라 메서드 오버로딩으로 분리했습니다.
-   *
-   * @param path 정렬 기준이 되는 Querydsl의 숫자 컬럼 경로 (예: content.averageRating)
-   * @param cursorVal 커서 엔티티가 가진 해당 컬럼의 실제 값 (예: cursorContent.getAverageRating())
-   * @param isAsc 오름차순 여부
-   * @param cursorId 커서 엔티티의 고유 ID (UUID)
-   * @param <T> Number와 Comparable을 동시에 구현한 타입 (Double, Integer 등)
-   * @return Querydsl Where 절에 들어갈 BooleanExpression 조건식
-   */
+  // 숫자형 컬럼(예: 평점인 averageRating 등)을 기준으로 복합 커서 조건식을 생성하는 제네릭 헬퍼 메서드입니다.
   private <T extends Number & Comparable<?>> BooleanExpression createNumberCursorExpression(
       NumberExpression<T> path, T cursorVal, boolean isAsc, UUID cursorId) {
     if (isAsc) {
@@ -216,30 +203,28 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
   }
 
   /**
-   * 클라이언트가 보낸 정렬 기준(sortBy)과 방향(sortDirection)에 맞추어 ORDER BY 컬럼 배열을 구성합니다.
-   *
-   * <p>- POPULAR (인기순): watcherCount(시청자수) -> reviewCount(리뷰수) -> id(고유 ID) 순으로 정렬 - CREATED_AT
-   * (생성일순): createdAt(생성일) -> id(고유 ID) 순으로 정렬 - RATING (평점순): averageRating(평점) -> id(고유 ID) 순으로
-   * 정렬
+   * 클라이언트가 보낸 정렬 기준(sortBy)과 방향(sortDirection)에 맞추어 ORDER BY 컬럼 배열을 구성합니다. (인기순):
+   * watcherCount(시청자수) -> reviewCount(리뷰수) -> id(고유 ID) 순으로 정렬 (생성일순): createdAt(생성일) -> id(고유 ID)
+   * 순으로 정렬 - (평점순): averageRating(평점) -> id(고유 ID) 순으로 정렬
    */
   private OrderSpecifier<?>[] getOrderSpecifiers(ContentSearchRequest request) {
     boolean isAsc = request.sortDirection() == SortDirection.ASCENDING;
     ContentSortBy sortBy = request.sortBy();
 
-    if (sortBy == ContentSortBy.watcherCount) {
+    if (sortBy == ContentSortBy.watcherCount) { // 인기순 정렬
       return new OrderSpecifier<?>[] {
-        isAsc ? content.watcherCount.asc() : content.watcherCount.desc(),
-        isAsc ? content.reviewCount.asc() : content.reviewCount.desc(),
+        isAsc ? content.watcherCount.asc() : content.watcherCount.desc(), // 시청자 수
+        isAsc ? content.reviewCount.asc() : content.reviewCount.desc(), // 리뷰 수
         isAsc ? content.id.asc() : content.id.desc()
       };
     } else if (sortBy == ContentSortBy.createdAt) {
       return new OrderSpecifier<?>[] {
-        isAsc ? content.createdAt.asc() : content.createdAt.desc(),
+        isAsc ? content.createdAt.asc() : content.createdAt.desc(), // 생성 시각
         isAsc ? content.id.asc() : content.id.desc()
       };
     } else if (sortBy == ContentSortBy.rate) {
       return new OrderSpecifier<?>[] {
-        isAsc ? content.averageRating.asc() : content.averageRating.desc(),
+        isAsc ? content.averageRating.asc() : content.averageRating.desc(), // 평균 평점
         isAsc ? content.id.asc() : content.id.desc()
       };
     }
