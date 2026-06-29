@@ -30,6 +30,6 @@ class JsonAuthenticationEntryPointTest {
     assertEquals(401, response.getStatus());
     assertEquals("application/json;charset=UTF-8", response.getContentType());
     assertEquals("AUTH01", body.get("code").asText());
-    assertEquals("Authentication is required.", body.get("details").get("message").asText());
+    assertEquals("인증이 필요합니다.", body.get("details").get("message").asText());
   }
 }

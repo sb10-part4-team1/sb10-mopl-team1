@@ -83,7 +83,7 @@ class CurrentUserArgumentResolverTest {
                     parameter("requiredCurrentUser", AuthenticatedUser.class), null, null, null));
 
     assertEquals(AuthErrorCode.AUTHENTICATION_FAILED, exception.getErrorCode());
-    assertEquals("Authentication is required.", exception.getDetails().get("message"));
+    assertEquals("인증이 필요합니다.", exception.getDetails().get("message"));
   }
 
   @Test
@@ -102,7 +102,7 @@ class CurrentUserArgumentResolverTest {
                     parameter("requiredCurrentUser", AuthenticatedUser.class), null, null, null));
 
     assertEquals(AuthErrorCode.AUTHENTICATION_FAILED, exception.getErrorCode());
-    assertEquals("Authentication is required.", exception.getDetails().get("message"));
+    assertEquals("인증이 필요합니다.", exception.getDetails().get("message"));
   }
 
   @Test
@@ -121,7 +121,7 @@ class CurrentUserArgumentResolverTest {
                     parameter("requiredCurrentUser", AuthenticatedUser.class), null, null, null));
 
     assertEquals(AuthErrorCode.AUTHENTICATION_FAILED, exception.getErrorCode());
-    assertEquals("Authentication is required.", exception.getDetails().get("message"));
+    assertEquals("인증이 필요합니다.", exception.getDetails().get("message"));
   }
 
   @Test

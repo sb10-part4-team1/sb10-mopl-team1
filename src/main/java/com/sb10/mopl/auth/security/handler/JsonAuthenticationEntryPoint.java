@@ -22,9 +22,8 @@ public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
       HttpServletResponse response,
       AuthenticationException authException)
       throws IOException {
+
     responseWriter.write(
-        response,
-        AuthErrorCode.AUTHENTICATION_FAILED,
-        Map.of("message", "Authentication is required."));
+        response, AuthErrorCode.AUTHENTICATION_FAILED, Map.of("message", "인증이 필요합니다."));
   }
 }
