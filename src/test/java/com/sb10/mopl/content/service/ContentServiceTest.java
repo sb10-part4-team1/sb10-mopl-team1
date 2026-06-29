@@ -7,9 +7,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.common.storage.ImageStorageService;
 import com.sb10.mopl.content.dto.ContentCreateRequest;
 import com.sb10.mopl.content.dto.ContentDto;
+import com.sb10.mopl.content.dto.ContentSearchRequest;
+import com.sb10.mopl.content.dto.ContentSortBy;
 import com.sb10.mopl.content.dto.ContentUpdateRequest;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentType;
@@ -31,10 +35,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockMultipartFile;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("unchecked")
 class ContentServiceTest {
 
   private final ContentMapper contentMapper = Mappers.getMapper(ContentMapper.class);
@@ -70,7 +74,7 @@ class ContentServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     // when: 서비스 레이어의 콘텐츠 생성 기능 실행
-    ContentDto result = contentService.createContent(request, thumbnailFile);
+    ContentDto result = contentService.create(request, thumbnailFile);
 
     // then: 저장 로직이 정상 처리되었고 DTO 응답 스펙이 알맞게 리턴되었는지 확인
     assertThat(result).isNotNull();
@@ -79,6 +83,7 @@ class ContentServiceTest {
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/test.jpg");
     assertThat(result.tags()).containsExactlyInAnyOrder("SF", "스릴러");
     verify(tagRepository).saveAll(anyCollection());
+    verify(contentRepository).save(any(Content.class));
   }
 
   @Test
@@ -96,7 +101,7 @@ class ContentServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     // when: 서비스 레이어 호출
-    ContentDto result = contentService.createContent(request, thumbnailFile);
+    ContentDto result = contentService.create(request, thumbnailFile);
 
     // then: 업로드 실패에도 디폴트 이미지 경로인 "/uploads/default-thumbnail.png"로 세팅되는지 확인
     assertThat(result).isNotNull();
@@ -104,6 +109,7 @@ class ContentServiceTest {
     assertThat(result.title()).isEqualTo("축구 중계");
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
     verify(tagRepository, never()).saveAll(anyCollection());
+    verify(contentRepository).save(any(Content.class));
   }
 
   @Test
@@ -121,7 +127,7 @@ class ContentServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     // when: 서비스 레이어 호출
-    ContentDto result = contentService.createContent(request, thumbnailFile);
+    ContentDto result = contentService.create(request, thumbnailFile);
 
     // then: 업로드 결과가 공백이어도 디폴트 이미지 경로인 "/uploads/default-thumbnail.png"로 세팅되는지 확인
     assertThat(result).isNotNull();
@@ -129,6 +135,7 @@ class ContentServiceTest {
     assertThat(result.title()).isEqualTo("축구 중계");
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
     verify(tagRepository, never()).saveAll(anyCollection());
+    verify(contentRepository).save(any(Content.class));
   }
 
   @Test
@@ -142,11 +149,12 @@ class ContentServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     // when: 서비스 레이어 호출
-    ContentDto result = contentService.createContent(request, null);
+    ContentDto result = contentService.create(request, null);
 
     // then: 기본 썸네일 경로 "/uploads/default-thumbnail.png"로 세팅되는지 확인
     assertThat(result).isNotNull();
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
+    verify(contentRepository).save(any(Content.class));
   }
 
   @Test
@@ -163,11 +171,12 @@ class ContentServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     // when: 서비스 레이어 호출
-    ContentDto result = contentService.createContent(request, emptyThumbnail);
+    ContentDto result = contentService.create(request, emptyThumbnail);
 
     // then: 기본 썸네일 경로 "/uploads/default-thumbnail.png"로 세팅되는지 확인
     assertThat(result).isNotNull();
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
+    verify(contentRepository).save(any(Content.class));
   }
 
   @Test
@@ -191,7 +200,7 @@ class ContentServiceTest {
     when(tagRepository.saveAll(anyCollection())).thenReturn(List.of(actionTag));
 
     // when: 서비스 레이어의 콘텐츠 수정 기능 실행
-    ContentDto result = contentService.updateContent(contentId, request, thumbnailFile);
+    ContentDto result = contentService.update(contentId, request, thumbnailFile);
 
     // then: 필드 수정 및 태그 정보가 정상적으로 갱신되었는지 확인
     assertThat(result).isNotNull();
@@ -216,7 +225,7 @@ class ContentServiceTest {
     when(contentRepository.findById(contentId)).thenReturn(Optional.of(content));
 
     // when: 서비스 레이어 콘텐츠 수정 실행
-    ContentDto result = contentService.updateContent(contentId, request, emptyThumbnail);
+    ContentDto result = contentService.update(contentId, request, emptyThumbnail);
 
     // then: 제목/설명은 바뀌고 썸네일은 기존 "/uploads/test.jpg"로 유지되었는지 확인
     assertThat(result).isNotNull();
@@ -236,7 +245,7 @@ class ContentServiceTest {
 
     // when & then: 수정 실행 시 ContentException 던져지는지 확인
     Assertions.assertThrows(
-        ContentException.class, () -> contentService.updateContent(invalidId, request, null));
+        ContentException.class, () -> contentService.update(invalidId, request, null));
   }
 
   @Test
@@ -312,13 +321,14 @@ class ContentServiceTest {
     when(imageStorageService.upload(thumbnailFile)).thenReturn("/uploads/test.jpg");
     when(tagRepository.findAllByNameIn(anyCollection())).thenReturn(Collections.emptyList());
     when(tagRepository.saveAll(anyCollection()))
-        .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Duplicate key"));
+        .thenThrow(new DataIntegrityViolationException("Duplicate key"));
 
     // when & then: 콘텐츠 생성 시 ContentException이 발생하는지 검증하고, 에러 코드가 DUPLICATE_TAG_NAME인지 확인
     ContentException exception =
         Assertions.assertThrows(
-            ContentException.class, () -> contentService.createContent(request, thumbnailFile));
+            ContentException.class, () -> contentService.create(request, thumbnailFile));
     assertThat(exception.getErrorCode()).isEqualTo(ContentErrorCode.DUPLICATE_TAG_NAME);
+    verify(contentRepository, never()).save(any(Content.class));
   }
 
   @Test
@@ -330,7 +340,7 @@ class ContentServiceTest {
     when(contentRepository.findById(contentId)).thenReturn(Optional.of(content));
 
     // when: 서비스 레이어 삭제 호출
-    contentService.deleteContent(contentId);
+    contentService.delete(contentId);
 
     // then: repository의 delete 호출 확인
     verify(contentRepository).delete(content);
@@ -345,8 +355,67 @@ class ContentServiceTest {
 
     // when & then: 삭제 호출 시 ContentException이 발생하는지 및 에러 코드가 CONTENT_NOT_FOUND인지 확인
     ContentException exception =
-        Assertions.assertThrows(
-            ContentException.class, () -> contentService.deleteContent(invalidId));
+        Assertions.assertThrows(ContentException.class, () -> contentService.delete(invalidId));
     assertThat(exception.getErrorCode()).isEqualTo(ContentErrorCode.CONTENT_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("존재하는 콘텐츠 ID로 단건 조회 시 상세 정보 리턴에 성공한다")
+  void getContent_success_whenIdIsValid() {
+    // given: 존재하는 콘텐츠 ID 및 조회 모킹 설정
+    UUID contentId = UUID.randomUUID();
+    Content content = Content.create("인셉션", ContentType.MOVIE, "SF 영화", "/uploads/test.jpg");
+    when(contentRepository.findById(contentId)).thenReturn(Optional.of(content));
+
+    // when: 서비스 레이어 단건 조회 호출
+    ContentDto result = contentService.find(contentId);
+
+    // then: 상세 정보가 정상적으로 리턴되었는지 확인
+    assertThat(result).isNotNull();
+    assertThat(result.title()).isEqualTo("인셉션");
+    assertThat(result.type()).isEqualTo("MOVIE");
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 콘텐츠 ID로 단건 조회 시 CONTENT_NOT_FOUND 예외가 발생한다")
+  void getContent_fail_whenIdIsInvalid() {
+    // given: 존재하지 않는 임의의 ID 구성
+    UUID invalidId = UUID.randomUUID();
+    when(contentRepository.findById(invalidId)).thenReturn(Optional.empty());
+
+    // when & then: 단건 조회 호출 시 ContentException이 발생하는지 및 에러 코드가 CONTENT_NOT_FOUND인지 확인
+    ContentException exception =
+        Assertions.assertThrows(ContentException.class, () -> contentService.find(invalidId));
+    assertThat(exception.getErrorCode()).isEqualTo(ContentErrorCode.CONTENT_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("목록 조회 요청 시 조건에 맞는 콘텐츠 슬라이스 데이터 리턴에 성공한다")
+  void searchContents_success_whenDataIsValid() {
+    // given: 검색 요청 DTO 구성 및 repository 조회 결과 모킹 설정
+    ContentSearchRequest request =
+        new ContentSearchRequest(
+            ContentType.MOVIE,
+            "인셉션",
+            null,
+            null,
+            null,
+            10,
+            SortDirection.DESCENDING,
+            ContentSortBy.createdAt);
+    Content content1 = Content.create("인셉션", ContentType.MOVIE, "SF 영화", "/uploads/test.jpg");
+    Content content2 = Content.create("인셉션 2", ContentType.MOVIE, "SF 영화 2", "/uploads/test2.jpg");
+    when(contentRepository.findAllByCondition(request)).thenReturn(List.of(content1, content2));
+    when(contentRepository.countContents(request)).thenReturn(2L);
+
+    // when: 서비스 레이어 목록 조회 호출
+    CursorPageResponse<ContentDto> result = contentService.findAll(request);
+
+    // then: 슬라이스 결과가 리턴되었는지 확인 (hasNext는 false여야 함, 가져온 개수가 limit보다 적기 때문)
+    assertThat(result).isNotNull();
+    assertThat(result.data()).hasSize(2);
+    assertThat(result.hasNext()).isFalse();
+    assertThat(result.nextCursor()).isNull();
+    assertThat(result.totalCount()).isEqualTo(2L);
   }
 }
