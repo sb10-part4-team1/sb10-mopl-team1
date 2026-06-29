@@ -1,29 +1,29 @@
 package com.sb10.mopl.auth.security.handler;
 
-import com.sb10.mopl.auth.exception.AuthErrorCode;
+import com.sb10.mopl.common.exception.SystemErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
+public class JsonAccessDeniedHandler implements AccessDeniedHandler {
 
   private final AuthErrorResponseWriter responseWriter;
 
   @Override
-  public void commence(
+  public void handle(
       HttpServletRequest request,
       HttpServletResponse response,
-      AuthenticationException authException)
+      AccessDeniedException accessDeniedException)
       throws IOException {
 
     responseWriter.write(
-        response, AuthErrorCode.AUTHENTICATION_FAILED, Map.of("message", "인증이 필요합니다."));
+        response, SystemErrorCode.ACCESS_DENIED, Map.of("message", "요청한 리소스에 접근할 권한이 없습니다."));
   }
 }

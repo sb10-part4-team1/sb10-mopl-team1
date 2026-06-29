@@ -48,7 +48,6 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
     if (currentUser != null && !currentUser.required()) {
       return null;
     }
-    throw new MoplException(
-        AuthErrorCode.AUTHENTICATION_FAILED, Map.of("message", "Authentication is required."));
+    throw new MoplException(AuthErrorCode.AUTHENTICATION_FAILED, Map.of("message", "인증이 필요합니다."));
   }
 }

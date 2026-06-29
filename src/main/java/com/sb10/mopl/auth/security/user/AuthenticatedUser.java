@@ -8,4 +8,8 @@ public record AuthenticatedUser(UUID id, String email, UserRole role) {
   public String roleName() {
     return role.name();
   }
+
+  public String authorityName() {
+    return role.authorityName();
+  }
 }
