@@ -1,4 +1,4 @@
-package com.sb10.mopl.batch.tmdb.dto;
+package com.sb10.mopl.batch.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,6 +1,6 @@
 package com.sb10.mopl.batch.client;
 
-import com.sb10.mopl.batch.sports.dto.SportsSearchResponse;
+import com.sb10.mopl.batch.dto.SportsSearchResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;

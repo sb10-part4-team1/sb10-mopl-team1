@@ -1,8 +1,6 @@
 package com.sb10.mopl.batch.client;
 
-import static org.hibernate.query.results.Builders.fetch;
-
-import com.sb10.mopl.batch.tmdb.dto.TmdbSearchResponse;
+import com.sb10.mopl.batch.dto.TmdbSearchResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;

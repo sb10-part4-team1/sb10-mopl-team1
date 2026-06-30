@@ -1,4 +1,4 @@
-package com.sb10.mopl.batch.sports.dto;
+package com.sb10.mopl.batch.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
