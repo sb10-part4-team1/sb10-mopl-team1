@@ -126,9 +126,12 @@ CREATE TABLE IF NOT EXISTS "playlists" (
     "description"        TEXT                        NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
-    CONSTRAINT "FK_USERS_TO_PLAYLISTS"
+     CONSTRAINT "FK_USERS_TO_PLAYLISTS"
         FOREIGN KEY ("owner_id") REFERENCES "users" ("id") ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS "idx_playlists_owner_id"
+    ON "playlists" ("owner_id");
 
 -- 재생목록-컨텐츠 매핑 테이블 (복합 유니크 하단 배치)
 CREATE TABLE IF NOT EXISTS "playlist_contents" (
