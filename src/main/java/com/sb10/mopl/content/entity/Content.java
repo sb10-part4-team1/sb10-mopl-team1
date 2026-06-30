@@ -67,7 +67,7 @@ public class Content extends BaseUpdatableEntity {
       String thumbnailUrl,
       ContentProvider provider,
       String providerId) {
-    validate(title, type, description, thumbnailUrl);
+    validate(title, type, description, thumbnailUrl, provider);
     this.title = title;
     this.type = type;
     this.description = description;
@@ -92,7 +92,11 @@ public class Content extends BaseUpdatableEntity {
   }
 
   private static void validate(
-      String title, ContentType type, String description, String thumbnailUrl) {
+      String title,
+      ContentType type,
+      String description,
+      String thumbnailUrl,
+      ContentProvider provider) {
     DomainValidator.start()
         .check(title == null || title.isBlank(), "title", "제목은 비어 있을 수 없습니다.")
         .check(title != null && title.length() > 100, "title", "제목은 100자를 초과할 수 없습니다.")
@@ -102,11 +106,12 @@ public class Content extends BaseUpdatableEntity {
             thumbnailUrl == null || thumbnailUrl.isBlank(),
             "thumbnailUrl",
             "썸네일 URL은 비어 있을 수 없습니다.")
+        .check(provider == null, "provider", "제공처 정보는 필수입니다.")
         .orThrow(details -> new ContentException(ContentErrorCode.INVALID_CONTENT_DATA, details));
   }
 
   public void update(String title, String description, String thumbnailUrl) {
-    validate(title, this.type, description, thumbnailUrl);
+    validate(title, this.type, description, thumbnailUrl, this.provider);
     this.title = title;
     this.description = description;
     this.thumbnailUrl = thumbnailUrl;
