@@ -19,6 +19,7 @@ public final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeH
       HttpServletResponse response,
       Supplier<CsrfToken> deferredCsrfToken) {
     delegate.handle(request, response, deferredCsrfToken);
+    deferredCsrfToken.get();
   }
 
   @Override
