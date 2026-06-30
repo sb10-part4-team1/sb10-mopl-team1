@@ -3,18 +3,21 @@ package com.sb10.mopl.auth.security.integration;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.user.MoplUserDetails;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.repository.UserRepository;
+import jakarta.servlet.http.Cookie;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,10 +25,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.TestSecurityContextHolder;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,12 +41,11 @@ import org.springframework.web.bind.annotation.RestController;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 @Import(AuthorizationPolicyIntegrationTest.AuthorizationPolicyTestController.class)
 class AuthorizationPolicyIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
-
-  @Autowired private JwtProvider jwtProvider;
 
   @Autowired private PasswordEncoder passwordEncoder;
 
@@ -46,7 +53,15 @@ class AuthorizationPolicyIntegrationTest {
 
   @BeforeEach
   void setUp() {
+    SecurityContextHolder.clearContext();
+    TestSecurityContextHolder.clearContext();
     userRepository.deleteAll();
+  }
+
+  @AfterEach
+  void tearDown() {
+    SecurityContextHolder.clearContext();
+    TestSecurityContextHolder.clearContext();
   }
 
   @Test
@@ -71,10 +86,8 @@ class AuthorizationPolicyIntegrationTest {
   @Test
   @DisplayName("일반 사용자는 ADMIN API 호출 시 403을 받는다")
   void adminApi_returnsForbidden_whenUserRequestsAdminEndpoint() throws Exception {
-    String accessToken = accessToken(saveUser(UserRole.USER, "user@example.com"));
-
     mockMvc
-        .perform(get("/api/users").header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+        .perform(get("/api/users").with(authority(UserRole.USER)))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("SYS04"));
   }
@@ -82,14 +95,11 @@ class AuthorizationPolicyIntegrationTest {
   @Test
   @DisplayName("일반 사용자는 권한 변경 API 호출 시 403을 받는다")
   void rolePatch_returnsForbidden_whenUserRequestsAdminRoleEndpoint() throws Exception {
-    String accessToken = accessToken(saveUser(UserRole.USER, "user-role@example.com"));
     UUID userId = UUID.randomUUID();
 
     mockMvc
         .perform(
-            patch("/api/users/{userId}/role", userId)
-                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
-                .with(csrf()))
+            patch("/api/users/{userId}/role", userId).with(authority(UserRole.USER)).with(csrf()))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("SYS04"));
   }
@@ -98,7 +108,8 @@ class AuthorizationPolicyIntegrationTest {
   @DisplayName("비로그인 사용자는 계정 잠금 API 호출 시 401을 받는다")
   void lockedPatch_returnsUnauthorized_whenAnonymousUserRequestsLockedEndpoint() throws Exception {
     mockMvc
-        .perform(patch("/api/users/{userId}/locked", UUID.randomUUID()).with(csrf()))
+        .perform(
+            patch("/api/users/{userId}/locked", UUID.randomUUID()).with(anonymous()).with(csrf()))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("AUTH01"));
   }
@@ -106,26 +117,23 @@ class AuthorizationPolicyIntegrationTest {
   @Test
   @DisplayName("관리자는 사용자 목록 조회, 권한 변경, 계정 잠금 API에 접근할 수 있다")
   void adminApi_returnsOk_whenAdminRequestsUserManagementEndpoints() throws Exception {
-    String accessToken = accessToken(saveUser(UserRole.ADMIN, "admin@example.com"));
-    UUID userId = UUID.randomUUID();
+    final UUID userId = UUID.randomUUID();
 
     mockMvc
-        .perform(get("/api/users").header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+        .perform(get("/api/users").with(authority(UserRole.ADMIN)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("admin users"));
 
     mockMvc
         .perform(
-            patch("/api/users/{userId}/role", userId)
-                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
-                .with(csrf()))
+            patch("/api/users/{userId}/role", userId).with(authority(UserRole.ADMIN)).with(csrf()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("admin role"));
 
     mockMvc
         .perform(
             patch("/api/users/{userId}/locked", userId)
-                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                .with(authority(UserRole.ADMIN))
                 .with(csrf()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("admin locked"));
@@ -164,12 +172,16 @@ class AuthorizationPolicyIntegrationTest {
     return userRepository.saveAndFlush(user);
   }
 
-  private String accessToken(User user) {
-    return jwtProvider.createAccessToken(new MoplUserDetails(user));
+  private RequestPostProcessor authority(UserRole role) {
+    return user(role.name().toLowerCase())
+        .authorities(new SimpleGrantedAuthority(role.authorityName()));
   }
 
-  private String bearer(String accessToken) {
-    return "Bearer " + accessToken;
+  private Cookie getXsrfTokenCookie() throws Exception {
+    MvcResult result =
+        mockMvc.perform(get("/api/auth/csrf-token")).andExpect(status().isNoContent()).andReturn();
+
+    return result.getResponse().getCookie("XSRF-TOKEN");
   }
 
   @RestController
