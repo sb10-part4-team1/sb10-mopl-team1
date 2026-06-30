@@ -1,6 +1,6 @@
 package com.sb10.mopl.batch.client;
 
-import com.sb10.mopl.batch.dto.TmdbSearchResponse;
+import com.sb10.mopl.batch.dto.TmdbApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -19,34 +19,40 @@ public class TmdbApiClient {
 
   // TODO PR 4: @CircuitBreaker, @Retry, @TimeLimiter 추가 예정
   // 인기 영화 목록
-  public TmdbSearchResponse fetchPopularMovies(int page) {
+  public TmdbApiResponse fetchPopularMovies(int page) {
     return fetch("/movie/popular", page);
   }
 
   // 인기 TV 시리즈 목록
-  public TmdbSearchResponse fetchPopularTv(int page) {
+  public TmdbApiResponse fetchPopularTv(int page) {
     return fetch("/tv/popular", page);
   }
 
-  private TmdbSearchResponse fetch(String path, int page) {
+  private TmdbApiResponse fetch(String path, int page) {
     try {
-      TmdbSearchResponse response =
+      TmdbApiResponse response =
           restClient
               .get()
-              .uri("{path}?language=ko-KR&page={page}", path, page)
+              .uri(
+                  uriBuilder ->
+                      uriBuilder
+                          .path(path)
+                          .queryParam("language", "ko-KR")
+                          .queryParam("page", page)
+                          .build())
               .retrieve()
-              .body(TmdbSearchResponse.class);
+              .body(TmdbApiResponse.class);
 
       if (response == null) {
         log.warn("TMDB 응답 null - path: {}, page: {}", path, page);
-        return TmdbSearchResponse.empty();
+        return TmdbApiResponse.empty(); // retry로직 이후 예외 발행 예정
       }
 
       return response;
 
     } catch (RestClientException e) {
       log.error("TMDB API 호출 실패 - path: {}, page: {}, 원인: {}", path, page, e.getMessage());
-      return TmdbSearchResponse.empty();
+      return TmdbApiResponse.empty(); // retry로직 이후 예외 발행 예정
     }
   }
 }

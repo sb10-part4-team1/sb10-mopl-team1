@@ -8,7 +8,7 @@ import lombok.Getter;
 
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class TmdbSearchResponse {
+public class TmdbApiResponse {
 
   private int page;
   private List<TmdbContentDto> results;
@@ -20,8 +20,8 @@ public class TmdbSearchResponse {
   private int totalResults;
 
   // fallback용 빈 응답 생성
-  public static TmdbSearchResponse empty() {
-    TmdbSearchResponse response = new TmdbSearchResponse();
+  public static TmdbApiResponse empty() {
+    TmdbApiResponse response = new TmdbApiResponse();
     response.results = Collections.emptyList();
     response.totalPages = 0;
     response.totalResults = 0;

@@ -8,7 +8,7 @@ spring:
 
   datasource:
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE # PostgreSQL 모드 활성화
+    url: jdbc:h2:mem:localdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE # PostgreSQL 모드 활성화
     username: sa
     password:
 

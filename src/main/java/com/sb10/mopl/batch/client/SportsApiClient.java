@@ -1,6 +1,6 @@
 package com.sb10.mopl.batch.client;
 
-import com.sb10.mopl.batch.dto.SportsSearchResponse;
+import com.sb10.mopl.batch.dto.SportsApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -18,18 +18,24 @@ public class SportsApiClient {
   }
 
   // TODO PR 4: @CircuitBreaker, @Retry, @TimeLimiter 추가 예정
-  public SportsSearchResponse fetchEventsByDay(String date, int leagueId) {
+  public SportsApiResponse fetchEventsByDay(String date, int leagueId) {
     try {
-      SportsSearchResponse response =
+      SportsApiResponse response =
           restClient
               .get()
-              .uri("/eventsday.php?d={date}&l={leagueId}", date, leagueId)
+              .uri(
+                  uriBuilder ->
+                      uriBuilder
+                          .path("/eventsday.php")
+                          .queryParam("d", date)
+                          .queryParam("l", leagueId)
+                          .build())
               .retrieve()
-              .body(SportsSearchResponse.class);
+              .body(SportsApiResponse.class);
 
       if (response == null) {
         log.warn("SportsDB 응답 null - date: {}, leagueId: {}", date, leagueId);
-        return SportsSearchResponse.empty();
+        return SportsApiResponse.empty(); // 그날 경기가 없는 것이며 잘못된 응답이 아님
       }
 
       return response;
@@ -37,7 +43,7 @@ public class SportsApiClient {
     } catch (RestClientException e) {
       log.error(
           "SportsDB API 호출 실패 - date: {}, leagueId: {}, 원인: {}", date, leagueId, e.getMessage());
-      return SportsSearchResponse.empty(); // TODO: 커스텀 메트릭 지표 추가
+      return SportsApiResponse.empty(); // TODO: 커스텀 메트릭 지표 추가, retry로직 이후 예외 발행 예정
     }
   }
 }
