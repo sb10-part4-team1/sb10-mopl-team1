@@ -46,6 +46,13 @@ public class Content extends BaseUpdatableEntity {
   @Column(name = "watcher_count", nullable = false)
   private long watcherCount = 0L;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "provider", nullable = false, length = 20)
+  private ContentProvider provider;
+
+  @Column(name = "provider_id", length = 100)
+  private String providerId;
+
   @OneToMany(
       mappedBy = "content",
       fetch = FetchType.LAZY,
@@ -53,17 +60,35 @@ public class Content extends BaseUpdatableEntity {
       orphanRemoval = true)
   private List<ContentTag> contentTags = new ArrayList<>();
 
-  private Content(String title, ContentType type, String description, String thumbnailUrl) {
+  private Content(
+      String title,
+      ContentType type,
+      String description,
+      String thumbnailUrl,
+      ContentProvider provider,
+      String providerId) {
     validate(title, type, description, thumbnailUrl);
     this.title = title;
     this.type = type;
     this.description = description;
     this.thumbnailUrl = thumbnailUrl;
+    this.provider = provider != null ? provider : ContentProvider.MANUAL;
+    this.providerId = providerId;
   }
 
   public static Content create(
       String title, ContentType type, String description, String thumbnailUrl) {
-    return new Content(title, type, description, thumbnailUrl);
+    return new Content(title, type, description, thumbnailUrl, ContentProvider.MANUAL, null);
+  }
+
+  public static Content createWithProvider(
+      String title,
+      ContentType type,
+      String description,
+      String thumbnailUrl,
+      ContentProvider provider,
+      String providerId) {
+    return new Content(title, type, description, thumbnailUrl, provider, providerId);
   }
 
   private static void validate(

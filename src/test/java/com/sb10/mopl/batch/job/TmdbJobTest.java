@@ -64,11 +64,15 @@ class TmdbJobTest {
         new TmdbContentDto(2L, null, null, "설명은 있음", "/path.jpg", List.of(1));
     TmdbContentDto noPosterMovie =
         new TmdbContentDto(3L, "포스터 없는 영화", null, "설명", null, List.of(1));
+    TmdbContentDto missingIdMovie =
+        new TmdbContentDto(null, "ID 없는 영화", null, "설명", "/path.jpg", List.of(1));
 
     // 영화 1페이지 API 응답 모킹 (totalPages = 2 설정)
     TmdbApiResponse movieResponsePage1 = TmdbApiResponse.empty();
     org.springframework.test.util.ReflectionTestUtils.setField(
-        movieResponsePage1, "results", List.of(normalMovie, missingTitleMovie, noPosterMovie));
+        movieResponsePage1,
+        "results",
+        List.of(normalMovie, missingTitleMovie, noPosterMovie, missingIdMovie));
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponsePage1, "totalPages", 2);
     when(tmdbApiClient.fetchPopularMovies(1)).thenReturn(movieResponsePage1);
 
@@ -111,7 +115,7 @@ class TmdbJobTest {
         .containsExactlyInAnyOrder("tmdbMovieStep", "tmdbTvStep");
 
     List<Content> saved = contentRepository.findAll();
-    // 제목 없는 영화(missingTitleMovie)는 필터링되어 제외되므로 [영화 3건 + TV 1건] = 총 4건 저장
+    // 제목 없는 영화(missingTitleMovie)와 ID 없는 영화(missingIdMovie)는 필터링되어 제외되므로 [영화 3건 + TV 1건] = 총 4건 저장
     assertThat(saved).hasSize(4);
 
     // 썸네일 누락 시 기본 이미지 경로로 설정되었는지 확인
@@ -171,5 +175,68 @@ class TmdbJobTest {
 
     // TV API는 전혀 호출되지 않았음을 보장
     verify(tmdbApiClient, never()).fetchPopularTv(anyInt());
+  }
+
+  @Test
+  @DisplayName("제목이 같지만 TMDB ID가 다른 동명 영화는 모두 저장되고, 동일한 TMDB ID의 중복 데이터는 2회차 실행 시 정상 제외된다")
+  void tmdbJob_saveDifferentMoviesWithSameTitleAndDeduplicateSameId() throws Exception {
+    // 1. [1차 실행] 동명 영화 Dracula 1992 (ID=100) & Dracula 2014 (ID=200) 등록
+    TmdbContentDto dracula1992 =
+        new TmdbContentDto(100L, "드라큘라", null, "1992년작 영화", "/dracula1992.jpg", List.of(1));
+    TmdbContentDto dracula2014 =
+        new TmdbContentDto(200L, "드라큘라", null, "2014년작 영화", "/dracula2014.jpg", List.of(1));
+
+    TmdbApiResponse movieResponse1 = TmdbApiResponse.empty();
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        movieResponse1, "results", List.of(dracula1992, dracula2014));
+    org.springframework.test.util.ReflectionTestUtils.setField(movieResponse1, "totalPages", 1);
+    when(tmdbApiClient.fetchPopularMovies(1)).thenReturn(movieResponse1);
+
+    // TV는 비어있음
+    when(tmdbApiClient.fetchPopularTv(1)).thenReturn(TmdbApiResponse.empty());
+
+    // 매퍼는 실제 호출 사용
+    when(tmdbContentMapper.toEntity(any())).thenCallRealMethod();
+
+    // 1차 기동
+    JobExecution firstRun =
+        jobLauncher.run(
+            tmdbJob,
+            new JobParametersBuilder()
+                .addLong("time", System.currentTimeMillis())
+                .toJobParameters());
+    assertThat(firstRun.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+    // 검증: 제목이 같지만 ID가 다른 영화 2개가 모두 정상 적재되었는지 확인
+    List<Content> savedFirst = contentRepository.findAll();
+    assertThat(savedFirst).hasSize(2);
+    assertThat(savedFirst)
+        .extracting(Content::getProviderId)
+        .containsExactlyInAnyOrder("100", "200");
+
+    // 2. [2차 실행] 동일한 Dracula 1992 (ID=100) & 신규 Dracula 2020 (ID=300) 등록
+    TmdbContentDto dracula300 =
+        new TmdbContentDto(300L, "드라큘라", null, "2020년작 영화", "/dracula2020.jpg", List.of(1));
+    TmdbApiResponse movieResponse2 = TmdbApiResponse.empty();
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        movieResponse2, "results", List.of(dracula1992, dracula300)); // ID=100은 이미 DB에 있음!
+    org.springframework.test.util.ReflectionTestUtils.setField(movieResponse2, "totalPages", 1);
+    when(tmdbApiClient.fetchPopularMovies(1)).thenReturn(movieResponse2);
+
+    // 2차 기동
+    JobExecution secondRun =
+        jobLauncher.run(
+            tmdbJob,
+            new JobParametersBuilder()
+                .addLong("time", System.currentTimeMillis())
+                .toJobParameters());
+    assertThat(secondRun.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+    // 검증: ID=100은 중복 제거되고 ID=300만 새로 들어가 총 3개가 저장되어야 함
+    List<Content> savedSecond = contentRepository.findAll();
+    assertThat(savedSecond).hasSize(3);
+    assertThat(savedSecond)
+        .extracting(Content::getProviderId)
+        .containsExactlyInAnyOrder("100", "200", "300");
   }
 }

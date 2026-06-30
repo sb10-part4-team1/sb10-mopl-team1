@@ -2,6 +2,7 @@ package com.sb10.mopl.batch.mapper;
 
 import com.sb10.mopl.batch.dto.TmdbContentDto;
 import com.sb10.mopl.content.entity.Content;
+import com.sb10.mopl.content.entity.ContentProvider;
 import com.sb10.mopl.content.entity.ContentType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -31,6 +32,12 @@ public class TmdbContentMapper {
 
     ContentType type = dto.isMovie() ? ContentType.MOVIE : ContentType.TV_SERIES;
 
-    return Content.create(dto.resolveTitle(), type, description, thumbnailUrl);
+    return Content.createWithProvider(
+        dto.resolveTitle(),
+        type,
+        description,
+        thumbnailUrl,
+        ContentProvider.TMDB,
+        String.valueOf(dto.id()));
   }
 }

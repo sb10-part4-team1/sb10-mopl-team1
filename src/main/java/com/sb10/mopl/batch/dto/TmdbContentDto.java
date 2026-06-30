@@ -3,6 +3,7 @@ package com.sb10.mopl.batch.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
+import org.springframework.util.StringUtils;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record TmdbContentDto(
@@ -15,10 +16,10 @@ public record TmdbContentDto(
 
   /** Movie: title 필드 사용 TV: name 필드 사용 */
   public String resolveTitle() {
-    if (title != null && !title.isBlank()) {
+    if (StringUtils.hasText(title)) {
       return title;
     }
-    if (name != null && !name.isBlank()) {
+    if (StringUtils.hasText(name)) {
       return name;
     }
     return null;

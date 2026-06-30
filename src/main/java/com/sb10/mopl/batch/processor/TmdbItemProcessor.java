@@ -27,6 +27,11 @@ public class TmdbItemProcessor implements ItemProcessor<TmdbContentDto, Content>
       return null; // 프로세서가 null을 반환하면 해당 아이템은 라이터로 전달되지 않고 자동 스킵됩니다.
     }
 
+    if (dto.id() == null) {
+      log.warn("TMDB id(provider_id) 없음 스킵 - title: {}", dto.resolveTitle());
+      return null;
+    }
+
     return tmdbContentMapper.toEntity(dto);
   }
 }

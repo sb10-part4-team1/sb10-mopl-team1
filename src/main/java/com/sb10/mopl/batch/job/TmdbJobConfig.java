@@ -2,10 +2,10 @@ package com.sb10.mopl.batch.job;
 
 import com.sb10.mopl.batch.dto.TmdbContentDto;
 import com.sb10.mopl.batch.processor.TmdbItemProcessor;
-import com.sb10.mopl.batch.reader.TmdbMovieReader;
-import com.sb10.mopl.batch.reader.TmdbTvReader;
+import com.sb10.mopl.batch.reader.TmdbItemReader;
 import com.sb10.mopl.batch.writer.TmdbItemWriter;
 import com.sb10.mopl.content.entity.Content;
+import com.sb10.mopl.content.exception.ContentException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -28,10 +28,11 @@ public class TmdbJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
-  private final TmdbMovieReader tmdbMovieReader;
-  private final TmdbTvReader tmdbTvReader;
   private final TmdbItemProcessor tmdbItemProcessor;
   private final TmdbItemWriter tmdbItemWriter;
+
+  // 단일 공통 리더를 주입받아 양쪽 스텝에서 공유하여 사용합니다 (StepScope 스레드/격리 보장)
+  private final TmdbItemReader tmdbItemReader;
 
   /** TMDB 인기 콘텐츠 수집의 시작점이 되는 최상위 Job 객체를 정의합니다. 영화 수집 스텝을 완료한 뒤 순차적으로 TV 시리즈 수집 스텝을 실행합니다. */
   @Bean
@@ -49,7 +50,7 @@ public class TmdbJobConfig {
         // 1. 한번에 트랜잭션을 걸어 처리할 단위(20건)를 지정합니다.
         .<TmdbContentDto, Content>chunk(20, transactionManager)
         // 2. TMDB API로부터 인기 영화 데이터를 페이지 단위로 지연 로딩 공급합니다.
-        .reader(tmdbMovieReader)
+        .reader(tmdbItemReader)
         // 3. 공급받은 DTO의 데이터를 검증하고 엔티티로 변환합니다.
         .processor(tmdbItemProcessor)
         // 4. 변환된 20건을 모아 중복을 제거한 뒤 DB에 한꺼번에 저장합니다.
@@ -58,7 +59,7 @@ public class TmdbJobConfig {
         .faultTolerant()
         // 6. 예외가 터지면 해당 청크를 롤백하고 1건씩 다시 실행하여, 에러가 난 특정 아이템만 최대 5번까지 건너뜁니다.
         .skipLimit(5)
-        .skip(RuntimeException.class)
+        .skip(ContentException.class)
         .build();
   }
 
@@ -69,7 +70,7 @@ public class TmdbJobConfig {
         // 1. 한번에 트랜잭션을 걸어 처리할 단위(20건)를 지정합니다.
         .<TmdbContentDto, Content>chunk(20, transactionManager)
         // 2. TMDB API로부터 인기 TV 시리즈 데이터를 페이지 단위로 지연 로딩 공급합니다.
-        .reader(tmdbTvReader)
+        .reader(tmdbItemReader)
         // 3. 공급받은 DTO의 데이터를 검증하고 엔티티로 변환합니다.
         .processor(tmdbItemProcessor)
         // 4. 변환된 20건을 모아 중복을 제거한 뒤 DB에 한꺼번에 저장합니다.
@@ -78,7 +79,7 @@ public class TmdbJobConfig {
         .faultTolerant()
         // 6. 예외가 터지면 해당 청크를 롤백하고 1건씩 다시 실행하여, 에러가 난 특정 아이템만 최대 5번까지 건너뜁니다.
         .skipLimit(5)
-        .skip(RuntimeException.class)
+        .skip(ContentException.class)
         .build();
   }
 }
