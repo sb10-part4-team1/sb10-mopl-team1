@@ -72,7 +72,7 @@ public class Content extends BaseUpdatableEntity {
     this.type = type;
     this.description = description;
     this.thumbnailUrl = thumbnailUrl;
-    this.provider = provider != null ? provider : ContentProvider.MANUAL;
+    this.provider = provider;
     this.providerId = providerId;
   }
 
