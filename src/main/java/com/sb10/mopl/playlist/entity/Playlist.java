@@ -8,6 +8,7 @@ import com.sb10.mopl.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -17,7 +18,9 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "playlists")
+@Table(
+    name = "playlists",
+    indexes = {@Index(name = "idx_playlists_owner_id", columnList = "owner_id")})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Playlist extends BaseUpdatableEntity {
 
@@ -37,7 +40,8 @@ public class Playlist extends BaseUpdatableEntity {
   private static void validateCreate(User owner, String title) {
     DomainValidator.start()
         .check(owner == null, "owner", "플레이리스트 제작자는 필수입니다.")
-        .check(title == null || title.isBlank(), "title", "플레이리스트 제목은 필수입니다.")
+        .check(
+            title == null || title.isBlank() && title.length() > 100, "title", "플레이리스트 제목은 필수입니다.")
         .orThrow(
             details -> new PlaylistException(PlaylistErrorCode.INVALID_PLAYLIST_VALUE, details));
   }
