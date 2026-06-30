@@ -98,10 +98,7 @@ class AuthorizationPolicyIntegrationTest {
   @DisplayName("비로그인 사용자는 계정 잠금 API 호출 시 401을 받는다")
   void lockedPatch_returnsUnauthorized_whenAnonymousUserRequestsLockedEndpoint() throws Exception {
     mockMvc
-        .perform(
-            patch("/api/users/{userId}/locked", UUID.randomUUID())
-                .header(HttpHeaders.AUTHORIZATION, bearer("invalid-token"))
-                .with(csrf()))
+        .perform(patch("/api/users/{userId}/locked", UUID.randomUUID()).with(csrf()))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("AUTH01"));
   }
