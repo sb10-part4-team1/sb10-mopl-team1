@@ -96,6 +96,18 @@ dependencies {
   annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
   annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 
+  // WebClient
+  implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+  // Spring Batch
+  implementation 'org.springframework.boot:spring-boot-starter-batch'
+
+  // Spring retry, Circuit Breaker
+  implementation 'org.springframework.retry:spring-retry'
+  implementation 'org.springframework.boot:spring-boot-starter-aop' // retry 동작에 필요
+  implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
+  implementation 'io.github.resilience4j:resilience4j-reactor:2.2.0' // WebClient + 서킷브레이커 연동
+
   // Test
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
   testImplementation 'org.springframework.batch:spring-batch-test'
