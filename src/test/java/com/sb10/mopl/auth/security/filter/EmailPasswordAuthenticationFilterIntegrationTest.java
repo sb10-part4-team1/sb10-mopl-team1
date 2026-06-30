@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -63,7 +64,8 @@ class EmailPasswordAuthenticationFilterIntegrationTest {
                 post("/api/auth/sign-in")
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .param("username", EMAIL)
-                    .param("password", PASSWORD))
+                    .param("password", PASSWORD)
+                    .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
             .andExpect(header().string(HttpHeaders.PRAGMA, "no-cache"))
@@ -100,7 +102,8 @@ class EmailPasswordAuthenticationFilterIntegrationTest {
             post("/api/auth/sign-in")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("username", EMAIL)
-                .param("password", "wrong-password"))
+                .param("password", "wrong-password")
+                .with(csrf()))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("AUTH01"));
   }
@@ -113,7 +116,8 @@ class EmailPasswordAuthenticationFilterIntegrationTest {
             post("/api/auth/sign-in")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("username", "missing@example.com")
-                .param("password", PASSWORD))
+                .param("password", PASSWORD)
+                .with(csrf()))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("AUTH01"));
   }
@@ -125,7 +129,8 @@ class EmailPasswordAuthenticationFilterIntegrationTest {
         .perform(
             post("/api/auth/sign-in")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"login-user@example.com\",\"password\":\"password123\"}"))
+                .content("{\"username\":\"login-user@example.com\",\"password\":\"password123\"}")
+                .with(csrf()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("SYS01"))
         .andExpect(jsonPath("$.details.contentType").exists());

@@ -3,6 +3,7 @@ package com.sb10.mopl.auth.security.integration;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -87,7 +88,8 @@ class AuthorizationPolicyIntegrationTest {
     mockMvc
         .perform(
             patch("/api/users/{userId}/role", userId)
-                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                .with(csrf()))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("SYS04"));
   }
@@ -96,7 +98,10 @@ class AuthorizationPolicyIntegrationTest {
   @DisplayName("비로그인 사용자는 계정 잠금 API 호출 시 401을 받는다")
   void lockedPatch_returnsUnauthorized_whenAnonymousUserRequestsLockedEndpoint() throws Exception {
     mockMvc
-        .perform(patch("/api/users/{userId}/locked", UUID.randomUUID()))
+        .perform(
+            patch("/api/users/{userId}/locked", UUID.randomUUID())
+                .header(HttpHeaders.AUTHORIZATION, bearer("invalid-token"))
+                .with(csrf()))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("AUTH01"));
   }
@@ -115,14 +120,16 @@ class AuthorizationPolicyIntegrationTest {
     mockMvc
         .perform(
             patch("/api/users/{userId}/role", userId)
-                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                .with(csrf()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("admin role"));
 
     mockMvc
         .perform(
             patch("/api/users/{userId}/locked", userId)
-                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                .with(csrf()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("admin locked"));
   }
