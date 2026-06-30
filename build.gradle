@@ -115,8 +115,7 @@ dependencies {
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
   testImplementation 'org.springframework.batch:spring-batch-test'
 
-  // Security Test - 임시 비활성화
-  // testImplementation 'org.springframework.security:spring-security-test'
+  testImplementation 'org.springframework.security:spring-security-test'
 
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
