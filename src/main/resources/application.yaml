@@ -54,7 +54,7 @@ mopl:
       token: ${TMDB_BEARER_TOKEN}
       base-url: https://api.themoviedb.org/3
     batch:
-      max-pages:${TMDB_MAX_PAGES:10}
+      max-pages: ${TMDB_MAX_PAGES:10}
   sports:
     api:
       base-url: https://www.thesportsdb.com/api/v1/json/123
