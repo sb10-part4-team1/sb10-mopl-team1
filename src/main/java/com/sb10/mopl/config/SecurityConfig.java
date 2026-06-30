@@ -1,5 +1,6 @@
 package com.sb10.mopl.config;
 
+import com.sb10.mopl.auth.security.csrf.SpaCsrfTokenRequestHandler;
 import com.sb10.mopl.auth.security.filter.EmailPasswordAuthenticationFilter;
 import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.jwt.JwtAuthenticationFilter;
@@ -32,6 +33,8 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;
@@ -83,8 +86,10 @@ public class SecurityConfig {
       AuthenticationEntryPoint authenticationEntryPoint,
       AccessDeniedHandler accessDeniedHandler)
       throws Exception {
-    // 이번 PR 범위에서는 CSRF 발급/검증을 아직 구현하지 않음. 추후 구현 예정
-    http.csrf(AbstractHttpConfigurer::disable)
+    http.csrf(
+            csrf ->
+                csrf.csrfTokenRepository(csrfTokenRepository())
+                    .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -118,6 +123,16 @@ public class SecurityConfig {
         .addFilterAt(emailPasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
+  }
+
+  @Bean
+  public CsrfTokenRepository csrfTokenRepository() {
+    CookieCsrfTokenRepository cookieCsrfTokenRepository =
+        CookieCsrfTokenRepository.withHttpOnlyFalse();
+    cookieCsrfTokenRepository.setCookieName("XSRF-TOKEN");
+    cookieCsrfTokenRepository.setHeaderName("X-XSRF-TOKEN");
+    cookieCsrfTokenRepository.setCookiePath("/");
+    return cookieCsrfTokenRepository;
   }
 
   @Bean
