@@ -15,7 +15,6 @@ import com.sb10.mopl.auth.security.user.MoplUserDetails;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.repository.UserRepository;
-import jakarta.servlet.http.Cookie;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +31,6 @@ import org.springframework.security.test.context.TestSecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -81,6 +79,16 @@ class AuthorizationPolicyIntegrationTest {
         .perform(get("/api/test/protected"))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("AUTH01"));
+  }
+
+  @Test
+  @DisplayName("PATCH API 요청에 CSRF 토큰이 없으면 403을 반환한다")
+  void patchApi_returnsForbidden_whenCsrfTokenIsMissing() throws Exception {
+    mockMvc
+        .perform(
+            patch("/api/users/{userId}/locked", UUID.randomUUID()).with(authority(UserRole.ADMIN)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("SYS04"));
   }
 
   @Test
@@ -175,13 +183,6 @@ class AuthorizationPolicyIntegrationTest {
   private RequestPostProcessor authority(UserRole role) {
     return user(role.name().toLowerCase())
         .authorities(new SimpleGrantedAuthority(role.authorityName()));
-  }
-
-  private Cookie getXsrfTokenCookie() throws Exception {
-    MvcResult result =
-        mockMvc.perform(get("/api/auth/csrf-token")).andExpect(status().isNoContent()).andReturn();
-
-    return result.getResponse().getCookie("XSRF-TOKEN");
   }
 
   @RestController
