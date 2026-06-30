@@ -31,3 +31,8 @@ springdoc:
     enabled: false # 운영에서는 스웨거 문서 숨김 (필요시 true 후 인증 보안 걸기)
   swagger-ui:
     enabled: false
+
+mopl:
+  jwt:
+    refresh-token-cookie:
+      secure: ${MOPL_REFRESH_TOKEN_COOKIE_SECURE:true}
