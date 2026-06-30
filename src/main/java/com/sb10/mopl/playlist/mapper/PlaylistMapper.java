@@ -17,7 +17,7 @@ public interface PlaylistMapper {
   @Mapping(source = "owner.id", target = "owner.userId")
   @Mapping(source = "owner.name", target = "owner.name")
   @Mapping(source = "owner.profileImageUrl", target = "owner.profileImageUrl")
-  @Mapping(target = "subscriberCount", constant = "0L")
+  @Mapping(target = "subscriberCount", expression = "java(0L)")
   @Mapping(target = "subscribedByMe", constant = "false")
   @Mapping(target = "contents", expression = "java(java.util.List.of())")
   PlaylistDto toDto(Playlist playlist);
