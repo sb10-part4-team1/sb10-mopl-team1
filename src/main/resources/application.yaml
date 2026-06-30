@@ -12,8 +12,10 @@ spring:
     import: optional:file:.env[.properties]
 
   batch:
+    jdbc:
+      initialize-schema: always   # 배치 메타 테이블 자동 생성
     job:
-      enabled: false # 프로젝트 실행 시 배치 잡 실행 여부
+      enabled: false # 프로젝트 실행 시 배치 잡 실행 여부 → 스케줄러로만 실행
 
     # 공통 JPA 설정 (포맷팅 및 성능 최적화 배치 크기 지정)
   jpa:
@@ -37,10 +39,24 @@ mopl:
   jwt:
     secret: ${MOPL_JWT_SECRET}
     access-token-expiration: ${MOPL_JWT_ACCESS_TOKEN_EXPIRATION:PT1H}
+
   aws:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
     region: ${AWS_REGION:ap-northeast-2}
+
+  external-api:
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000
+
+  tmdb:
+    api:
+      token: ${TMDB_BEARER_TOKEN}
+      base-url: https://api.themoviedb.org/3
+
+  sports:
+    api:
+      base-url: https://www.thesportsdb.com/api/v1/json/123
 
 # 로깅 레벨 설정
 logging:
