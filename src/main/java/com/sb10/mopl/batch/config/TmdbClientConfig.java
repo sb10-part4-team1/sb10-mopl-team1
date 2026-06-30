@@ -3,6 +3,7 @@ package com.sb10.mopl.batch.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
@@ -15,8 +16,10 @@ public class TmdbClientConfig {
   private String baseUrl;
 
   @Bean
-  public RestClient tmdbRestClient(RestClient.Builder builder) {
+  public RestClient tmdbRestClient(
+      RestClient.Builder builder, ClientHttpRequestFactory requestFactory) {
     return builder
+        .requestFactory(requestFactory)
         .baseUrl(baseUrl)
         .defaultHeader("Authorization", "Bearer " + accessToken)
         .defaultHeader("Accept", "application/json")

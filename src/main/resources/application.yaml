@@ -45,6 +45,10 @@ mopl:
     secret-key: ${AWS_SECRET_KEY}
     region: ${AWS_REGION:ap-northeast-2}
 
+  external-api:
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000
+
   tmdb:
     api:
       token: ${TMDB_BEARER_TOKEN}

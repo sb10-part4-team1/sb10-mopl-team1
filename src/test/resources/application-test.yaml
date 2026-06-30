@@ -24,3 +24,7 @@ mopl:
   jwt:
     secret: mopl-test-only-jwt-secret-key-at-least-32-bytes
     access-token-expiration: PT1H
+  tmdb:
+    api:
+      token: mock-tmdb-bearer-token-for-test # 테스트 환경용 가짜 토큰 지정
+      base-url: https://api.themoviedb.org/3
