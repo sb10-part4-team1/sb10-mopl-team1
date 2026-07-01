@@ -51,14 +51,13 @@ public class RefreshTokenService {
         .flatMap(
             refreshToken -> {
               User user = refreshToken.getUser();
+              refreshTokenRepository.delete(refreshToken);
+              refreshTokenRepository.flush();
+
               if (user.isLocked()) {
-                refreshTokenRepository.delete(refreshToken);
-                refreshTokenRepository.flush();
                 return Optional.empty();
               }
 
-              refreshTokenRepository.delete(refreshToken);
-              refreshTokenRepository.flush();
               return Optional.of(new RotatedRefreshToken(saveNewTokenFor(user), user));
             });
   }
