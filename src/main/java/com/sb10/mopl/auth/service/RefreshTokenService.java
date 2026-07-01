@@ -46,14 +46,14 @@ public class RefreshTokenService {
   }
 
   @Transactional
-  public Optional<IssuedRefreshToken> rotate(String rawToken) {
+  public Optional<RotatedRefreshToken> rotate(String rawToken) {
     return resolveUsableToken(rawToken)
         .map(
             refreshToken -> {
               User user = refreshToken.getUser();
               refreshTokenRepository.delete(refreshToken);
               refreshTokenRepository.flush();
-              return saveNewTokenFor(user);
+              return new RotatedRefreshToken(saveNewTokenFor(user), user);
             });
   }
 
@@ -84,7 +84,7 @@ public class RefreshTokenService {
 
     Instant now = clock.instant();
     return refreshTokenRepository
-        .findByTokenHash(hash(rawToken))
+        .findByTokenHashWithUser(hash(rawToken))
         .filter(token -> !token.isExpired(now));
   }
 
@@ -109,4 +109,6 @@ public class RefreshTokenService {
   }
 
   public record IssuedRefreshToken(String rawToken, Instant expiresAt) {}
+
+  public record RotatedRefreshToken(IssuedRefreshToken refreshToken, User user) {}
 }
