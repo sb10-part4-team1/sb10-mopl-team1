@@ -24,15 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-  private static final String REFRESH_TOKEN_COOKIE_NAME = "${mopl.jwt.refresh-token-cookie.name}";
-
   private final RefreshTokenService refreshTokenService;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
   private final JwtProvider jwtProvider;
 
   @PostMapping("/refresh")
   public JwtDto reissueToken(
-      @CookieValue(name = REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken,
+      @CookieValue(name = "${mopl.jwt.refresh-token-cookie.name}", required = false)
+          String refreshToken,
       HttpServletResponse response) {
     response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
     response.setHeader(HttpHeaders.PRAGMA, "no-cache");
