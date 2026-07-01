@@ -31,8 +31,11 @@ CREATE TABLE IF NOT EXISTS "contents" (
     "average_rating"     NUMERIC(2,1) DEFAULT 0.0    NOT NULL,
     "review_count"       INT                         NOT NULL,
     "watcher_count"      BIGINT                      NOT NULL,
+    "provider"           VARCHAR(20)  DEFAULT 'MANUAL' NOT NULL,
+    "provider_id"        VARCHAR(100)                NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
-    "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL
+    "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
+    CONSTRAINT "UQ_CONTENTS_PROVIDER_ID" UNIQUE ("provider", "provider_id")
 );
 
 -- 태그 테이블

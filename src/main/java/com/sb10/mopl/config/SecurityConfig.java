@@ -63,6 +63,7 @@ public class SecurityConfig {
     pathMatcher("/api-docs/**"),
     pathMatcher("/swagger-ui/**"),
     pathMatcher("/swagger-ui.html"),
+    pathMatcher("/api/test/batch/**"),
     methodAndPathMatcher(HttpMethod.OPTIONS, "/**"),
     methodAndPathMatcher(HttpMethod.POST, "/api/users"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-in"),

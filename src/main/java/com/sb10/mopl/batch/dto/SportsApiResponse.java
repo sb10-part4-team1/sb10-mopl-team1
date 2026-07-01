@@ -7,12 +7,12 @@ import lombok.Getter;
 
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SportsSearchResponse {
+public class SportsApiResponse {
 
   private List<SportsContentDto> events;
 
-  public static SportsSearchResponse empty() {
-    SportsSearchResponse response = new SportsSearchResponse();
+  public static SportsApiResponse empty() {
+    SportsApiResponse response = new SportsApiResponse();
     response.events = Collections.emptyList();
     return response;
   }

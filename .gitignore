@@ -45,3 +45,7 @@ out/
 src/main/resources/static/uploads/*
 !src/main/resources/static/uploads/.gitkeep
 
+### Agent config ###
+.agents/
+
+
