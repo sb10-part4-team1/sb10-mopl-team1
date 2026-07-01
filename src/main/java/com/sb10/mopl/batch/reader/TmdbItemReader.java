@@ -3,9 +3,12 @@ package com.sb10.mopl.batch.reader;
 import com.sb10.mopl.batch.client.TmdbApiClient;
 import com.sb10.mopl.batch.dto.TmdbApiResponse;
 import com.sb10.mopl.batch.dto.TmdbContentDto;
+import com.sb10.mopl.batch.exception.BatchErrorCode;
+import com.sb10.mopl.batch.exception.BatchException;
 import com.sb10.mopl.content.entity.ContentType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemReader;
@@ -70,8 +73,10 @@ public class TmdbItemReader implements ItemReader<TmdbContentDto> {
     List<TmdbContentDto> results = response.getResults();
     // API 응답 구조 붕괴 상황에 대한 명확한 예외 처리
     if (results == null) {
-      throw new IllegalStateException(
-          "TMDB " + typeName + " API 응답 구조가 변경되었거나 비정상입니다. 'results' 필드가 null입니다.");
+      throw new BatchException(
+          BatchErrorCode.INVALID_API_RESPONSE,
+          Map.of(
+              "message", "TMDB " + typeName + " API 응답 구조가 변경되었거나 비정상입니다. 'results' 필드가 null입니다."));
     }
 
     this.buffer = results;

@@ -3,11 +3,14 @@ package com.sb10.mopl.batch.reader;
 import com.sb10.mopl.batch.client.SportsApiClient;
 import com.sb10.mopl.batch.dto.SportsApiResponse;
 import com.sb10.mopl.batch.dto.SportsContentDto;
+import com.sb10.mopl.batch.exception.BatchErrorCode;
+import com.sb10.mopl.batch.exception.BatchException;
 import com.sb10.mopl.batch.job.League;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemReader;
@@ -69,9 +72,12 @@ public class SportsItemReader implements ItemReader<SportsContentDto> {
 
       // 1. API 응답 구조 붕괴 상황에 대한 명확한 예외 처리 (events 키가 아예 없음)
       if (response == null || !response.isHasEventsKey()) {
-        throw new IllegalStateException(
-            "SportsDB API 응답 구조가 변경되었거나 비정상입니다. 'events' 필드가 유실되었습니다. 리그: "
-                + league.getLeagueName());
+        throw new BatchException(
+            BatchErrorCode.INVALID_API_RESPONSE,
+            Map.of(
+                "message",
+                "SportsDB API 응답 구조가 변경되었거나 비정상입니다. 'events' 필드가 유실되었습니다. 리그: "
+                    + league.getLeagueName()));
       }
 
       // 2. 정상적으로 해당 날짜에 경기가 없는 경우 (events: null)

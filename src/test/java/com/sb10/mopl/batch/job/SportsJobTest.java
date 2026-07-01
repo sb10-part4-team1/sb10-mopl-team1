@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.sb10.mopl.batch.client.SportsApiClient;
 import com.sb10.mopl.batch.dto.SportsApiResponse;
 import com.sb10.mopl.batch.dto.SportsContentDto;
+import com.sb10.mopl.batch.exception.BatchException;
 import com.sb10.mopl.batch.mapper.SportsContentMapper;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentProvider;
@@ -162,12 +163,12 @@ class SportsJobTest {
                 .addString("targetDate", "2026-05-24")
                 .toJobParameters());
 
-    // then: 배치가 실패하고 예외 원인에 IllegalStateException이 있는지 검증
+    // then: 배치가 실패하고 예외 원인에 BatchException이 있는지 검증
     assertThat(run.getStatus()).isEqualTo(BatchStatus.FAILED);
     List<Throwable> exceptions = run.getAllFailureExceptions();
     assertThat(exceptions).isNotEmpty();
     assertThat(exceptions.get(0).getCause())
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(BatchException.class)
         .hasMessageContaining("API 응답 구조가 변경되었거나 비정상입니다");
   }
 }
