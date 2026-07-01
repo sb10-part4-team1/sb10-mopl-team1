@@ -35,4 +35,4 @@ springdoc:
 mopl:
   jwt:
     refresh-token-cookie:
-      secure: ${MOPL_REFRESH_TOKEN_COOKIE_SECURE:true}
+      secure: true

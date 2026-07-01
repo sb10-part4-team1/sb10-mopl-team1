@@ -13,6 +13,7 @@ import com.sb10.mopl.user.entity.User;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-  private static final String REFRESH_TOKEN_COOKIE_NAME = "REFRESH_TOKEN";
+  private static final String REFRESH_TOKEN_COOKIE_NAME = "${mopl.jwt.refresh-token-cookie.name}";
 
   private final RefreshTokenService refreshTokenService;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
@@ -33,6 +34,10 @@ public class AuthController {
   public JwtDto reissueToken(
       @CookieValue(name = REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken,
       HttpServletResponse response) {
+    response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+    response.setHeader(HttpHeaders.PRAGMA, "no-cache");
+    response.setDateHeader(HttpHeaders.EXPIRES, 0);
+
     RotatedRefreshToken rotatedRefreshToken =
         refreshTokenService
             .rotate(refreshToken)

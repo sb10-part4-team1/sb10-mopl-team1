@@ -56,6 +56,11 @@ public record JwtProperties(
         throw new IllegalArgumentException(
             "Refresh token cookie SameSite must be Strict, Lax, or None.");
       }
+
+      if ("None".equals(sameSite) && !secure) {
+        throw new IllegalArgumentException(
+            "Refresh token cookie with SameSite=None must be Secure.");
+      }
     }
   }
 }
