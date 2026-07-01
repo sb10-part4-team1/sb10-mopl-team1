@@ -48,12 +48,18 @@ public class RefreshTokenService {
   @Transactional
   public Optional<RotatedRefreshToken> rotate(String rawToken) {
     return resolveUsableToken(rawToken)
-        .map(
+        .flatMap(
             refreshToken -> {
               User user = refreshToken.getUser();
+              if (user.isLocked()) {
+                refreshTokenRepository.delete(refreshToken);
+                refreshTokenRepository.flush();
+                return Optional.empty();
+              }
+
               refreshTokenRepository.delete(refreshToken);
               refreshTokenRepository.flush();
-              return new RotatedRefreshToken(saveNewTokenFor(user), user);
+              return Optional.of(new RotatedRefreshToken(saveNewTokenFor(user), user));
             });
   }
 
