@@ -3,6 +3,7 @@ package com.sb10.mopl.batch.job;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,7 +75,7 @@ class TmdbJobTest {
         "results",
         List.of(normalMovie, missingTitleMovie, noPosterMovie, missingIdMovie));
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponsePage1, "totalPages", 2);
-    when(tmdbApiClient.fetchPopularMovies(1)).thenReturn(movieResponsePage1);
+    when(tmdbApiClient.fetch("/movie/popular", 1)).thenReturn(movieResponsePage1);
 
     // 영화 2페이지 DTO 구성 (다중 페이지 순회 검증용)
     TmdbContentDto noOverviewMovie =
@@ -83,7 +84,7 @@ class TmdbJobTest {
     org.springframework.test.util.ReflectionTestUtils.setField(
         movieResponsePage2, "results", List.of(noOverviewMovie));
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponsePage2, "totalPages", 2);
-    when(tmdbApiClient.fetchPopularMovies(2)).thenReturn(movieResponsePage2);
+    when(tmdbApiClient.fetch("/movie/popular", 2)).thenReturn(movieResponsePage2);
 
     // TV 시리즈 1페이지 DTO 구성 (TV Step 실행 검증용 - name 필드 사용으로 TV 시리즈 구분)
     TmdbContentDto normalTv =
@@ -92,8 +93,8 @@ class TmdbJobTest {
     org.springframework.test.util.ReflectionTestUtils.setField(
         tvResponsePage1, "results", List.of(normalTv));
     org.springframework.test.util.ReflectionTestUtils.setField(tvResponsePage1, "totalPages", 1);
-    when(tmdbApiClient.fetchPopularTv(1)).thenReturn(tvResponsePage1);
-    when(tmdbApiClient.fetchPopularTv(2)).thenReturn(TmdbApiResponse.empty());
+    when(tmdbApiClient.fetch("/tv/popular", 1)).thenReturn(tvResponsePage1);
+    when(tmdbApiClient.fetch("/tv/popular", 2)).thenReturn(TmdbApiResponse.empty());
 
     // 매퍼는 실제 자바 코드 동작을 수행하도록 모킹
     when(tmdbContentMapper.toEntity(any())).thenCallRealMethod();
@@ -151,8 +152,7 @@ class TmdbJobTest {
     org.springframework.test.util.ReflectionTestUtils.setField(
         mockMovieResponse, "results", errorMovies);
     org.springframework.test.util.ReflectionTestUtils.setField(mockMovieResponse, "totalPages", 1);
-
-    when(tmdbApiClient.fetchPopularMovies(1)).thenReturn(mockMovieResponse);
+    when(tmdbApiClient.fetch("/movie/popular", 1)).thenReturn(mockMovieResponse);
 
     // 매퍼에서 RuntimeException을 던지도록 모킹하여 에러 발생 시뮬레이션
     when(tmdbContentMapper.toEntity(any())).thenThrow(new RuntimeException("테스트용 변환 실패 예외"));
@@ -174,7 +174,7 @@ class TmdbJobTest {
         .containsExactly("tmdbMovieStep");
 
     // TV API는 전혀 호출되지 않았음을 보장
-    verify(tmdbApiClient, never()).fetchPopularTv(anyInt());
+    verify(tmdbApiClient, never()).fetch(eq("/tv/popular"), anyInt());
   }
 
   @Test
@@ -190,10 +190,10 @@ class TmdbJobTest {
     org.springframework.test.util.ReflectionTestUtils.setField(
         movieResponse1, "results", List.of(dracula1992, dracula2014));
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponse1, "totalPages", 1);
-    when(tmdbApiClient.fetchPopularMovies(1)).thenReturn(movieResponse1);
+    when(tmdbApiClient.fetch("/movie/popular", 1)).thenReturn(movieResponse1);
 
     // TV는 비어있음
-    when(tmdbApiClient.fetchPopularTv(1)).thenReturn(TmdbApiResponse.empty());
+    when(tmdbApiClient.fetch("/tv/popular", 1)).thenReturn(TmdbApiResponse.empty());
 
     // 매퍼는 실제 호출 사용
     when(tmdbContentMapper.toEntity(any())).thenCallRealMethod();
@@ -221,7 +221,7 @@ class TmdbJobTest {
     org.springframework.test.util.ReflectionTestUtils.setField(
         movieResponse2, "results", List.of(dracula1992, dracula300)); // ID=100은 이미 DB에 있음!
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponse2, "totalPages", 1);
-    when(tmdbApiClient.fetchPopularMovies(1)).thenReturn(movieResponse2);
+    when(tmdbApiClient.fetch("/movie/popular", 1)).thenReturn(movieResponse2);
 
     // 2차 기동
     JobExecution secondRun =
