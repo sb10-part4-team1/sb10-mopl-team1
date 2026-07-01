@@ -58,8 +58,6 @@ mopl:
   sports:
     api:
       base-url: https://www.thesportsdb.com/api/v1/json/123
-    batch:
-      league-id: ${SPORTS_LEAGUE_ID:4328}
 
 # 로깅 레벨 설정
 logging:
