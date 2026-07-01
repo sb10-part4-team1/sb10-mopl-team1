@@ -3,7 +3,7 @@ package com.sb10.mopl.batch.job;
 import com.sb10.mopl.batch.dto.TmdbContentDto;
 import com.sb10.mopl.batch.processor.TmdbItemProcessor;
 import com.sb10.mopl.batch.reader.TmdbItemReader;
-import com.sb10.mopl.batch.writer.TmdbItemWriter;
+import com.sb10.mopl.batch.writer.ContentItemWriter;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.exception.ContentException;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +19,11 @@ import org.springframework.transaction.PlatformTransactionManager;
 /**
  * TMDB 인기 콘텐츠(영화 및 TV 시리즈)를 수집하기 위한 Spring Batch Job 설정 클래스입니다.
  *
- * <p>이 배치 작업은 다음과 같은 순서로 실행됩니다: 1. tmdbMovieStep: 인기 영화 데이터를 수집하여 DB에 커밋합니다. (완전 격리 실행) 2.
- * tmdbTvStep: 인기 TV 시리즈 데이터를 수집하여 DB에 커밋합니다. (영화 단계 완료 후 실행)
+ * <p>이 배치 작업은 다음과 같은 순서로 실행됩니다:
+ *
+ * <p>1.tmdbMovieStep: 인기 영화 데이터를 수집하여 DB에 커밋합니다. (완전 격리 실행)
+ *
+ * <p>2.tmdbTvStep: 인기 TV 시리즈 데이터를 수집하여 DB에 커밋합니다. (영화 단계 완료 후 실행)
  */
 @Configuration
 @RequiredArgsConstructor
@@ -29,7 +32,7 @@ public class TmdbJobConfig {
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
   private final TmdbItemProcessor tmdbItemProcessor;
-  private final TmdbItemWriter tmdbItemWriter;
+  private final ContentItemWriter contentItemWriter;
 
   // 단일 공통 리더를 주입받아 양쪽 스텝에서 공유하여 사용합니다 (StepScope 스레드/격리 보장)
   private final TmdbItemReader tmdbItemReader;
@@ -54,7 +57,7 @@ public class TmdbJobConfig {
         // 3. 공급받은 DTO의 데이터를 검증하고 엔티티로 변환합니다.
         .processor(tmdbItemProcessor)
         // 4. 변환된 20건을 모아 중복을 제거한 뒤 DB에 한꺼번에 저장합니다.
-        .writer(tmdbItemWriter)
+        .writer(contentItemWriter)
         // 5. 예외 발생 시 배치가 즉시 종료되지 않고 우회(스킵)할 수 있도록 허용합니다.
         .faultTolerant()
         // 6. 예외가 터지면 해당 청크를 롤백하고 1건씩 다시 실행하여, 에러가 난 특정 아이템만 최대 5번까지 건너뜁니다.
@@ -74,7 +77,7 @@ public class TmdbJobConfig {
         // 3. 공급받은 DTO의 데이터를 검증하고 엔티티로 변환합니다.
         .processor(tmdbItemProcessor)
         // 4. 변환된 20건을 모아 중복을 제거한 뒤 DB에 한꺼번에 저장합니다.
-        .writer(tmdbItemWriter)
+        .writer(contentItemWriter)
         // 5. 예외 발생 시 배치가 즉시 종료되지 않고 우회(스킵)할 수 있도록 허용합니다.
         .faultTolerant()
         // 6. 예외가 터지면 해당 청크를 롤백하고 1건씩 다시 실행하여, 에러가 난 특정 아이템만 최대 5번까지 건너뜁니다.

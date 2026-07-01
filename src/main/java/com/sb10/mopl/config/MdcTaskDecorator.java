@@ -5,8 +5,9 @@ import org.slf4j.MDC;
 import org.springframework.core.task.TaskDecorator;
 
 /**
- * Spring의 TaskExecutor가 작업을 수행할 때 부모 스레드의 MDC 컨텍스트를 자식 스레드로 복사해주는 데코레이터입니다. 비동기 스레드 풀 스레드 반환 시 MDC를
- * 깨끗하게 비워 스레드 오염을 방지합니다.
+ * Spring의 TaskExecutor가 작업을 수행할 때 부모 스레드의 MDC 컨텍스트를 자식 스레드로 복사해주는 데코레이터입니다.
+ *
+ * <p>비동기 스레드 풀 스레드 반환 시 MDC를 깨끗하게 비워 스레드 오염을 방지합니다.
  */
 public class MdcTaskDecorator implements TaskDecorator {
 
