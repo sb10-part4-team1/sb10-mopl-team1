@@ -7,6 +7,7 @@ import com.sb10.mopl.batch.exception.BatchErrorCode;
 import com.sb10.mopl.batch.exception.BatchException;
 import com.sb10.mopl.batch.job.League;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +60,9 @@ public class SportsItemReader implements ItemReader<SportsContentDto> {
     String date =
         StringUtils.hasText(this.targetDate)
             ? this.targetDate
-            : LocalDate.now().minusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE);
+            : LocalDate.now(ZoneId.of("Asia/Seoul"))
+                .minusDays(1)
+                .format(DateTimeFormatter.ISO_LOCAL_DATE);
 
     log.info("SportsDB 전체 리그 수집 시작 - date: {}", date);
 
