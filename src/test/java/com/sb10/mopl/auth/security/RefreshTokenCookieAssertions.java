@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
+import java.util.regex.Pattern;
 import org.hamcrest.Matchers;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.ResultActions;
@@ -29,9 +30,12 @@ public final class RefreshTokenCookieAssertions {
                     Matchers.hasItem(
                         Matchers.allOf(
                             Matchers.containsString(cookieName + "="),
-                            Matchers.containsString(
-                                "Max-Age=" + jwtProperties.refreshTokenExpiration().toSeconds()),
-                            Matchers.containsString("Path=" + cookieProperties.path()),
+                            Matchers.matchesPattern(
+                                ".*\\bMax-Age="
+                                    + jwtProperties.refreshTokenExpiration().toSeconds()
+                                    + "\\b.*"),
+                            Matchers.matchesPattern(
+                                ".*\\bPath=" + Pattern.quote(cookieProperties.path()) + "\\b.*"),
                             Matchers.containsString("HttpOnly"),
                             Matchers.containsString("SameSite=" + cookieProperties.sameSite())))));
   }
