@@ -19,7 +19,7 @@ public class BatchScheduler {
   private final Job sportsJob;
 
   /** 매일 자정 + 2(2시 0분 0초)에 TMDB 및 스포츠 경기 수집 배치를 순차적으로 실행합니다. */
-  @Scheduled(cron = "0 0 2 * * *")
+  @Scheduled(cron = "0 0 2 * * *", zone = "Asia/Seoul")
   public void runJobs() {
     long timestamp = System.currentTimeMillis();
     log.info("정기 배치 스케줄러 작동 시작 - timestamp: {}", timestamp);
