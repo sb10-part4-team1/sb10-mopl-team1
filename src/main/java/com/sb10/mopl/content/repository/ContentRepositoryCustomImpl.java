@@ -30,9 +30,7 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
   private final JPAQueryFactory queryFactory;
   private final EntityManager em;
 
-  /**
-   * 조건 필터링 및 정렬 기준에 부합하는 콘텐츠의 목록을 슬라이스(Slice) 단위로 조회합니다. 메인 쿼리를 직관적이고 선언적으로 배치하여 전체 구조 파악이 용이합니다.
-   */
+  /** 조건 필터링 및 정렬 기준에 부합하는 콘텐츠의 목록을 슬라이스(Slice) 단위로 조회합니다. */
   @Override
   public List<Content> findAllByCondition(ContentSearchRequest request) {
     int limit = request.limit() != null ? request.limit() : 20;
@@ -65,16 +63,22 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
   }
 
   /**
-   * 콘텐츠 타입(type) 필터링 조건절을 생성합니다. - 클라이언트가 typeEqual 파라미터를 보냈을 때만 "where type = :typeEqual" 쿼리가
-   * 생성됩니다. - null이면 조건절에서 완전히 무시(생략)됩니다.
+   * 콘텐츠 타입(type) 필터링 조건절을 생성합니다.
+   *
+   * <p>클라이언트가 typeEqual 파라미터를 보냈을 때만 "where type = :typeEqual" 쿼리가 생성됩니다.
+   *
+   * <p>null이면 조건절에서 완전히 무시(생략)됩니다.
    */
   private BooleanExpression typeEqual(ContentType type) {
     return type != null ? content.type.eq(type) : null;
   }
 
   /**
-   * 제목(title) 또는 설명(description) 검색 키워드 매칭 조건절을 생성합니다. - 입력된 키워드가 존재하면 "where title like %keyword%
-   * or description like %keyword%" 형태로 쿼리가 생성됩니다. - null이거나 빈 문자열이면 조건절에서 생략됩니다.
+   * 제목(title) 또는 설명(description) 검색 키워드 매칭 조건절을 생성합니다.
+   *
+   * <p>입력된 키워드가 존재하면 "where title like %keyword%or description like %keyword%" 형태로 쿼리가 생성됩니다.
+   *
+   * <p>null이거나 빈 문자열이면 조건절에서 생략됩니다.
    */
   private BooleanExpression keywordLike(String keyword) {
     if (keyword == null || keyword.isBlank()) {
@@ -85,8 +89,9 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
   }
 
   /**
-   * 태그 조건절을 생성합니다. - N:M 다대다 관계 매핑 테이블을 효율적으로 조회하고 데이터 중복을 방지하기 위해 EXISTS 서브쿼리를 사용합니다. - "EXISTS
-   * (SELECT 1 FROM ContentTag ct WHERE ct.content = c AND ct.tag.name IN :tags)" 형태로 쿼리가 생성됩니다.
+   * 태그 조건절을 생성합니다. - N:M 다대다 관계 매핑 테이블을 효율적으로 조회하고 데이터 중복을 방지하기 위해 EXISTS 서브쿼리를 사용합니다.
+   *
+   * <p>"EXISTS (SELECT 1 FROM ContentTag ct WHERE ct.content = c AND ct.tag.name IN :tags)"
    */
   private BooleanExpression tagsIn(List<String> tags) {
     if (tags == null || tags.isEmpty()) {
@@ -99,8 +104,9 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
   }
 
   /**
-   * 커서 기반 페이지네이션의 핵심 Where 조건절을 생성합니다. - 이전에 받아온 마지막 데이터의 고유 ID(idAfter)와 정렬 기준값(cursor) 스냅샷이 존재할
-   * 때만 작동합니다.
+   * 커서 기반 페이지네이션의 핵심 Where 조건절을 생성합니다.
+   *
+   * <p>이전에 받아온 마지막 데이터의 고유 ID(idAfter)와 정렬 기준값(cursor) 스냅샷이 존재할때만 작동합니다.
    */
   private BooleanExpression cursorCondition(ContentSearchRequest request) {
     // 1. 이전 페이지의 마지막 아이템 ID 또는 커서 스냅샷이 없는 첫 페이지 조회인 경우 커서 조건 적용 안 함
@@ -139,7 +145,11 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
     }
   }
 
-  /** 인기순(POPULAR) 정렬 기준의 3중 복합 커서 조건식을 분기 및 생성합니다. - 1순위: 시청자 수 - 2순위: 리뷰 수 - 3순위: 고유 ID (id) */
+  /**
+   * 인기순(POPULAR) 정렬 기준의 3중 복합 커서 조건식을 분기 및 생성합니다.
+   *
+   * <p>- 1순위: 시청자 수 - 2순위: 리뷰 수 - 3순위: 고유 ID (id)
+   */
   private BooleanExpression getPopularCursorExpression(
       long cursorWatcher, int cursorReview, UUID cursorId, boolean isAsc) {
     if (isAsc) {
@@ -206,9 +216,13 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
   }
 
   /**
-   * 클라이언트가 보낸 정렬 기준(sortBy)과 방향(sortDirection)에 맞추어 ORDER BY 컬럼 배열을 구성합니다. (인기순):
-   * watcherCount(시청자수) -> reviewCount(리뷰수) -> id(고유 ID) 순으로 정렬 (생성일순): createdAt(생성일) -> id(고유 ID)
-   * 순으로 정렬 - (평점순): averageRating(평점) -> id(고유 ID) 순으로 정렬
+   * 클라이언트가 보낸 정렬 기준(sortBy)과 방향(sortDirection)에 맞추어 ORDER BY 컬럼 배열을 구성합니다.
+   *
+   * <p>(인기순):watcherCount(시청자수) -> reviewCount(리뷰수) -> id(고유 ID) 순으로 정렬
+   *
+   * <p>(생성일순): createdAt(생성일) -> id(고유 ID)순으로 정렬
+   *
+   * <p>(평점순): averageRating(평점) -> id(고유 ID) 순으로 정렬
    */
   private OrderSpecifier<?>[] getOrderSpecifiers(ContentSearchRequest request) {
     boolean isAsc = request.sortDirection() == SortDirection.ASCENDING;
