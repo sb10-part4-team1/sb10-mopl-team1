@@ -263,7 +263,12 @@ class JwtAuthenticationFilterTest {
   }
 
   private JwtProvider jwtProviderAt(Instant instant) {
-    JwtProperties properties = new JwtProperties(SECRET, Duration.ofHours(1));
+    JwtProperties properties =
+        new JwtProperties(
+            SECRET,
+            Duration.ofHours(1),
+            Duration.ofDays(14),
+            new JwtProperties.RefreshTokenCookie("REFRESH_TOKEN", "/api/auth", true, false, "Lax"));
     return new JwtProvider(properties, Clock.fixed(instant, ZoneOffset.UTC));
   }
 

@@ -70,8 +70,8 @@ CREATE TABLE IF NOT EXISTS "temporary_passwords" (
 -- 토큰 테이블
 CREATE TABLE IF NOT EXISTS "refresh_tokens" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
-    "user_id"            UUID                        NOT NULL,
-    "token"              TEXT                        NOT NULL UNIQUE,
+    "user_id"            UUID                        NOT NULL UNIQUE,
+    "token"              VARCHAR(64)                 NOT NULL UNIQUE,
     "expires_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     CONSTRAINT "FK_USERS_TO_REFRESH_TOKENS"
@@ -245,9 +245,6 @@ CREATE TABLE IF NOT EXISTS "content_reviews" (
 -- ==========================================
 -- 성능 최적화를 위한 조회용 인덱스 (INDEX)
 -- ==========================================
-CREATE INDEX IF NOT EXISTS "IDX_REFRESH_TOKENS_USER"
-    ON "refresh_tokens" ("user_id");
-
 CREATE INDEX IF NOT EXISTS "IDX_FOLLOWS_FOLLOWEE"
     ON "follows" ("followee_id");
 
