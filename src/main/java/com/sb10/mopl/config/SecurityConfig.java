@@ -34,6 +34,9 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -86,7 +89,9 @@ public class SecurityConfig {
       JwtAuthenticationFilter jwtAuthenticationFilter,
       EmailPasswordAuthenticationFilter emailPasswordAuthenticationFilter,
       AuthenticationEntryPoint authenticationEntryPoint,
-      AccessDeniedHandler accessDeniedHandler)
+      AccessDeniedHandler accessDeniedHandler,
+      LogoutHandler signOutLogoutHandler,
+      LogoutSuccessHandler logoutSuccessHandler)
       throws Exception {
     http.csrf(
             csrf ->
@@ -97,7 +102,14 @@ public class SecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
-        .logout(AbstractHttpConfigurer::disable)
+        .logout(
+            logout ->
+                logout
+                    .logoutUrl("/api/auth/sign-out")
+                    .addLogoutHandler(signOutLogoutHandler)
+                    .logoutSuccessHandler(logoutSuccessHandler)
+                    .clearAuthentication(true)
+                    .invalidateHttpSession(false))
         // H2-Console 사용을 위한 헤더 설정. 추후 제거 예정
         .headers(headers -> headers.frameOptions(FrameOptionsConfig::sameOrigin))
         .authorizeHttpRequests(
@@ -121,7 +133,7 @@ public class SecurityConfig {
                     .authenticationEntryPoint(authenticationEntryPoint)
                     // 인증은 되었지만 필요한 권한이 부족한 요청은 403 응답으로 처리
                     .accessDeniedHandler(accessDeniedHandler))
-        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(jwtAuthenticationFilter, LogoutFilter.class)
         .addFilterAt(emailPasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
