@@ -2,7 +2,6 @@ package com.sb10.mopl.playlist.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -333,16 +332,14 @@ class PlaylistControllerTest {
   }
 
   @Test
-  @DisplayName("플레이리스트 수정 실패 - 소유자가 아니면 403을 반환한다")
-  void updateFailUnauthorizedOwner() throws Exception {
+  @DisplayName("플레이리스트 수정 실패 - 소유자가 아니면 403 Forbidden을 반환한다")
+  void update_returnForbidden_whenNotOwner() throws Exception {
     // given
-    given(
-            playlistService.update(
-                eq(playlistId), any(PlaylistUpdateRequest.class), eq(CURRENT_USER_ID)))
-        .willThrow(
+    when(playlistService.update(eq(playlistId), any(PlaylistUpdateRequest.class), eq(ownerId)))
+        .thenThrow(
             new PlaylistException(
                 PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS,
-                Map.of("playlistId", playlistId, "userId", CURRENT_USER_ID)));
+                Map.of("playlistId", playlistId, "userId", ownerId)));
 
     // when
     ResultActions resultActions =
@@ -357,8 +354,7 @@ class PlaylistControllerTest {
         .andExpect(
             jsonPath("$.code").value(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS.getCode()));
 
-    verify(playlistService)
-        .update(eq(playlistId), any(PlaylistUpdateRequest.class), eq(CURRENT_USER_ID));
+    verify(playlistService).update(eq(playlistId), any(PlaylistUpdateRequest.class), eq(ownerId));
   }
 
   @Test
