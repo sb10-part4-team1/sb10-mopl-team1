@@ -59,11 +59,11 @@ public class SecurityConfig {
     pathMatcher("/error"),
     pathMatcher("/oauth2/**"),
     pathMatcher("/login/oauth2/**"),
-    pathMatcher("/h2-console/**"),
+    pathMatcher("/h2-console/**"), // FIXME: 나중에 지워야 할 부분,
     pathMatcher("/api-docs/**"),
     pathMatcher("/swagger-ui/**"),
     pathMatcher("/swagger-ui.html"),
-    pathMatcher("/api/test/batch/**"),
+    pathMatcher("/api/test/batch/**"), // FIXME: 나중에 지워야 할 부분,
     methodAndPathMatcher(HttpMethod.OPTIONS, "/**"),
     methodAndPathMatcher(HttpMethod.POST, "/api/users"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-in"),
@@ -79,6 +79,24 @@ public class SecurityConfig {
     methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/locked")
   };
 
+  private static RequestMatcher pathMatcher(String pattern) {
+    return request -> PATH_MATCHER.match(pattern, path(request));
+  }
+
+  private static RequestMatcher methodAndPathMatcher(HttpMethod method, String pattern) {
+    return request ->
+        method.matches(request.getMethod()) && PATH_MATCHER.match(pattern, path(request));
+  }
+
+  private static String path(HttpServletRequest request) {
+    String requestUri = request.getRequestURI();
+    String contextPath = request.getContextPath();
+    if (contextPath == null || contextPath.isBlank()) {
+      return requestUri;
+    }
+    return requestUri.substring(contextPath.length());
+  }
+
   @Bean
   public SecurityFilterChain securityFilterChain(
       HttpSecurity http,
@@ -89,7 +107,9 @@ public class SecurityConfig {
       throws Exception {
     http.csrf(
             csrf ->
-                csrf.csrfTokenRepository(csrfTokenRepository())
+                csrf.ignoringRequestMatchers(
+                        "/h2-console/**", "/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
+                    .csrfTokenRepository(csrfTokenRepository())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
         .sessionManagement(
@@ -97,7 +117,7 @@ public class SecurityConfig {
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
         .logout(AbstractHttpConfigurer::disable)
-        // H2-Console 사용을 위한 헤더 설정. 추후 제거 예정
+        // H2-Console 사용을 위한 헤더 설정. 추후 제거 예정  // FIXME: 나중에 지워야 할 부분,
         .headers(headers -> headers.frameOptions(FrameOptionsConfig::sameOrigin))
         .authorizeHttpRequests(
             auth ->
@@ -179,23 +199,5 @@ public class SecurityConfig {
   @Bean
   public Clock clock() {
     return Clock.systemUTC();
-  }
-
-  private static RequestMatcher pathMatcher(String pattern) {
-    return request -> PATH_MATCHER.match(pattern, path(request));
-  }
-
-  private static RequestMatcher methodAndPathMatcher(HttpMethod method, String pattern) {
-    return request ->
-        method.matches(request.getMethod()) && PATH_MATCHER.match(pattern, path(request));
-  }
-
-  private static String path(HttpServletRequest request) {
-    String requestUri = request.getRequestURI();
-    String contextPath = request.getContextPath();
-    if (contextPath == null || contextPath.isBlank()) {
-      return requestUri;
-    }
-    return requestUri.substring(contextPath.length());
   }
 }
