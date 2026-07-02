@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 public class JwtProvider {
 
   public static final String TOKEN_TYPE_CLAIM = "tokenType";
+  public static final String SESSION_ID_CLAIM = "sessionId";
   public static final String ACCESS_TOKEN_TYPE = "ACCESS";
 
   private final JwtProperties jwtProperties;
@@ -27,7 +29,7 @@ public class JwtProvider {
     this.secretKey = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
   }
 
-  public String createAccessToken(MoplUserDetails userDetails) {
+  public String createAccessToken(MoplUserDetails userDetails, UUID sessionId) {
     Instant issuedAt = clock.instant();
     Instant expiresAt = issuedAt.plus(jwtProperties.accessTokenExpiration());
 
@@ -37,6 +39,7 @@ public class JwtProvider {
         .claim("email", userDetails.getEmail())
         .claim("role", userDetails.getRole().name())
         .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
+        .claim(SESSION_ID_CLAIM, sessionId.toString())
         .issuedAt(Date.from(issuedAt))
         .expiration(Date.from(expiresAt))
         .signWith(secretKey, Jwts.SIG.HS256)
