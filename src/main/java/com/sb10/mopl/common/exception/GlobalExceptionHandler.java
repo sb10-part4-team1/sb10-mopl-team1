@@ -14,8 +14,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -114,6 +116,71 @@ public class GlobalExceptionHandler {
 
     log.warn(
         "[BindException] Code: {}, Message: {}, Details: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        details);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), details);
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  /**
+   * 요청 파라미터 타입 변환에 실패했을 때 발생하는 예외를 처리합니다. 예: enum 값 변환 실패, UUID 형식 오류 등
+   *
+   * <p>{@code @RequestParam}으로 전달된 값이 컨트롤러 메서드 파라미터 타입으로 변환되지 못한 경우 SYS01 코드와 함께 400 Bad Request를
+   * 반환합니다.
+   *
+   * @param ex 발생한 TypeMismatchException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
+   */
+  @ExceptionHandler(TypeMismatchException.class)
+  public ResponseEntity<ErrorResponse> handleTypeMismatchException(TypeMismatchException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.INVALID_INPUT_VALUE;
+
+    String field = "message";
+    if (ex instanceof MethodArgumentTypeMismatchException methodEx) {
+      field = methodEx.getName();
+    }
+
+    Class<?> requiredType = ex.getRequiredType();
+
+    String message =
+        requiredType != null && requiredType.isEnum()
+            ? "지원하지 않는 값입니다. (선택 가능한 값: " + Arrays.toString(requiredType.getEnumConstants()) + ")"
+            : "올바르지 않은 형식입니다.";
+
+    Map<String, Object> details = Map.of(field, message);
+
+    log.warn(
+        "[TypeMismatchException] Type: {}, Code: {}, Message: {}, Details: {}",
+        ex.getClass().getName(),
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        details);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), details);
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  /**
+   * 필수 요청 파라미터가 누락되었을 때 발생하는 예외를 처리합니다. 예: required=true인 @RequestParam 값이 없는 경우
+   *
+   * @param ex 발생한 MissingServletRequestParameterException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
+   */
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+      MissingServletRequestParameterException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.INVALID_INPUT_VALUE;
+
+    Map<String, Object> details = Map.of(ex.getParameterName(), "필수 요청 파라미터입니다.");
+
+    log.warn(
+        "[MissingServletRequestParameterException] Code: {}, Message: {}, Details: {}",
         errorCode.getCode(),
         errorCode.getMessage(),
         details);
