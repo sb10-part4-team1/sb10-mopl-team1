@@ -56,7 +56,7 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   @Override
-  @Transactional
+  @Transactional(readOnly = true)
   public CursorPageResponse<PlaylistDto> findAll(
       String keywordLike,
       UUID ownerId,
@@ -101,7 +101,7 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   @Override
-  @Transactional
+  @Transactional(readOnly = true)
   public PlaylistDto findById(UUID playlistId) {
     // 플레이 리스트 존재 검증
     Playlist playlist =
@@ -118,17 +118,7 @@ public class PlaylistServiceImpl implements PlaylistService {
   @Override
   @Transactional
   public PlaylistDto update(UUID playlistId, PlaylistUpdateRequest request, UUID userId) {
-    // 플레이리스트 존재 검증
-    Playlist playlist =
-        playlistRepository
-            .findByIdWithOwner(playlistId)
-            .orElseThrow(
-                () ->
-                    new PlaylistException(
-                        PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
-
-    // 플레이리스트 생성자 권한 검증
-    validatePlaylistOwner(playlist, userId);
+    Playlist playlist = getPlaylistOwnedBy(playlistId, userId);
 
     // 플레이리스트 업데이트
     playlist.update(request.title(), request.description());
@@ -139,19 +129,24 @@ public class PlaylistServiceImpl implements PlaylistService {
   @Override
   @Transactional
   public void delete(UUID playlistId, UUID userId) {
-    // 플레이리스트 존재 검증
-    Playlist playlist =
-        playlistRepository
-            .findByIdWithOwner(playlistId)
-            .orElseThrow(
-                () ->
-                    new PlaylistException(
-                        PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
-
-    // 사용자 권한 검증
-    validatePlaylistOwner(playlist, userId);
+    Playlist playlist = getPlaylistOwnedBy(playlistId, userId);
 
     playlistRepository.delete(playlist);
+  }
+
+  // 플레이 리스트 존재 / 생성자 권한 검증 중복 코드
+  private Playlist getPlaylistOwnedBy(UUID playlistId, UUID userId) {
+    Playlist playlist =
+      playlistRepository
+        .findByIdWithOwner(playlistId)
+        .orElseThrow(
+          () ->
+            new PlaylistException(
+              PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)
+            )
+        );
+    validatePlaylistOwner(playlist, userId);
+    return playlist;
   }
 
   private void validateFindAllRequest(
