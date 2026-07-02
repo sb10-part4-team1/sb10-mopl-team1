@@ -78,6 +78,17 @@ CREATE TABLE IF NOT EXISTS "refresh_tokens" (
         FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE
 );
 
+-- JWT 세션 테이블
+CREATE TABLE IF NOT EXISTS "jwt_sessions" (
+    "id"                 UUID                        NOT NULL PRIMARY KEY,
+    "user_id"            UUID                        NOT NULL UNIQUE,
+    "session_id"         UUID                        NOT NULL UNIQUE,
+    "expires_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
+    "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
+    CONSTRAINT "FK_USERS_TO_JWT_SESSIONS"
+        FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE
+);
+
 -- 소셜 계정 테이블 (소셜 정보는 복합 유니크이므로 하단 배치)
 CREATE TABLE IF NOT EXISTS "social_accounts" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
