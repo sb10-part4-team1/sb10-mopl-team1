@@ -1,19 +1,14 @@
 package com.sb10.mopl.auth.controller;
 
 import com.sb10.mopl.auth.dto.response.JwtDto;
-import com.sb10.mopl.auth.exception.AuthErrorCode;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.user.MoplUserDetails;
-import com.sb10.mopl.auth.service.JwtSessionService;
-import com.sb10.mopl.auth.service.RefreshTokenService;
-import com.sb10.mopl.auth.service.RefreshTokenService.RotatedRefreshToken;
-import com.sb10.mopl.common.exception.MoplException;
+import com.sb10.mopl.auth.service.AuthTokenReissueService;
+import com.sb10.mopl.auth.service.AuthTokenReissueService.ReissuedToken;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -26,8 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-  private final RefreshTokenService refreshTokenService;
-  private final JwtSessionService jwtSessionService;
+  private final AuthTokenReissueService authTokenReissueService;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
   private final JwtProvider jwtProvider;
 
@@ -40,26 +34,11 @@ public class AuthController {
     response.setHeader(HttpHeaders.PRAGMA, "no-cache");
     response.setDateHeader(HttpHeaders.EXPIRES, 0);
 
-    RotatedRefreshToken rotatedRefreshToken =
-        refreshTokenService
-            .rotate(refreshToken)
-            .orElseThrow(
-                () ->
-                    new MoplException(
-                        AuthErrorCode.AUTHENTICATION_FAILED,
-                        Map.of("message", "유효하지 않은 리프레시 토큰입니다.")));
+    ReissuedToken reissuedToken = authTokenReissueService.reissue(refreshToken);
 
-    refreshTokenCookieWriter.addRefreshTokenCookie(response, rotatedRefreshToken.refreshToken());
+    refreshTokenCookieWriter.addRefreshTokenCookie(response, reissuedToken.refreshToken());
 
-    User user = rotatedRefreshToken.user();
-    UUID sessionId =
-        jwtSessionService
-            .extendActiveSession(user.getId(), rotatedRefreshToken.refreshToken().expiresAt())
-            .orElseThrow(
-                () ->
-                    new MoplException(
-                        AuthErrorCode.AUTHENTICATION_FAILED,
-                        Map.of("message", "유효하지 않은 로그인 세션입니다.")));
+    User user = reissuedToken.user();
     UserDto userDto =
         new UserDto(
             user.getId(),
@@ -69,6 +48,8 @@ public class AuthController {
             user.getProfileImageUrl(),
             user.getRole(),
             user.isLocked());
-    return new JwtDto(userDto, jwtProvider.createAccessToken(new MoplUserDetails(user), sessionId));
+    return new JwtDto(
+        userDto,
+        jwtProvider.createAccessToken(new MoplUserDetails(user), reissuedToken.sessionId()));
   }
 }
