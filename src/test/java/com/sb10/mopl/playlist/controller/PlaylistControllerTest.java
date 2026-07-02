@@ -336,25 +336,29 @@ class PlaylistControllerTest {
   @DisplayName("플레이리스트 수정 실패 - 소유자가 아니면 403을 반환한다")
   void updateFailUnauthorizedOwner() throws Exception {
     // given
-    given(playlistService.update(eq(playlistId), any(PlaylistUpdateRequest.class), eq(CURRENT_USER_ID)))
-      .willThrow(
-        new PlaylistException(
-          PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS,
-          Map.of("playlistId", playlistId, "userId", CURRENT_USER_ID)));
+    given(
+            playlistService.update(
+                eq(playlistId), any(PlaylistUpdateRequest.class), eq(CURRENT_USER_ID)))
+        .willThrow(
+            new PlaylistException(
+                PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS,
+                Map.of("playlistId", playlistId, "userId", CURRENT_USER_ID)));
 
     // when
     ResultActions resultActions =
-      mockMvc.perform(
-        patch(DETAIL_URL, playlistId)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(toJson(updateRequest)));
+        mockMvc.perform(
+            patch(DETAIL_URL, playlistId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(updateRequest)));
 
     // then
     resultActions
-      .andExpect(status().isForbidden())
-      .andExpect(jsonPath("$.code").value(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS.getCode()));
+        .andExpect(status().isForbidden())
+        .andExpect(
+            jsonPath("$.code").value(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS.getCode()));
 
-    verify(playlistService).update(eq(playlistId), any(PlaylistUpdateRequest.class), eq(CURRENT_USER_ID));
+    verify(playlistService)
+        .update(eq(playlistId), any(PlaylistUpdateRequest.class), eq(CURRENT_USER_ID));
   }
 
   @Test
@@ -377,19 +381,20 @@ class PlaylistControllerTest {
   void deleteFailUnauthorizedOwner() throws Exception {
     // given
     willThrow(
-      new PlaylistException(
-        PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS,
-        Map.of("playlistId", playlistId, "userId", CURRENT_USER_ID)))
-      .given(playlistService)
-      .delete(playlistId, CURRENT_USER_ID);
+            new PlaylistException(
+                PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS,
+                Map.of("playlistId", playlistId, "userId", CURRENT_USER_ID)))
+        .given(playlistService)
+        .delete(playlistId, CURRENT_USER_ID);
 
     // when
     ResultActions resultActions = mockMvc.perform(delete(DETAIL_URL, playlistId));
 
     // then
     resultActions
-      .andExpect(status().isForbidden())
-      .andExpect(jsonPath("$.code").value(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS.getCode()));
+        .andExpect(status().isForbidden())
+        .andExpect(
+            jsonPath("$.code").value(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS.getCode()));
 
     verify(playlistService).delete(playlistId, CURRENT_USER_ID);
   }
