@@ -54,7 +54,7 @@ public class AuthController {
     User user = rotatedRefreshToken.user();
     UUID sessionId =
         jwtSessionService
-            .findActiveSessionId(user.getId())
+            .extendActiveSession(user.getId(), rotatedRefreshToken.refreshToken().expiresAt())
             .orElseThrow(
                 () ->
                     new MoplException(

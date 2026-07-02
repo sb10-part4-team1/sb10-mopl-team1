@@ -49,4 +49,8 @@ public class JwtSession extends BaseEntity {
   public boolean isExpired(Instant now) {
     return !expiresAt.isAfter(now);
   }
+
+  public void extendExpiresAt(Instant expiresAt) {
+    this.expiresAt = expiresAt;
+  }
 }

@@ -48,6 +48,17 @@ public class JwtSessionService {
         .map(JwtSession::getSessionId);
   }
 
+  @Transactional
+  public Optional<UUID> extendActiveSession(UUID userId, Instant expiresAt) {
+    return jwtSessionRepository
+        .findActiveByUserId(userId, clock.instant())
+        .map(
+            jwtSession -> {
+              jwtSession.extendExpiresAt(expiresAt);
+              return jwtSession.getSessionId();
+            });
+  }
+
   @Transactional(readOnly = true)
   public boolean isActive(UUID userId, UUID sessionId) {
     if (userId == null || sessionId == null) {
