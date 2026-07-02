@@ -134,7 +134,7 @@ public class PlaylistServiceImpl implements PlaylistService {
     playlistRepository.delete(playlist);
   }
 
-  // 플레이 리스트 존재 / 생성자 권한 검증 중복 코드
+  // 플레이리스트 존재 여부와 소유자 권한을 함께 검증
   private Playlist getPlaylistOwnedBy(UUID playlistId, UUID userId) {
     Playlist playlist =
         playlistRepository
