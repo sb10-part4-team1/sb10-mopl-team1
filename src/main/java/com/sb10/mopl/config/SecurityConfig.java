@@ -6,6 +6,7 @@ import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.jwt.JwtAuthenticationFilter;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
+import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.user.entity.UserRole;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Validator;
@@ -138,9 +139,11 @@ public class SecurityConfig {
 
   @Bean
   public JwtAuthenticationFilter jwtAuthenticationFilter(
-      JwtProvider jwtProvider, AuthErrorResponseWriter authErrorResponseWriter) {
+      JwtProvider jwtProvider,
+      JwtSessionService jwtSessionService,
+      AuthErrorResponseWriter authErrorResponseWriter) {
     return new JwtAuthenticationFilter(
-        jwtProvider, authErrorResponseWriter, PUBLIC_ENDPOINT_MATCHERS);
+        jwtProvider, jwtSessionService, authErrorResponseWriter, PUBLIC_ENDPOINT_MATCHERS);
   }
 
   @Bean

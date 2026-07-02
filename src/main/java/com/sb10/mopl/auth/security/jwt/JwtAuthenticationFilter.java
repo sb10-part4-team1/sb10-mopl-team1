@@ -3,6 +3,7 @@ package com.sb10.mopl.auth.security.jwt;
 import com.sb10.mopl.auth.exception.AuthErrorCode;
 import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.user.entity.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -27,14 +28,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private static final String BEARER_PREFIX = "Bearer ";
 
   private final JwtProvider jwtProvider;
+  private final JwtSessionService jwtSessionService;
   private final AuthErrorResponseWriter responseWriter;
   private final List<RequestMatcher> skipRequestMatchers;
 
   public JwtAuthenticationFilter(
       JwtProvider jwtProvider,
+      JwtSessionService jwtSessionService,
       AuthErrorResponseWriter responseWriter,
       RequestMatcher[] skipRequestMatchers) {
     this.jwtProvider = jwtProvider;
+    this.jwtSessionService = jwtSessionService;
     this.responseWriter = responseWriter;
     this.skipRequestMatchers = List.of(skipRequestMatchers);
   }
@@ -102,7 +106,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   }
 
   protected void verifyAdditionalTokenPolicy(Claims claims, AuthenticatedUser authenticatedUser) {
-    // 단일 로그인 세션에서 sessionId 또는 jti를 검증해야 하면 이곳에 정책 추가
+    UUID sessionId = UUID.fromString(requiredClaim(claims, JwtProvider.SESSION_ID_CLAIM));
+    if (!jwtSessionService.isActive(authenticatedUser.id(), sessionId)) {
+      throw new IllegalArgumentException("JWT session is not active.");
+    }
   }
 
   private String requiredClaim(Claims claims, String name) {
