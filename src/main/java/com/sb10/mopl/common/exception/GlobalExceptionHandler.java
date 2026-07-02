@@ -253,28 +253,27 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * DB 무결성 제약 조건 위반 예외를 처리합니다.
-   * 예: UNIQUE 제약 조건 위반, FK 제약 조건 위반 등
+   * DB 무결성 제약 조건 위반 예외를 처리합니다. 예: UNIQUE 제약 조건 위반, FK 제약 조건 위반 등
    *
    * @param ex 발생한 DataIntegrityViolationException 인스턴스
    * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
    */
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
-    DataIntegrityViolationException ex) {
+      DataIntegrityViolationException ex) {
     SystemErrorCode errorCode = SystemErrorCode.DATA_INTEGRITY_VIOLATION;
 
     log.warn(
-      "[DataIntegrityViolationException] Code: {}, Message: {}",
-      errorCode.getCode(),
-      errorCode.getMessage(),
-      ex);
-
-    ErrorResponse errorResponse =
-      new ErrorResponse(
+        "[DataIntegrityViolationException] Code: {}, Message: {}",
         errorCode.getCode(),
         errorCode.getMessage(),
-        Map.of("message", "데이터 무결성 제약 조건을 위반했습니다."));
+        ex);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(),
+            errorCode.getMessage(),
+            Map.of("message", "데이터 무결성 제약 조건을 위반했습니다."));
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }
