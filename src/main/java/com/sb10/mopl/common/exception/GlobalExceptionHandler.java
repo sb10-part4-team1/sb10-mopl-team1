@@ -17,6 +17,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -139,9 +140,7 @@ public class GlobalExceptionHandler {
     SystemErrorCode errorCode = SystemErrorCode.INVALID_INPUT_VALUE;
 
     String field = "message";
-    if (ex
-        instanceof
-        org.springframework.web.method.annotation.MethodArgumentTypeMismatchException methodEx) {
+    if (ex instanceof MethodArgumentTypeMismatchException methodEx) {
       field = methodEx.getName();
     }
 

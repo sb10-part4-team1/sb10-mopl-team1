@@ -2,6 +2,8 @@ package com.sb10.mopl.playlist.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -331,6 +333,31 @@ class PlaylistControllerTest {
   }
 
   @Test
+  @DisplayName("플레이리스트 수정 실패 - 소유자가 아니면 403을 반환한다")
+  void updateFailUnauthorizedOwner() throws Exception {
+    // given
+    given(playlistService.update(eq(playlistId), any(PlaylistUpdateRequest.class), eq(CURRENT_USER_ID)))
+      .willThrow(
+        new PlaylistException(
+          PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS,
+          Map.of("playlistId", playlistId, "userId", CURRENT_USER_ID)));
+
+    // when
+    ResultActions resultActions =
+      mockMvc.perform(
+        patch(DETAIL_URL, playlistId)
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(toJson(updateRequest)));
+
+    // then
+    resultActions
+      .andExpect(status().isForbidden())
+      .andExpect(jsonPath("$.code").value(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS.getCode()));
+
+    verify(playlistService).update(eq(playlistId), any(PlaylistUpdateRequest.class), eq(CURRENT_USER_ID));
+  }
+
+  @Test
   @DisplayName("존재하지 않는 플레이리스트 삭제 요청 시 404 Not Found를 반환한다")
   void delete_returnNotFound_whenPlaylistDoesNotExist() throws Exception {
     // given
@@ -343,6 +370,28 @@ class PlaylistControllerTest {
     resultActions
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value(PlaylistErrorCode.PLAYLIST_NOT_FOUND.getCode()));
+  }
+
+  @Test
+  @DisplayName("플레이리스트 삭제 실패 - 소유자가 아니면 403을 반환한다")
+  void deleteFailUnauthorizedOwner() throws Exception {
+    // given
+    willThrow(
+      new PlaylistException(
+        PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS,
+        Map.of("playlistId", playlistId, "userId", CURRENT_USER_ID)))
+      .given(playlistService)
+      .delete(playlistId, CURRENT_USER_ID);
+
+    // when
+    ResultActions resultActions = mockMvc.perform(delete(DETAIL_URL, playlistId));
+
+    // then
+    resultActions
+      .andExpect(status().isForbidden())
+      .andExpect(jsonPath("$.code").value(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS.getCode()));
+
+    verify(playlistService).delete(playlistId, CURRENT_USER_ID);
   }
 
   private String toJson(Object request) throws Exception {
