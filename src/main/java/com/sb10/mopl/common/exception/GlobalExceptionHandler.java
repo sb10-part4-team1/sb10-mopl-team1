@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.PropertyAccessException;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -247,6 +248,30 @@ public class GlobalExceptionHandler {
     ErrorResponse errorResponse =
         new ErrorResponse(
             errorCode.getCode(), errorCode.getMessage(), Map.of("message", ex.getMessage()));
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  /**
+   * DB 무결성 제약 조건 위반 예외를 처리합니다. 예: UNIQUE 제약 조건 위반, FK 제약 조건 위반 등
+   *
+   * @param ex 발생한 DataIntegrityViolationException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
+   */
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+      DataIntegrityViolationException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.DATA_INTEGRITY_VIOLATION;
+
+    log.warn(
+        "[DataIntegrityViolationException] Code: {}, Message: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(), errorCode.getMessage(), Map.of("message", errorCode.getMessage()));
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }

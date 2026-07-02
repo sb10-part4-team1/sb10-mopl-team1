@@ -37,9 +37,24 @@ public class Playlist extends BaseUpdatableEntity {
   @Column(name = "description", nullable = false, columnDefinition = "TEXT")
   private String description;
 
+  public void update(String title, String description) {
+    validateUpdate(title, description);
+    this.title = title;
+    this.description = description;
+  }
+
   private static void validateCreate(User owner, String title, String description) {
     DomainValidator.start()
         .check(owner == null, "owner", "플레이리스트 제작자는 필수입니다.")
+        .check(title == null || title.isBlank(), "title", "플레이리스트 제목은 필수입니다.")
+        .check(title != null && title.length() > 255, "title", "플레이리스트 제목은 255자 이하여야 합니다.")
+        .check(description == null || description.isBlank(), "description", "플레이리스트 설명은 필수입니다.")
+        .orThrow(
+            details -> new PlaylistException(PlaylistErrorCode.INVALID_PLAYLIST_VALUE, details));
+  }
+
+  private static void validateUpdate(String title, String description) {
+    DomainValidator.start()
         .check(title == null || title.isBlank(), "title", "플레이리스트 제목은 필수입니다.")
         .check(title != null && title.length() > 255, "title", "플레이리스트 제목은 255자 이하여야 합니다.")
         .check(description == null || description.isBlank(), "description", "플레이리스트 설명은 필수입니다.")
