@@ -1,6 +1,7 @@
 package com.sb10.mopl.auth.service;
 
 import com.sb10.mopl.auth.exception.AuthErrorCode;
+import com.sb10.mopl.auth.service.JwtSessionService.IssuedJwtSession;
 import com.sb10.mopl.auth.service.RefreshTokenService.IssuedRefreshToken;
 import com.sb10.mopl.auth.service.RefreshTokenService.RotatedRefreshToken;
 import com.sb10.mopl.common.exception.MoplException;
@@ -13,10 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class AuthTokenReissueService {
+public class AuthTokenService {
 
   private final RefreshTokenService refreshTokenService;
   private final JwtSessionService jwtSessionService;
+
+  @Transactional
+  public IssuedToken issue(UUID userId) {
+    IssuedRefreshToken refreshToken = refreshTokenService.issue(userId);
+    IssuedJwtSession jwtSession = jwtSessionService.issue(userId);
+
+    return new IssuedToken(refreshToken, jwtSession.sessionId());
+  }
 
   @Transactional
   public ReissuedToken reissue(String refreshToken) {
@@ -42,6 +51,8 @@ public class AuthTokenReissueService {
 
     return new ReissuedToken(issuedRefreshToken, user, sessionId);
   }
+
+  public record IssuedToken(IssuedRefreshToken refreshToken, UUID sessionId) {}
 
   public record ReissuedToken(IssuedRefreshToken refreshToken, User user, UUID sessionId) {}
 }

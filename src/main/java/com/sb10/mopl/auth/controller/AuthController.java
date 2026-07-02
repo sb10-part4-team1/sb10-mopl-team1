@@ -4,8 +4,8 @@ import com.sb10.mopl.auth.dto.response.JwtDto;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.user.MoplUserDetails;
-import com.sb10.mopl.auth.service.AuthTokenReissueService;
-import com.sb10.mopl.auth.service.AuthTokenReissueService.ReissuedToken;
+import com.sb10.mopl.auth.service.AuthTokenService;
+import com.sb10.mopl.auth.service.AuthTokenService.ReissuedToken;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-  private final AuthTokenReissueService authTokenReissueService;
+  private final AuthTokenService authTokenService;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
   private final JwtProvider jwtProvider;
 
@@ -34,7 +34,7 @@ public class AuthController {
     response.setHeader(HttpHeaders.PRAGMA, "no-cache");
     response.setDateHeader(HttpHeaders.EXPIRES, 0);
 
-    ReissuedToken reissuedToken = authTokenReissueService.reissue(refreshToken);
+    ReissuedToken reissuedToken = authTokenService.reissue(refreshToken);
 
     refreshTokenCookieWriter.addRefreshTokenCookie(response, reissuedToken.refreshToken());
 

@@ -41,13 +41,6 @@ public class JwtSessionService {
     return new IssuedJwtSession(sessionId, expiresAt);
   }
 
-  @Transactional(readOnly = true)
-  public Optional<UUID> findActiveSessionId(UUID userId) {
-    return jwtSessionRepository
-        .findActiveByUserId(userId, clock.instant())
-        .map(JwtSession::getSessionId);
-  }
-
   @Transactional
   public Optional<UUID> extendActiveSession(UUID userId, Instant expiresAt) {
     return jwtSessionRepository
