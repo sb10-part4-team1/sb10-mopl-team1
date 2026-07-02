@@ -137,14 +137,12 @@ public class PlaylistServiceImpl implements PlaylistService {
   // 플레이 리스트 존재 / 생성자 권한 검증 중복 코드
   private Playlist getPlaylistOwnedBy(UUID playlistId, UUID userId) {
     Playlist playlist =
-      playlistRepository
-        .findByIdWithOwner(playlistId)
-        .orElseThrow(
-          () ->
-            new PlaylistException(
-              PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)
-            )
-        );
+        playlistRepository
+            .findByIdWithOwner(playlistId)
+            .orElseThrow(
+                () ->
+                    new PlaylistException(
+                        PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
     validatePlaylistOwner(playlist, userId);
     return playlist;
   }
