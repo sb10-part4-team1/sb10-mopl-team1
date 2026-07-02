@@ -271,9 +271,7 @@ public class GlobalExceptionHandler {
 
     ErrorResponse errorResponse =
         new ErrorResponse(
-            errorCode.getCode(),
-            errorCode.getMessage(),
-            Map.of("message", "데이터 무결성 제약 조건을 위반했습니다."));
+            errorCode.getCode(), errorCode.getMessage(), Map.of("message", errorCode.getMessage()));
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }
