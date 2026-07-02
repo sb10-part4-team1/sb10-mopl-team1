@@ -4,6 +4,7 @@ import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.playlist.dto.PlaylistCreateRequest;
 import com.sb10.mopl.playlist.dto.PlaylistDto;
+import com.sb10.mopl.playlist.dto.PlaylistUpdateRequest;
 import com.sb10.mopl.playlist.entity.Playlist;
 import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
@@ -55,6 +56,7 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   @Override
+  @Transactional
   public CursorPageResponse<PlaylistDto> findAll(
       String keywordLike,
       UUID ownerId,
@@ -99,6 +101,7 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   @Override
+  @Transactional
   public PlaylistDto findById(UUID playlistId) {
     // 플레이 리스트 존재 검증
     Playlist playlist =
@@ -110,6 +113,45 @@ public class PlaylistServiceImpl implements PlaylistService {
                         PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
 
     return playlistMapper.toDto(playlist);
+  }
+
+  @Override
+  @Transactional
+  public PlaylistDto update(UUID playlistId, PlaylistUpdateRequest request, UUID userId) {
+    // 플레이리스트 존재 검증
+    Playlist playlist =
+        playlistRepository
+            .findByIdWithOwner(playlistId)
+            .orElseThrow(
+                () ->
+                    new PlaylistException(
+                        PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
+
+    // 플레이리스트 생성자 권한 검증
+    validatePlaylistOwner(playlist, userId);
+
+    // 플레이리스트 업데이트
+    playlist.update(request.title(), request.description());
+
+    return playlistMapper.toDto(playlist);
+  }
+
+  @Override
+  @Transactional
+  public void delete(UUID playlistId, UUID userId) {
+    // 플레이리스트 존재 검증
+    Playlist playlist =
+        playlistRepository
+            .findByIdWithOwner(playlistId)
+            .orElseThrow(
+                () ->
+                    new PlaylistException(
+                        PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
+
+    // 사용자 권한 검증
+    validatePlaylistOwner(playlist, userId);
+
+    playlistRepository.delete(playlist);
   }
 
   private void validateFindAllRequest(
@@ -149,6 +191,15 @@ public class PlaylistServiceImpl implements PlaylistService {
       throw new PlaylistException(
           PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
           Map.of("limit", "limit은 1 이상 " + MAX_PLAYLIST_PAGE_LIMIT + " 이하여야 합니다."));
+    }
+  }
+
+  // 플레이리스트 생성자 권한 검증 메서드
+  private void validatePlaylistOwner(Playlist playlist, UUID userId) {
+    if (!playlist.getOwner().getId().equals(userId)) {
+      throw new PlaylistException(
+          PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS,
+          Map.of("playlistId", playlist.getId(), "userId", userId));
     }
   }
 

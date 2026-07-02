@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,17 +72,9 @@ public class ReviewServiceImpl implements ReviewService {
     // 요청 DTO를 Review 엔티티로 변환
     Review review = reviewMapper.toEntity(request, content, user);
 
-    try {
-      // 리뷰 저장 후 즉시 flush하여 DB 유니크 제약 위반을 현재 try-catch 안에서 감지
-      Review savedReview = reviewRepository.saveAndFlush(review);
-      return reviewMapper.toDto(savedReview);
-    } catch (DataIntegrityViolationException e) {
-      // 동시 요청으로 유니크 제약이 발생한 경우 중복 리뷰 예외로 변환
-      throw new ReviewException(
-          ReviewErrorCode.REVIEW_ALREADY_EXISTS,
-          Map.of("contentId", contentId, "userId", userId),
-          e);
-    }
+    // 리뷰 저장
+    Review savedReview = reviewRepository.save(review);
+    return reviewMapper.toDto(savedReview);
   }
 
   @Override
