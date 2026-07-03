@@ -18,8 +18,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 final class AuthIntegrationTestSupport {
+
+  static final String PROTECTED_API_PATH = "/api/test/auth-session/protected";
 
   private AuthIntegrationTestSupport() {}
 
@@ -78,4 +82,15 @@ final class AuthIntegrationTestSupport {
   }
 
   record SignInTokens(String accessToken, Cookie refreshToken) {}
+
+  @RestController
+  static class ProtectedApiController {
+
+    @GetMapping(PROTECTED_API_PATH)
+    MessageResponse protectedApi() {
+      return new MessageResponse("authenticated");
+    }
+  }
+
+  record MessageResponse(String message) {}
 }

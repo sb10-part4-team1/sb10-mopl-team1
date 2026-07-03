@@ -1,10 +1,12 @@
 package com.sb10.mopl.auth.security.integration;
 
+import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.PROTECTED_API_PATH;
 import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.authenticatedGet;
 import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.expectAccessTokenUnauthorized;
 import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.expectRefreshTokenUnauthorized;
 import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.refreshTokenCookieName;
 import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.signIn;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -33,18 +35,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(SignOutIntegrationTest.ProtectedApiController.class)
+@Import(AuthIntegrationTestSupport.ProtectedApiController.class)
 class SignOutIntegrationTest {
 
   private static final String EMAIL = "sign-out-user@example.com";
   private static final String PASSWORD = "password123";
-  private static final String PROTECTED_API_PATH = "/api/test/sign-out/protected";
 
   @Autowired private MockMvc mockMvc;
 
@@ -91,9 +90,10 @@ class SignOutIntegrationTest {
             header()
                 .stringValues(
                     HttpHeaders.SET_COOKIE,
-                    hasItem(containsString(refreshTokenCookieName(jwtProperties) + "=;"))))
-        .andExpect(
-            header().stringValues(HttpHeaders.SET_COOKIE, hasItem(containsString("Max-Age=0"))));
+                    hasItem(
+                        allOf(
+                            containsString(refreshTokenCookieName(jwtProperties) + "=;"),
+                            containsString("Max-Age=0")))));
 
     assertAll(
         () -> assertEquals(0L, jwtSessionRepository.count()),
@@ -116,15 +116,4 @@ class SignOutIntegrationTest {
     User user = User.createUser("sign-out-user", EMAIL, passwordEncoder.encode(PASSWORD), null);
     return userRepository.saveAndFlush(user);
   }
-
-  @RestController
-  static class ProtectedApiController {
-
-    @GetMapping(PROTECTED_API_PATH)
-    MessageResponse protectedApi() {
-      return new MessageResponse("authenticated");
-    }
-  }
-
-  record MessageResponse(String message) {}
 }

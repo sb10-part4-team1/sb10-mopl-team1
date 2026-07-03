@@ -1,5 +1,6 @@
 package com.sb10.mopl.auth.security.integration;
 
+import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.PROTECTED_API_PATH;
 import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.authenticatedGet;
 import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.expectAccessTokenUnauthorized;
 import static com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.expectRefreshTokenUnauthorized;
@@ -27,18 +28,15 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(SingleLoginSessionIntegrationTest.ProtectedApiController.class)
+@Import(AuthIntegrationTestSupport.ProtectedApiController.class)
 class SingleLoginSessionIntegrationTest {
 
   private static final String EMAIL = "single-login-user@example.com";
   private static final String PASSWORD = "password123";
-  private static final String PROTECTED_API_PATH = "/api/test/auth-session/protected";
 
   @Autowired private MockMvc mockMvc;
 
@@ -95,15 +93,4 @@ class SingleLoginSessionIntegrationTest {
     User user = User.createUser("single-login-user", EMAIL, passwordEncoder.encode(PASSWORD), null);
     return userRepository.saveAndFlush(user);
   }
-
-  @RestController
-  static class ProtectedApiController {
-
-    @GetMapping(PROTECTED_API_PATH)
-    MessageResponse protectedApi() {
-      return new MessageResponse("authenticated");
-    }
-  }
-
-  record MessageResponse(String message) {}
 }
