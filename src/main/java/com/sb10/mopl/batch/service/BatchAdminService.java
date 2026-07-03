@@ -11,6 +11,7 @@ import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
+import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
@@ -75,18 +76,18 @@ public class BatchAdminService {
    * @param jobName 재시작할 Job 이름 (sportsJob | tmdbJob)
    */
   public void restartJob(String jobName) {
-    JobExecution lastExecution = validateAndGetLastFailedExecution(jobName);
-    if (lastExecution == null) {
-      throw new BatchException(
-          BatchErrorCode.JOB_RESTART_UNAVAILABLE,
-          Map.of("jobName", jobName, "message", "재시작 가능한 FAILED 상태의 배치 이력이 존재하지 않습니다."));
-    }
-
     Job job = resolveJob(jobName);
     if (job == null) {
       throw new BatchException(
           BatchErrorCode.JOB_NOT_FOUND,
           Map.of("jobName", jobName, "message", "존재하지 않거나 알 수 없는 배치 Job 이름입니다."));
+    }
+
+    JobExecution lastExecution = validateAndGetLastFailedExecution(jobName);
+    if (lastExecution == null) {
+      throw new BatchException(
+          BatchErrorCode.JOB_RESTART_UNAVAILABLE,
+          Map.of("jobName", jobName, "message", "재시작 가능한 FAILED 상태의 배치 이력이 존재하지 않습니다."));
     }
 
     try {
@@ -97,20 +98,12 @@ public class BatchAdminService {
           BatchErrorCode.JOB_ALREADY_RUNNING,
           Map.of("jobName", jobName, "message", "해당 배치 Job이 현재 이미 실행 중입니다."),
           e);
-    } catch (JobInstanceAlreadyCompleteException e) {
+    } catch (JobInstanceAlreadyCompleteException
+        | JobRestartException
+        | JobParametersInvalidException e) {
       throw new BatchException(
           BatchErrorCode.JOB_RESTART_UNAVAILABLE,
-          Map.of("jobName", jobName, "message", "이미 성공적으로 완료된 배치 작업 인스턴스이므로 재시작할 수 없습니다."),
-          e);
-    } catch (JobRestartException e) {
-      throw new BatchException(
-          BatchErrorCode.JOB_RESTART_UNAVAILABLE,
-          Map.of("jobName", jobName, "message", "스프링 배치 정책(동일 파라미터 실행 한계 등)에 의해 재시작이 불가능합니다."),
-          e);
-    } catch (Exception e) {
-      throw new BatchException(
-          BatchErrorCode.INVALID_API_RESPONSE,
-          Map.of("jobName", jobName, "message", "배치 수동 기동 처리 도중 장애가 발생했습니다: " + e.getMessage()),
+          Map.of("jobName", jobName, "message", "배치 설정 또는 인스턴스 정책에 의해 재시작이 불가능합니다."),
           e);
     }
   }

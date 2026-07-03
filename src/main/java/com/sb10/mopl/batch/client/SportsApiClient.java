@@ -7,7 +7,6 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -75,16 +74,5 @@ public class SportsApiClient {
           e.getMessage());
       throw e;
     }
-  }
-
-  /** SportsDB API 호출 재시도 횟수 최종 소진 시 복구 로직. 최종 실패 로깅을 상세하게 남기고, 스케줄러 복구 감지를 위해 예외를 전파합니다. */
-  @Recover
-  public SportsApiResponse recoverFetchEventsByDay(RuntimeException e, String date, int leagueId) {
-    log.error(
-        "[API-RETRY-FAILED] SportsDB API 호출 최종 재시도 실패 - date: {}, leagueId: {}, 원인: {}",
-        date,
-        leagueId,
-        e.getMessage());
-    throw e;
   }
 }
