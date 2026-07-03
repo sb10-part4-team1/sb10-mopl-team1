@@ -13,7 +13,6 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 @Slf4j
 @Component
@@ -61,8 +60,21 @@ public class SportsApiClient {
 
       return response;
 
-    } catch (RestClientException e) {
-      log.error("SportsDB API 에러 감지 (재시도 대상) - leagueId: {}, 에러: {}", leagueId, e.getMessage());
+    } catch (ResourceAccessException
+        | HttpServerErrorException
+        | HttpClientErrorException.TooManyRequests e) {
+      log.warn(
+          "SportsDB API 호출 장애 발생 (재시도 진행 예정) - date: {}, leagueId: {}, 원인: {}",
+          date,
+          leagueId,
+          e.getMessage());
+      throw e;
+    } catch (Exception e) {
+      log.error(
+          "SportsDB API 호출 중 예외 발생 (즉시 실패) - date: {}, leagueId: {}, 원인: {}",
+          date,
+          leagueId,
+          e.getMessage());
       throw e;
     }
   }

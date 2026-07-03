@@ -13,7 +13,6 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 @Slf4j
 @Component
@@ -61,8 +60,15 @@ public class TmdbApiClient {
 
       return response;
 
-    } catch (RestClientException e) {
-      log.error("TMDB API 호출 에러 (재시도 대상) - path: {}, page: {}, 원인: {}", path, page, e.getMessage());
+    } catch (org.springframework.web.client.ResourceAccessException
+        | org.springframework.web.client.HttpServerErrorException
+        | org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
+      log.warn(
+          "TMDB API 호출 장애 발생 (재시도 진행 예정) - path: {}, page: {}, 원인: {}", path, page, e.getMessage());
+      throw e;
+    } catch (Exception e) {
+      log.error(
+          "TMDB API 호출 중 예외 발생 (즉시 실패) - path: {}, page: {}, 원인: {}", path, page, e.getMessage());
       throw e;
     }
   }
