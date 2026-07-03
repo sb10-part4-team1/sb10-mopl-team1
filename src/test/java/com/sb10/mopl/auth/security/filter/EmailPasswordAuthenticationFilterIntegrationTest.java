@@ -1,5 +1,6 @@
 package com.sb10.mopl.auth.security.filter;
 
+import static com.sb10.mopl.auth.security.RefreshTokenCookieAssertions.expectRefreshTokenCookie;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -12,6 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sb10.mopl.auth.repository.RefreshTokenRepository;
+import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
@@ -48,8 +51,13 @@ class EmailPasswordAuthenticationFilterIntegrationTest {
 
   @Autowired private JwtProvider jwtProvider;
 
+  @Autowired private JwtProperties jwtProperties;
+
+  @Autowired private RefreshTokenRepository refreshTokenRepository;
+
   @BeforeEach
   void setUp() {
+    refreshTokenRepository.deleteAll();
     userRepository.deleteAll();
   }
 
@@ -59,16 +67,18 @@ class EmailPasswordAuthenticationFilterIntegrationTest {
     User user = saveUser();
 
     MvcResult result =
-        mockMvc
-            .perform(
-                post("/api/auth/sign-in")
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .param("username", EMAIL)
-                    .param("password", PASSWORD)
-                    .with(csrf()))
-            .andExpect(status().isOk())
-            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
-            .andExpect(header().string(HttpHeaders.PRAGMA, "no-cache"))
+        expectRefreshTokenCookie(
+                mockMvc
+                    .perform(
+                        post("/api/auth/sign-in")
+                            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                            .param("username", EMAIL)
+                            .param("password", PASSWORD)
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                    .andExpect(header().string(HttpHeaders.PRAGMA, "no-cache")),
+                jwtProperties)
             .andExpect(jsonPath("$.userDto.id").value(user.getId().toString()))
             .andExpect(jsonPath("$.userDto.email").value(EMAIL))
             .andExpect(jsonPath("$.userDto.name").value("login-user"))

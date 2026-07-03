@@ -45,7 +45,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -105,7 +104,7 @@ class ReviewServiceImplTest {
     given(userRepository.findById(userId)).willReturn(Optional.of(user));
     given(reviewRepository.existsByTargetContentIdAndUserId(contentId, userId)).willReturn(false);
     given(reviewMapper.toEntity(request, content, user)).willReturn(review);
-    given(reviewRepository.saveAndFlush(review)).willReturn(review);
+    given(reviewRepository.save(review)).willReturn(review);
     given(reviewMapper.toDto(review)).willReturn(expectedResponse);
 
     // when
@@ -113,7 +112,7 @@ class ReviewServiceImplTest {
 
     // then
     assertThat(result).isEqualTo(expectedResponse);
-    verify(reviewRepository).saveAndFlush(review);
+    verify(reviewRepository).save(review);
   }
 
   @Test
@@ -129,7 +128,7 @@ class ReviewServiceImplTest {
         .isInstanceOf(ContentException.class);
 
     verify(userRepository, never()).findById(any());
-    verify(reviewRepository, never()).saveAndFlush(any());
+    verify(reviewRepository, never()).save(any());
   }
 
   @Test
@@ -145,7 +144,7 @@ class ReviewServiceImplTest {
     assertThatThrownBy(() -> reviewService.create(request, userId))
         .isInstanceOf(UserException.class);
 
-    verify(reviewRepository, never()).saveAndFlush(any());
+    verify(reviewRepository, never()).save(any());
   }
 
   @Test
@@ -164,27 +163,7 @@ class ReviewServiceImplTest {
         .extracting("errorCode")
         .isEqualTo(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
 
-    verify(reviewRepository, never()).saveAndFlush(any());
-  }
-
-  @Test
-  @DisplayName("리뷰 - 생성 실패 - 동시 요청으로 유니크 제약 위반 발생")
-  void create_fail_dataIntegrityViolation() {
-    // given
-    ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋은 콘텐츠입니다.", 5);
-
-    given(contentRepository.findById(contentId)).willReturn(Optional.of(content));
-    given(userRepository.findById(userId)).willReturn(Optional.of(user));
-    given(reviewRepository.existsByTargetContentIdAndUserId(contentId, userId)).willReturn(false);
-    given(reviewMapper.toEntity(request, content, user)).willReturn(review);
-    given(reviewRepository.saveAndFlush(review))
-        .willThrow(new DataIntegrityViolationException("duplicate review"));
-
-    // when & then
-    assertThatThrownBy(() -> reviewService.create(request, userId))
-        .isInstanceOf(ReviewException.class)
-        .extracting("errorCode")
-        .isEqualTo(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
+    verify(reviewRepository, never()).save(any());
   }
 
   @Test

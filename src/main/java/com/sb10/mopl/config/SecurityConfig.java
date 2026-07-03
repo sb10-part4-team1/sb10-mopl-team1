@@ -6,6 +6,7 @@ import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.jwt.JwtAuthenticationFilter;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
+import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.user.entity.UserRole;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Validator;
@@ -33,6 +34,9 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -79,31 +83,15 @@ public class SecurityConfig {
     methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/locked")
   };
 
-  private static RequestMatcher pathMatcher(String pattern) {
-    return request -> PATH_MATCHER.match(pattern, path(request));
-  }
-
-  private static RequestMatcher methodAndPathMatcher(HttpMethod method, String pattern) {
-    return request ->
-        method.matches(request.getMethod()) && PATH_MATCHER.match(pattern, path(request));
-  }
-
-  private static String path(HttpServletRequest request) {
-    String requestUri = request.getRequestURI();
-    String contextPath = request.getContextPath();
-    if (contextPath == null || contextPath.isBlank()) {
-      return requestUri;
-    }
-    return requestUri.substring(contextPath.length());
-  }
-
   @Bean
   public SecurityFilterChain securityFilterChain(
       HttpSecurity http,
       JwtAuthenticationFilter jwtAuthenticationFilter,
       EmailPasswordAuthenticationFilter emailPasswordAuthenticationFilter,
       AuthenticationEntryPoint authenticationEntryPoint,
-      AccessDeniedHandler accessDeniedHandler)
+      AccessDeniedHandler accessDeniedHandler,
+      LogoutHandler signOutLogoutHandler,
+      LogoutSuccessHandler logoutSuccessHandler)
       throws Exception {
     http.csrf(
             csrf ->
@@ -116,8 +104,15 @@ public class SecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
-        .logout(AbstractHttpConfigurer::disable)
-        // H2-Console 사용을 위한 헤더 설정. 추후 제거 예정  // FIXME: 나중에 지워야 할 부분,
+        .logout(
+            logout ->
+                logout
+                    .logoutUrl("/api/auth/sign-out")
+                    .addLogoutHandler(signOutLogoutHandler)
+                    .logoutSuccessHandler(logoutSuccessHandler)
+                    .clearAuthentication(true)
+                    .invalidateHttpSession(false))
+        // H2-Console 사용을 위한 헤더 설정. 추후 제거 예정
         .headers(headers -> headers.frameOptions(FrameOptionsConfig::sameOrigin))
         .authorizeHttpRequests(
             auth ->
@@ -140,7 +135,7 @@ public class SecurityConfig {
                     .authenticationEntryPoint(authenticationEntryPoint)
                     // 인증은 되었지만 필요한 권한이 부족한 요청은 403 응답으로 처리
                     .accessDeniedHandler(accessDeniedHandler))
-        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(jwtAuthenticationFilter, LogoutFilter.class)
         .addFilterAt(emailPasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
@@ -158,9 +153,11 @@ public class SecurityConfig {
 
   @Bean
   public JwtAuthenticationFilter jwtAuthenticationFilter(
-      JwtProvider jwtProvider, AuthErrorResponseWriter authErrorResponseWriter) {
+      JwtProvider jwtProvider,
+      JwtSessionService jwtSessionService,
+      AuthErrorResponseWriter authErrorResponseWriter) {
     return new JwtAuthenticationFilter(
-        jwtProvider, authErrorResponseWriter, PUBLIC_ENDPOINT_MATCHERS);
+        jwtProvider, jwtSessionService, authErrorResponseWriter, PUBLIC_ENDPOINT_MATCHERS);
   }
 
   @Bean
@@ -199,5 +196,23 @@ public class SecurityConfig {
   @Bean
   public Clock clock() {
     return Clock.systemUTC();
+  }
+
+  private static RequestMatcher pathMatcher(String pattern) {
+    return request -> PATH_MATCHER.match(pattern, path(request));
+  }
+
+  private static RequestMatcher methodAndPathMatcher(HttpMethod method, String pattern) {
+    return request ->
+        method.matches(request.getMethod()) && PATH_MATCHER.match(pattern, path(request));
+  }
+
+  private static String path(HttpServletRequest request) {
+    String requestUri = request.getRequestURI();
+    String contextPath = request.getContextPath();
+    if (contextPath == null || contextPath.isBlank()) {
+      return requestUri;
+    }
+    return requestUri.substring(contextPath.length());
   }
 }

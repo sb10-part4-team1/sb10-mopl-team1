@@ -5,12 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.security.user.MoplUserDetails;
+import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import io.jsonwebtoken.JwtBuilder;
@@ -56,7 +60,8 @@ class JwtAuthenticationFilterTest {
     UUID userId = UUID.randomUUID();
     String token =
         jwtProviderAt(NOW)
-            .createAccessToken(userDetails(userId, "jwt-user@example.com", UserRole.USER));
+            .createAccessToken(
+                userDetails(userId, "jwt-user@example.com", UserRole.USER), UUID.randomUUID());
     JwtAuthenticationFilter filter = jwtFilter(jwtProviderAt(NOW));
     MockHttpServletRequest request = request("/api/protected");
     request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
@@ -103,6 +108,7 @@ class JwtAuthenticationFilterTest {
     JwtAuthenticationFilter filter =
         new JwtAuthenticationFilter(
             jwtProviderAt(NOW),
+            activeJwtSessionService(),
             new AuthErrorResponseWriter(objectMapper),
             new RequestMatcher[] {publicMatcher});
     MockHttpServletRequest request = request("/api/public");
@@ -146,7 +152,8 @@ class JwtAuthenticationFilterTest {
     String token =
         jwtProviderAt(NOW)
             .createAccessToken(
-                userDetails(UUID.randomUUID(), "expired-user@example.com", UserRole.USER));
+                userDetails(UUID.randomUUID(), "expired-user@example.com", UserRole.USER),
+                UUID.randomUUID());
     JwtAuthenticationFilter filter = jwtFilter(jwtProviderAt(NOW.plus(Duration.ofHours(2))));
     MockHttpServletRequest request = request("/api/protected");
     request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
@@ -259,7 +266,16 @@ class JwtAuthenticationFilterTest {
 
   private JwtAuthenticationFilter jwtFilter(JwtProvider jwtProvider) {
     return new JwtAuthenticationFilter(
-        jwtProvider, new AuthErrorResponseWriter(objectMapper), new RequestMatcher[0]);
+        jwtProvider,
+        activeJwtSessionService(),
+        new AuthErrorResponseWriter(objectMapper),
+        new RequestMatcher[0]);
+  }
+
+  private JwtSessionService activeJwtSessionService() {
+    JwtSessionService jwtSessionService = mock(JwtSessionService.class);
+    when(jwtSessionService.isActive(any(UUID.class), any(UUID.class))).thenReturn(true);
+    return jwtSessionService;
   }
 
   private JwtProvider jwtProviderAt(Instant instant) {

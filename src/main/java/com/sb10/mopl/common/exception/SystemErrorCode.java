@@ -9,6 +9,7 @@ public enum SystemErrorCode implements ErrorCode {
   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "SYS03", "지원하지 않는 HTTP 메서드입니다."),
   ACCESS_DENIED(HttpStatus.FORBIDDEN, "SYS04", "접근 권한이 없습니다."),
   RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "SYS05", "존재하지 않는 경로 또는 리소스입니다."),
+  DATA_INTEGRITY_VIOLATION(HttpStatus.CONFLICT, "SYS06", "데이터 무결성 제약 조건을 위반했습니다."),
   INTERNAL_SERVER_ERROR(
       HttpStatus.INTERNAL_SERVER_ERROR, "SYS99", "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
 

@@ -5,8 +5,8 @@ import com.sb10.mopl.auth.dto.response.JwtDto;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.user.MoplUserDetails;
-import com.sb10.mopl.auth.service.RefreshTokenService;
-import com.sb10.mopl.auth.service.RefreshTokenService.IssuedRefreshToken;
+import com.sb10.mopl.auth.service.AuthTokenService;
+import com.sb10.mopl.auth.service.AuthTokenService.IssuedToken;
 import com.sb10.mopl.user.dto.response.UserDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
   private final JwtProvider jwtProvider;
-  private final RefreshTokenService refreshTokenService;
+  private final AuthTokenService authTokenService;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
   private final ObjectMapper objectMapper;
 
@@ -40,8 +40,8 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
     response.setHeader(HttpHeaders.PRAGMA, "no-cache");
     response.setDateHeader(HttpHeaders.EXPIRES, 0);
 
-    IssuedRefreshToken refreshToken = refreshTokenService.issue(userDetails.getId());
-    refreshTokenCookieWriter.addRefreshTokenCookie(response, refreshToken);
+    IssuedToken issuedToken = authTokenService.issue(userDetails.getId());
+    refreshTokenCookieWriter.addRefreshTokenCookie(response, issuedToken.refreshToken());
 
     UserDto userDto =
         new UserDto(
@@ -52,7 +52,8 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
             userDetails.getProfileImageUrl(),
             userDetails.getRole(),
             userDetails.isLocked());
-    JwtDto jwtDto = new JwtDto(userDto, jwtProvider.createAccessToken(userDetails));
+    JwtDto jwtDto =
+        new JwtDto(userDto, jwtProvider.createAccessToken(userDetails, issuedToken.sessionId()));
     objectMapper.writeValue(response.getWriter(), jwtDto);
   }
 }
