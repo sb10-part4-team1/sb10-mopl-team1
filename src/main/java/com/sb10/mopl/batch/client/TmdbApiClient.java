@@ -3,7 +3,6 @@ package com.sb10.mopl.batch.client;
 import com.sb10.mopl.batch.dto.TmdbApiResponse;
 import com.sb10.mopl.batch.exception.BatchErrorCode;
 import com.sb10.mopl.batch.exception.BatchException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -26,15 +25,10 @@ public class TmdbApiClient {
     this.restClient = restClient;
   }
 
-  /**
-   * TMDB 오픈 API로부터 인기 영화 또는 TV 시리즈 콘텐츠 목록을 가져옵니다. 500 계열, 네트워크 지연 발생 시 최대 3회(총 4회 시도) 지수 백오프 재시도를
-   * 수행합니다.
-   *
-   * @param path API 엔드포인트 경로 (예: /movie/popular, /tv/popular)
-   * @param page 페이지 번호
-   * @return TmdbApiResponse
+  /*
+   * TMDB 오픈 API로부터 인기 영화 또는 TV 시리즈 콘텐츠 목록을 가져옵니다.
+   * 429, 500 계열, 네트워크 지연 발생 시 최대 3회(총 4회 시도) 지수 백오프 재시도를 수행합니다.
    */
-  @CircuitBreaker(name = "tmdbApiClient")
   @Retryable(
       retryFor = {
         HttpServerErrorException.class, // 5xx

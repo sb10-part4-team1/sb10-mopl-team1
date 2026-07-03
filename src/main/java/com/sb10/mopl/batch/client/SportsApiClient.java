@@ -3,7 +3,6 @@ package com.sb10.mopl.batch.client;
 import com.sb10.mopl.batch.dto.SportsApiResponse;
 import com.sb10.mopl.batch.exception.BatchErrorCode;
 import com.sb10.mopl.batch.exception.BatchException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -26,12 +25,10 @@ public class SportsApiClient {
     this.restClient = restClient;
   }
 
-  /**
+  /*
    * 지정된 날짜와 리그 ID의 경기 정보를 가져옵니다.
-   *
-   * <p>429, 5xx, 네트워크 지연 발생 시 최대 2회 재시도를 수행합니다.
+   * 429, 5xx, 네트워크 지연 발생 시 최대 2회 재시도를 수행합니다.
    */
-  @CircuitBreaker(name = "sportsApiClient")
   @Retryable(
       retryFor = {
         HttpServerErrorException.class, // 5xx
@@ -64,14 +61,6 @@ public class SportsApiClient {
 
       return response;
 
-    } catch (HttpClientErrorException.TooManyRequests e) {
-      log.warn("SportsDB 429 (Too Many Requests) 감지 - 60초 대기 후 재시도합니다. leagueId: {}", leagueId);
-      try {
-        Thread.sleep(60000);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-      }
-      throw e;
     } catch (RestClientException e) {
       log.error("SportsDB API 에러 감지 (재시도 대상) - leagueId: {}, 에러: {}", leagueId, e.getMessage());
       throw e;

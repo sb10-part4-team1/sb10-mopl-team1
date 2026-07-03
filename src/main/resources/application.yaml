@@ -17,6 +17,11 @@ spring:
     job:
       enabled: false # 프로젝트 실행 시 배치 잡 실행 여부 → 스케줄러로만 실행
 
+  task:
+    scheduling:
+      pool:
+        size: 2 # 스케줄러가 동시에 실행될 수 있는 크기(tmdb, sports)
+
     # 공통 JPA 설정 (포맷팅 및 성능 최적화 배치 크기 지정)
   jpa:
     properties:
@@ -66,30 +71,6 @@ mopl:
     api:
       base-url: https://www.thesportsdb.com/api/v1/json/123
 
-
-# Resilience4j 서킷 브레이커 설정
-resilience4j:
-  circuitbreaker:
-    configs:
-      default:
-        slidingWindowType: COUNT_BASED
-        slidingWindowSize: 10
-        minimumNumberOfCalls: 5
-        failureRateThreshold: 50
-        slowCallRateThreshold: 50
-        slowCallDurationThreshold: 8000
-        waitDurationInOpenState: 30000
-        permittedNumberOfCallsInHalfOpenState: 3
-        automaticTransitionFromOpenToHalfOpenEnabled: true
-        recordExceptions:
-          - org.springframework.web.client.HttpServerErrorException
-          - org.springframework.web.client.HttpClientErrorException.TooManyRequests
-          - org.springframework.web.client.ResourceAccessException
-    instances:
-      sportsApiClient:
-        baseConfig: default
-      tmdbApiClient:
-        baseConfig: default
 
 # 로깅 레벨 설정
 logging:
