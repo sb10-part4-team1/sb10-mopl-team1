@@ -7,6 +7,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -60,11 +61,10 @@ public class TmdbApiClient {
 
       return response;
 
-    } catch (org.springframework.web.client.ResourceAccessException
-        | org.springframework.web.client.HttpServerErrorException
-        | org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
-      log.warn(
-          "TMDB API 호출 장애 발생 (재시도 진행 예정) - path: {}, page: {}, 원인: {}", path, page, e.getMessage());
+    } catch (ResourceAccessException
+        | HttpServerErrorException
+        | HttpClientErrorException.TooManyRequests e) {
+      log.warn("TMDB API 호출 장애 발생 - path: {}, page: {}, 원인: {}", path, page, e.getMessage());
       throw e;
     } catch (Exception e) {
       log.error(
@@ -74,16 +74,13 @@ public class TmdbApiClient {
   }
 
   /** TMDB API 호출 재시도 횟수 최종 소진 시 복구 로직. 최종 실패 로깅을 상세하게 남기고, 스케줄러 복구 감지를 위해 예외를 전파합니다. */
-  @org.springframework.retry.annotation.Recover
-  public TmdbApiResponse recoverFetch(Exception e, String path, int page) {
+  @Recover
+  public TmdbApiResponse recoverFetch(RuntimeException e, String path, int page) {
     log.error(
         "[API-RETRY-FAILED] TMDB API 호출 최종 재시도 실패 - path: {}, page: {}, 원인: {}",
         path,
         page,
         e.getMessage());
-    if (e instanceof RuntimeException) {
-      throw (RuntimeException) e;
-    }
-    throw new RuntimeException(e);
+    throw e;
   }
 }

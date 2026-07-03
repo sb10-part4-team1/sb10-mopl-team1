@@ -13,6 +13,9 @@ import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.stereotype.Service;
 
 /*
@@ -71,7 +74,7 @@ public class BatchAdminService {
    *
    * @param jobName 재시작할 Job 이름 (sportsJob | tmdbJob)
    */
-  public void restartJob(String jobName) throws Exception {
+  public void restartJob(String jobName) {
     JobExecution lastExecution = validateAndGetLastFailedExecution(jobName);
     if (lastExecution == null) {
       throw new BatchException(
@@ -86,8 +89,30 @@ public class BatchAdminService {
           Map.of("jobName", jobName, "message", "존재하지 않거나 알 수 없는 배치 Job 이름입니다."));
     }
 
-    log.info("[ADMIN] {} 배치 관리자 수동 재시작 진행", jobName);
-    jobLauncher.run(job, lastExecution.getJobParameters());
+    try {
+      log.info("[ADMIN] {} 배치 관리자 수동 재시작 진행", jobName);
+      jobLauncher.run(job, lastExecution.getJobParameters());
+    } catch (JobExecutionAlreadyRunningException e) {
+      throw new BatchException(
+          BatchErrorCode.JOB_ALREADY_RUNNING,
+          Map.of("jobName", jobName, "message", "해당 배치 Job이 현재 이미 실행 중입니다."),
+          e);
+    } catch (JobInstanceAlreadyCompleteException e) {
+      throw new BatchException(
+          BatchErrorCode.JOB_RESTART_UNAVAILABLE,
+          Map.of("jobName", jobName, "message", "이미 성공적으로 완료된 배치 작업 인스턴스이므로 재시작할 수 없습니다."),
+          e);
+    } catch (JobRestartException e) {
+      throw new BatchException(
+          BatchErrorCode.JOB_RESTART_UNAVAILABLE,
+          Map.of("jobName", jobName, "message", "스프링 배치 정책(동일 파라미터 실행 한계 등)에 의해 재시작이 불가능합니다."),
+          e);
+    } catch (Exception e) {
+      throw new BatchException(
+          BatchErrorCode.INVALID_API_RESPONSE,
+          Map.of("jobName", jobName, "message", "배치 수동 기동 처리 도중 장애가 발생했습니다: " + e.getMessage()),
+          e);
+    }
   }
 
   private Job resolveJob(String jobName) {

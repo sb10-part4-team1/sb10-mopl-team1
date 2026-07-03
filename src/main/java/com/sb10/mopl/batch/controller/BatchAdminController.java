@@ -31,7 +31,7 @@ public class BatchAdminController {
    * @param jobName 재시작할 Job 이름 (sportsJob | tmdbJob)
    */
   @PostMapping("/{jobName}/restart")
-  public ResponseEntity<String> restartJob(@PathVariable String jobName) throws Exception {
+  public ResponseEntity<String> restartJob(@PathVariable String jobName) {
     batchAdminService.restartJob(jobName);
     return ResponseEntity.ok(jobName + " 배치 재시작 완료");
   }
