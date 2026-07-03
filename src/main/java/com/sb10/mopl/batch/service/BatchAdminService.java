@@ -18,6 +18,7 @@ import org.springframework.batch.core.repository.JobExecutionAlreadyRunningExcep
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /*
  * 배치 관리 전담 비즈니스 서비스 클래스입니다.
@@ -40,6 +41,7 @@ public class BatchAdminService {
    * @return 가장 최근 실패한 JobExecution (복구 대상이 아니거나 이력이 없으면 null 반환)
    * @throws BatchException 현재 배치가 이미 실행 중(STARTED)인 경우
    */
+  @Transactional(readOnly = true)
   public JobExecution validateAndGetLastFailedExecution(String jobName) {
     // 1. 중복 기동 방지 검증 (STARTED 상태 확인)
     Set<JobExecution> runningExecutions = jobExplorer.findRunningJobExecutions(jobName);
