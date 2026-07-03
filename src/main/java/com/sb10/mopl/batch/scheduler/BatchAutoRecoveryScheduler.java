@@ -1,15 +1,15 @@
 package com.sb10.mopl.batch.scheduler;
 
+import com.sb10.mopl.batch.exception.BatchException;
+import com.sb10.mopl.batch.service.BatchAdminService;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
@@ -21,7 +21,6 @@ import org.springframework.web.client.ResourceAccessException;
 
 /*
  * FAILED 상태로 멈춘 배치 작업을 감지하여 10분마다 자동으로 이어서 재시작(Restart)을 수행하는 통합 복구 스케줄러입니다.
- *
  * [스프링 배치 구조 및 자동 초기화 원리]
  * 1. JobInstance (논리적 배치 단위): Job 이름 + JobParameters 조합이 같으면 동일한 인스턴스로 취급됩니다.
  *    - 매일 새벽 1시에 도는 정기 배치는 time 파라미터(System.currentTimeMillis())가 달라지므로 새로운 JobInstance ID가 발급됩니다.
@@ -38,65 +37,46 @@ public class BatchAutoRecoveryScheduler {
 
   private final JobLauncher jobLauncher;
   private final JobExplorer jobExplorer;
+  private final BatchAdminService batchAdminService;
   private final Job sportsJob;
   private final Job tmdbJob;
 
   /** 10분마다 실패한 스포츠 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
   @Scheduled(fixedDelay = 600000)
   public void recoverSportsJob() {
-    if (isRecoveryUnavailableTime()) { // KST 02:00~07:00 체크
-      return;
-    }
     recoverJob("sportsJob", sportsJob, "[RECOVERY-SPORTS]");
   }
 
   /** 10분마다 실패한 TMDB 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
   @Scheduled(fixedDelay = 600000)
   public void recoverTmdbJob() {
-    if (isRecoveryUnavailableTime()) {
-      return;
-    }
     recoverJob("tmdbJob", tmdbJob, "[RECOVERY-TMDB]");
   }
 
   /** 공통 복구 실행 메서드 */
   private void recoverJob(String jobName, Job job, String logPrefix) {
+    if (isRecoveryUnavailableTime()) { // KST 02:00~07:00 체크
+      return;
+    }
+
     log.debug("{} 실패 배치 모니터링 시작", logPrefix);
 
-    // 1. 중복 기동 방지: 해당 Job이 현재 이미 실행 중(STARTED)인지 먼저 확인합니다.
-    Set<JobExecution> runningExecutions = jobExplorer.findRunningJobExecutions(jobName);
-    if (!runningExecutions.isEmpty()) {
-      log.info("{} {} 배치 실행 중으로 중복 기동 방지 스킵", logPrefix, jobName);
-      return;
-    }
+    try {
+      // 1. 중복 기동 방지 및 최근 실행 인스턴스의 FAILED 상태 조회 (서비스 공통 검증 위임)
+      JobExecution lastExecution = batchAdminService.validateAndGetLastFailedExecution(jobName);
+      if (lastExecution == null) {
+        return; // 복구 대상(FAILED)이 없거나 실행 이력이 없음
+      }
 
-    // 2. 해당 Job의 가장 최근 실행 인스턴스 1건만 가져옵니다.
-    List<JobInstance> instances = jobExplorer.getJobInstances(jobName, 0, 1);
-    if (instances.isEmpty()) {
-      return;
-    }
-
-    JobInstance latestInstance = instances.get(0);
-    List<JobExecution> executions = jobExplorer.getJobExecutions(latestInstance);
-    if (executions.isEmpty()) {
-      return;
-    }
-
-    // 중요 변수 명시적 추출
-    JobExecution lastExecution = executions.get(0); // 가장 최근 실행 1건 (최신순 정렬)
-    BatchStatus lastStatus = lastExecution.getStatus(); // 최근 실행의 상태 (COMPLETED, FAILED, STARTED 등)
-
-    // 3. 가장 최근 실행 상태가 FAILED일 때만 복구 대상입니다.
-    if (lastStatus == BatchStatus.FAILED) {
-
-      // 4. 재시도 가능 여부 화이트리스트 검사 - 치명적 에러면 즉시 관리자 알림 후 락 처리합니다.
-      if (!isRetryableFailure(lastExecution)) {
+      // 2. 치명적 에러 감지 시 즉시 락 처리 및 관리자 알림 발송
+      if (isFatalFailure(lastExecution)) {
         log.error("{} {} 배치 치명적 에러 감지로 자동 재시작 차단", logPrefix, jobName);
         notifyAdminWithDetails(lastExecution, logPrefix, "치명적 에러 감지 (재시도 불가)");
         return;
       }
 
-      // 동일 JobInstance 내에서 누적된 실패(FAILED) 횟수를 구합니다.
+      // 3. 동일 JobInstance 내에서 누적된 실패(FAILED) 횟수를 구하기 위해 전체 이력 조회
+      List<JobExecution> executions = jobExplorer.getJobExecutions(lastExecution.getJobInstance());
       long failedCount =
           executions.stream().filter(exec -> exec.getStatus() == BatchStatus.FAILED).count();
 
@@ -107,27 +87,30 @@ public class BatchAutoRecoveryScheduler {
         return;
       }
 
-      // 5. 3회 미만일 때는 실패했던 파라미터 그대로 이어서 재시작(Restart)을 트리거합니다.
+      // 4. 3회 미만일 때는 실패했던 파라미터 그대로 이어서 재시작(Restart)을 트리거합니다.
       log.warn("{} {} 배치 실패 감지로 10분 쿨다운 후 재시작 진행 (누적 실패: {}/3)", logPrefix, jobName, failedCount);
-      try {
-        jobLauncher.run(job, lastExecution.getJobParameters());
-      } catch (Exception e) {
-        log.error("{} {} 배치 자동 재시작 실패: {}", logPrefix, jobName, e.getMessage());
-      }
+      jobLauncher.run(job, lastExecution.getJobParameters());
+
+    } catch (BatchException e) {
+      // 구조적으로 오직 JOB_ALREADY_RUNNING(중복 기동) 예외만 유입되므로 즉시 스킵 로깅
+      log.info("{} {} 배치 검증 실패로 스킵: {}", logPrefix, jobName, e.getMessage());
+    } catch (Exception e) {
+      // 그 외의 모든 스프링 배치 기동 예외 및 일반 예외 처리
+      log.error("{} {} 배치 자동 재시작 과정에서 예외 발생: {}", logPrefix, jobName, e.getMessage());
     }
   }
 
   /*
-   * 재시도 가능 예외 화이트리스트 검사 메서드.
-   * 일시적인 통신 장애(타임아웃, 5xx, 429)에 의한 실패만 재시도를 허용합니다.
-   * 그 외 모든 예외(인증 오류, 데이터 오류, 경로 유실 등)는 치명적 에러로 간주하여 즉시 관리자에게 알립니다.
+   * 치명적 에러(재시도 불가) 감지 메서드.
+   * 모든 예외가 일시적인 통신 장애(타임아웃, 5xx, 429)일 경우에만 false(재시도 가능)를 반환하고,
+   * 그 외 모든 예외(인증 오류, 데이터 오류 등)는 true(치명적 에러)를 반환합니다.
    */
-  private boolean isRetryableFailure(JobExecution execution) {
+  private boolean isFatalFailure(JobExecution execution) {
     List<Throwable> exceptions = execution.getAllFailureExceptions();
     if (exceptions.isEmpty()) {
-      return false;
+      return false; // 예외가 발생한 적 없으면 false
     }
-    return exceptions.stream()
+    return !exceptions.stream() // 아래의 Exception과 일치하면 false
         .allMatch(
             e ->
                 e instanceof ResourceAccessException
@@ -164,7 +147,7 @@ public class BatchAutoRecoveryScheduler {
   }
 
   /*
-   * 복구 허용 시간대 판별 메서드.
+   * 복구 불가 시간대 판별 메서드.
    * KST 01:00에 실행되는 정기 배치가 실패했을 때, KST 02:00부터 07:00 사이에만 복구를 허용합니다.
    * 07:00 이후에는 TMDB 데이터 갱신(KST 09:00) 전 안전 버퍼를 위해 복구를 차단합니다.
    */

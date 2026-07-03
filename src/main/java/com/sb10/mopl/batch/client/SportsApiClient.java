@@ -78,4 +78,18 @@ public class SportsApiClient {
       throw e;
     }
   }
+
+  /** SportsDB API 호출 재시도 횟수 최종 소진 시 복구 로직. 최종 실패 로깅을 상세하게 남기고, 스케줄러 복구 감지를 위해 예외를 전파합니다. */
+  @org.springframework.retry.annotation.Recover
+  public SportsApiResponse recoverFetchEventsByDay(Exception e, String date, int leagueId) {
+    log.error(
+        "[API-RETRY-FAILED] SportsDB API 호출 최종 재시도 실패 - date: {}, leagueId: {}, 원인: {}",
+        date,
+        leagueId,
+        e.getMessage());
+    if (e instanceof RuntimeException) {
+      throw (RuntimeException) e;
+    }
+    throw new RuntimeException(e);
+  }
 }
