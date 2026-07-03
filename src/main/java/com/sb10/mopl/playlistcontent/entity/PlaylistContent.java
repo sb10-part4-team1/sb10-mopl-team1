@@ -41,7 +41,7 @@ public class PlaylistContent extends BaseEntity {
   private static void validateCreate(Playlist playlist, Content content) {
     DomainValidator.start()
         .check(playlist == null, "playlist", "플레이리스트는 필수입니다.")
-        .check(content == null, "content", "콘텐츠는 필수입니다")
+        .check(content == null, "content", "콘텐츠는 필수입니다.")
         .orThrow(
             details ->
                 new PlaylistContentException(
