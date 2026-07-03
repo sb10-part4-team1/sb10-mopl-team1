@@ -5,6 +5,8 @@ import com.sb10.mopl.batch.service.BatchAdminService;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
@@ -41,6 +43,9 @@ public class BatchAutoRecoveryScheduler {
   private final Job sportsJob;
   private final Job tmdbJob;
 
+  // 이미 락이 걸리거나 치명적 에러로 알림을 보낸 JobExecution ID 목록을 기억하여 중복 스팸을 차단합니다.
+  private final Set<Long> notifiedExecutionIds = ConcurrentHashMap.newKeySet();
+
   /** 10분마다 실패한 스포츠 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
   @Scheduled(fixedDelay = 600000)
   public void recoverSportsJob() {
@@ -68,10 +73,16 @@ public class BatchAutoRecoveryScheduler {
         return; // 복구 대상(FAILED)이 없거나 실행 이력이 없음
       }
 
+      // 2. 이미 3회 실패 락/치명적 에러로 중단되고 알림이 나갔던 실행 건인지 검증
+      if (notifiedExecutionIds.contains(lastExecution.getId())) {
+        return;
+      }
+
       // 2. 치명적 에러 감지 시 즉시 락 처리 및 관리자 알림 발송
       if (isFatalFailure(lastExecution)) {
         log.error("{} {} 배치 치명적 에러 감지로 자동 재시작 차단", logPrefix, jobName);
         notifyAdminWithDetails(lastExecution, logPrefix, "치명적 에러 감지 (재시도 불가)");
+        notifiedExecutionIds.add(lastExecution.getId()); // 알림 발송 기록
         return;
       }
 
@@ -84,6 +95,7 @@ public class BatchAutoRecoveryScheduler {
       if (failedCount >= 3) {
         log.error("{} {} 배치 3회 연속 복구 실패로 자동 재시작 중단 및 락 처리", logPrefix, jobName);
         notifyAdminWithDetails(lastExecution, logPrefix, "3회 연속 복구 실패");
+        notifiedExecutionIds.add(lastExecution.getId()); // 알림 발송 기록
         return;
       }
 
