@@ -15,7 +15,6 @@ import com.sb10.mopl.content.entity.Tag;
 import com.sb10.mopl.content.exception.ContentErrorCode;
 import com.sb10.mopl.content.exception.ContentException;
 import jakarta.persistence.EntityManager;
-import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +23,6 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -54,7 +52,7 @@ class ContentRepositoryTest {
 
   @Test
   @DisplayName("목록 조회 시 조건 필터링, 다양한 정렬 기준 및 커서 페이지네이션이 정상 작동한다")
-  void findAllByCondition_success_withFiltersAndSortingAndCursor() {
+  void findAllByCondition_success_withFiltersAndSortingAndCursor() throws InterruptedException {
     // given: 테스트용 콘텐츠 데이터 및 태그 직접 관계 설정 저장
     Tag sf = tagRepository.save(Tag.create("SF"));
 
@@ -63,6 +61,7 @@ class ContentRepositoryTest {
     contentRepository.save(contentA);
     contentA.updateStatistics(4.5, 10);
     contentA.updateWatcherCount(300L);
+    Thread.sleep(10);
 
     Tag action = tagRepository.save(Tag.create("액션"));
     Content contentB = Content.create("인터스텔라", ContentType.MOVIE, "우주 SF 영화", "/uploads/test.jpg");
@@ -71,6 +70,7 @@ class ContentRepositoryTest {
     contentRepository.save(contentB);
     contentB.updateStatistics(4.0, 5);
     contentB.updateWatcherCount(500L);
+    Thread.sleep(10);
 
     Tag drama = tagRepository.save(Tag.create("드라마"));
     Content contentC =
@@ -158,20 +158,19 @@ class ContentRepositoryTest {
 
   @Test
   @DisplayName("목록 조회 시 생성일 오름차순(CREATED_AT ASC) 정렬 및 커서 페이징이 정상 작동한다")
-  void findAllByCondition_success_withCreatedAtSortAndAscending() {
+  void findAllByCondition_success_withCreatedAtSortAndAscending() throws InterruptedException {
     // given: 생성 순서대로 A, B, C 저장 (createdAt 순서: A < B < C)
     Content contentA = Content.create("인셉션", ContentType.MOVIE, "SF 영화", "/uploads/test.jpg");
     contentRepository.save(contentA);
-    ReflectionTestUtils.setField(contentA, "createdAt", Instant.now().minusSeconds(10));
+    Thread.sleep(10);
 
     Content contentB = Content.create("인터스텔라", ContentType.MOVIE, "우주 SF 영화", "/uploads/test.jpg");
     contentRepository.save(contentB);
-    ReflectionTestUtils.setField(contentB, "createdAt", Instant.now().minusSeconds(5));
+    Thread.sleep(10);
 
     Content contentC =
         Content.create("시그널", ContentType.TV_SERIES, "타임슬립 드라마", "/uploads/test.jpg");
     contentRepository.save(contentC);
-    ReflectionTestUtils.setField(contentC, "createdAt", Instant.now());
 
     em.flush();
     em.clear();
@@ -206,15 +205,17 @@ class ContentRepositoryTest {
 
   @Test
   @DisplayName("목록 조회 시 평점 내림차순(RATING DESC) 정렬 및 커서 페이징이 정상 작동한다")
-  void findAllByCondition_success_withRatingSortAndDescending() {
+  void findAllByCondition_success_withRatingSortAndDescending() throws InterruptedException {
     // given: 평점을 다르게 부여한 A(4.5), B(4.0), C(4.8) 저장
     Content contentA = Content.create("인셉션", ContentType.MOVIE, "SF 영화", "/uploads/test.jpg");
     contentRepository.save(contentA);
     contentA.updateStatistics(4.5, 10);
+    Thread.sleep(10);
 
     Content contentB = Content.create("인터스텔라", ContentType.MOVIE, "우주 SF 영화", "/uploads/test.jpg");
     contentRepository.save(contentB);
     contentB.updateStatistics(4.0, 5);
+    Thread.sleep(10);
 
     Content contentC =
         Content.create("시그널", ContentType.TV_SERIES, "타임슬립 드라마", "/uploads/test.jpg");

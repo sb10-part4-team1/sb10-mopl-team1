@@ -63,11 +63,11 @@ public class SecurityConfig {
     pathMatcher("/error"),
     pathMatcher("/oauth2/**"),
     pathMatcher("/login/oauth2/**"),
-    pathMatcher("/h2-console/**"),
+    pathMatcher("/h2-console/**"), // FIXME: 나중에 지워야 할 부분,
     pathMatcher("/api-docs/**"),
     pathMatcher("/swagger-ui/**"),
     pathMatcher("/swagger-ui.html"),
-    pathMatcher("/api/test/batch/**"),
+    pathMatcher("/api/test/batch/**"), // FIXME: 나중에 지워야 할 부분,
     methodAndPathMatcher(HttpMethod.OPTIONS, "/**"),
     methodAndPathMatcher(HttpMethod.POST, "/api/users"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-in"),
@@ -95,7 +95,9 @@ public class SecurityConfig {
       throws Exception {
     http.csrf(
             csrf ->
-                csrf.csrfTokenRepository(csrfTokenRepository())
+                csrf.ignoringRequestMatchers(
+                        "/h2-console/**", "/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
+                    .csrfTokenRepository(csrfTokenRepository())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
         .sessionManagement(
