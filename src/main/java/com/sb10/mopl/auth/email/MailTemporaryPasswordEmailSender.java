@@ -8,13 +8,13 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile({"prod", "local"})
+@Profile("!test")
 @RequiredArgsConstructor
 public class MailTemporaryPasswordEmailSender implements TemporaryPasswordEmailSender {
 
   private final JavaMailSender javaMailSender;
 
-  @Value("${mopl.mail.temporary-password.from:no-reply@mopl.com}")
+  @Value("${mopl.mail.temporary-password.from}")
   private String from;
 
   @Override

@@ -12,6 +12,12 @@ spring:
     username: sa
     password:
 
+  mail:
+    host: localhost
+    port: 2525
+    username: test
+    password: test
+
   sql:
     init:
       mode: always # 매번 시작할 때 schema.sql 실행

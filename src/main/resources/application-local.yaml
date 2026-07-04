@@ -26,24 +26,6 @@ spring:
 
     show-sql: true
 
-  mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
-    protocol: smtp
-    default-encoding: UTF-8
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT_MS:5000}
-          timeout: ${MAIL_READ_TIMEOUT_MS:5000}
-          writetimeout: ${MAIL_WRITE_TIMEOUT_MS:5000}
-
 # 로컬 개발용 특별 로깅 레벨 (DEBUG로 상세히 출력)
 logging:
   level:
