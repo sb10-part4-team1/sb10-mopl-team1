@@ -57,4 +57,9 @@ public class TemporaryPasswordService {
   public void deleteIssuedTemporaryPassword(UUID userId, UUID temporaryPasswordId) {
     temporaryPasswordRepository.deleteByIdAndUserId(temporaryPasswordId, userId);
   }
+
+  @Transactional
+  public void deleteByUserId(UUID userId) {
+    temporaryPasswordRepository.deleteByUserId(userId);
+  }
 }
