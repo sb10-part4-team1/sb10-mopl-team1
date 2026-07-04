@@ -6,11 +6,14 @@ import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.jwt.JwtAuthenticationFilter;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
+import com.sb10.mopl.auth.security.provider.TemporaryPasswordAuthenticationProvider;
 import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.user.entity.UserRole;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Validator;
 import java.time.Clock;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -175,8 +178,10 @@ public class SecurityConfig {
 
   @Bean
   public AuthenticationManager authenticationManager(
-      AuthenticationProvider authenticationProvider) {
-    return new ProviderManager(authenticationProvider);
+      @Qualifier("authenticationProvider") AuthenticationProvider passwordAuthenticationProvider,
+      TemporaryPasswordAuthenticationProvider temporaryPasswordAuthenticationProvider) {
+    return new ProviderManager(
+        List.of(passwordAuthenticationProvider, temporaryPasswordAuthenticationProvider));
   }
 
   @Bean
