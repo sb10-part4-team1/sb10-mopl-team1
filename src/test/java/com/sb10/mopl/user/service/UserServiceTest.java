@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sb10.mopl.auth.service.AuthSessionService;
+import com.sb10.mopl.auth.service.TemporaryPasswordService;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
@@ -45,6 +46,8 @@ class UserServiceTest {
   @Mock private UserMapper userMapper;
 
   @Mock private AuthSessionService authSessionService;
+
+  @Mock private TemporaryPasswordService temporaryPasswordService;
 
   @InjectMocks private UserService userService;
 
@@ -167,6 +170,7 @@ class UserServiceTest {
 
     verify(userRepository).findById(userId);
     verify(passwordEncoder).encode("new-password");
+    verify(temporaryPasswordService).deleteByUserId(userId);
     verify(authSessionService).invalidateAllByUserId(userId);
   }
 
@@ -192,6 +196,7 @@ class UserServiceTest {
 
     verify(userRepository, never()).findById(any());
     verify(passwordEncoder, never()).encode(any());
+    verify(temporaryPasswordService, never()).deleteByUserId(any());
     verify(authSessionService, never()).invalidateAllByUserId(any());
   }
 
@@ -216,6 +221,7 @@ class UserServiceTest {
 
     verify(userRepository).findById(userId);
     verify(passwordEncoder, never()).encode(any());
+    verify(temporaryPasswordService, never()).deleteByUserId(any());
     verify(authSessionService, never()).invalidateAllByUserId(any());
   }
 }
