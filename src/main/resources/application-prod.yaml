@@ -13,6 +13,24 @@ spring:
     username: ${AWS_RDS_USERNAME}
     password: ${AWS_RDS_PASSWORD}
 
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    protocol: smtp
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT_MS:5000}
+          timeout: ${MAIL_READ_TIMEOUT_MS:5000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT_MS:5000}
+
   sql:
     init:
       mode: never # 운영은 절대로 schema.sql 자동 실행 금지
@@ -36,8 +54,13 @@ mopl:
   jwt:
     refresh-token-cookie:
       secure: true
+
   datasource:
     api-pool-name: HikariPool-Prod-API
     api-pool-size: 30
     batch-pool-name: HikariPool-Prod-Batch
     batch-pool-size: 5
+
+  mail:
+    temporary-password:
+      from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}

@@ -52,6 +52,10 @@ mopl:
       secure: ${MOPL_REFRESH_TOKEN_COOKIE_SECURE:false}
       same-site: ${MOPL_REFRESH_TOKEN_COOKIE_SAME_SITE:Lax}
 
+  mail:
+    temporary-password:
+      from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:no-reply@mopl.com}
+
   aws:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
