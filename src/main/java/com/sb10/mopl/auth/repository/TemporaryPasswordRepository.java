@@ -18,4 +18,14 @@ public interface TemporaryPasswordRepository extends JpaRepository<TemporaryPass
       WHERE temporaryPassword.user.id = :userId
       """)
   int deleteByUserId(@Param("userId") UUID userId);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      """
+      DELETE FROM TemporaryPassword temporaryPassword
+      WHERE temporaryPassword.id = :temporaryPasswordId
+        AND temporaryPassword.user.id = :userId
+      """)
+  int deleteByIdAndUserId(
+      @Param("temporaryPasswordId") UUID temporaryPasswordId, @Param("userId") UUID userId);
 }

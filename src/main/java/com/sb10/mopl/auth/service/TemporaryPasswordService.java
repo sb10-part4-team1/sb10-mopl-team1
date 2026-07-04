@@ -1,9 +1,9 @@
 package com.sb10.mopl.auth.service;
 
-import com.sb10.mopl.auth.email.TemporaryPasswordEmailSender;
 import com.sb10.mopl.auth.entity.TemporaryPassword;
-import com.sb10.mopl.auth.util.TemporaryPasswordGenerator;
+import com.sb10.mopl.auth.event.TemporaryPasswordIssuedEvent;
 import com.sb10.mopl.auth.repository.TemporaryPasswordRepository;
+import com.sb10.mopl.auth.util.TemporaryPasswordGenerator;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
@@ -12,7 +12,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +29,7 @@ public class TemporaryPasswordService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final TemporaryPasswordGenerator temporaryPasswordGenerator;
-  private final TemporaryPasswordEmailSender temporaryPasswordEmailSender;
+  private final ApplicationEventPublisher eventPublisher;
   private final Clock clock;
 
   @Transactional
@@ -44,7 +46,15 @@ public class TemporaryPasswordService {
     String passwordHash = passwordEncoder.encode(temporaryPassword);
     Instant expiresAt = clock.instant().plus(TEMPORARY_PASSWORD_EXPIRATION);
 
-    temporaryPasswordRepository.save(TemporaryPassword.create(user, passwordHash, expiresAt));
-    temporaryPasswordEmailSender.send(user.getEmail(), temporaryPassword);
+    TemporaryPassword saved =
+        temporaryPasswordRepository.save(TemporaryPassword.create(user, passwordHash, expiresAt));
+    eventPublisher.publishEvent(
+        new TemporaryPasswordIssuedEvent(
+            user.getId(), saved.getId(), user.getEmail(), temporaryPassword));
+  }
+
+  @Transactional
+  public void deleteIssuedTemporaryPassword(UUID userId, UUID temporaryPasswordId) {
+    temporaryPasswordRepository.deleteByIdAndUserId(temporaryPasswordId, userId);
   }
 }
