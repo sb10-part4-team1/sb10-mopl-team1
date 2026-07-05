@@ -28,10 +28,10 @@ public class TemporaryPasswordEmailEventListener {
       sendWithRetry(event);
     } catch (RuntimeException exception) {
       log.error(
-          "임시 비밀번호 메일 발송 최종 실패 - userId: {}, temporaryPasswordId: {}",
+          "임시 비밀번호 메일 발송 최종 실패 - userId: {}, temporaryPasswordId: {}, exceptionType: {}",
           event.userId(),
           event.temporaryPasswordId(),
-          exception);
+          exception.getClass().getSimpleName());
       compensate(event);
     }
   }
@@ -45,12 +45,13 @@ public class TemporaryPasswordEmailEventListener {
       } catch (RuntimeException exception) {
         lastException = exception;
         log.warn(
-            "임시 비밀번호 메일 발송 실패 - attempt: {}/{}, userId: {}, temporaryPasswordId: {}",
+            "임시 비밀번호 메일 발송 실패 - attempt: {}/{}, "
+                + "userId: {}, temporaryPasswordId: {}, exceptionType: {}",
             attempt,
             MAX_ATTEMPTS,
             event.userId(),
             event.temporaryPasswordId(),
-            exception);
+            exception.getClass().getSimpleName());
         sleepBeforeRetry(attempt);
       }
     }
@@ -75,10 +76,10 @@ public class TemporaryPasswordEmailEventListener {
           event.userId(), event.temporaryPasswordId());
     } catch (RuntimeException exception) {
       log.error(
-          "임시 비밀번호 메일 발송 실패 보상 처리 실패 - userId: {}, temporaryPasswordId: {}",
+          "임시 비밀번호 메일 발송 실패 보상 처리 실패 - " + "userId: {}, temporaryPasswordId: {}, exceptionType: {}",
           event.userId(),
           event.temporaryPasswordId(),
-          exception);
+          exception.getClass().getSimpleName());
     }
   }
 }
