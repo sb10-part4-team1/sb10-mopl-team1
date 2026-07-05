@@ -21,7 +21,7 @@ public class TemporaryPasswordEmailEventListener {
   private final TemporaryPasswordEmailSender temporaryPasswordEmailSender;
   private final TemporaryPasswordService temporaryPasswordService;
 
-  @Async("ioExecutor")
+  @Async("mailExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void sendTemporaryPassword(TemporaryPasswordIssuedEvent event) {
     try {

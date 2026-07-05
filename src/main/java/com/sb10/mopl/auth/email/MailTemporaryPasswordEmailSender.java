@@ -1,5 +1,6 @@
 package com.sb10.mopl.auth.email;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.io.IOException;
@@ -27,8 +28,15 @@ public class MailTemporaryPasswordEmailSender implements TemporaryPasswordEmailS
 
   private final JavaMailSender javaMailSender;
 
+  private String htmlTemplate;
+
   @Value("${mopl.mail.temporary-password.from}")
   private String from;
+
+  @PostConstruct
+  void loadHtmlTemplate() {
+    this.htmlTemplate = loadTemplate();
+  }
 
   @Override
   public void send(String email, String temporaryPassword) {
@@ -64,7 +72,7 @@ public class MailTemporaryPasswordEmailSender implements TemporaryPasswordEmailS
 
   private String buildHtmlContent(String temporaryPassword) {
     String escapedTemporaryPassword = HtmlUtils.htmlEscape(temporaryPassword);
-    return loadTemplate().replace(TEMPORARY_PASSWORD_PLACEHOLDER, escapedTemporaryPassword);
+    return htmlTemplate.replace(TEMPORARY_PASSWORD_PLACEHOLDER, escapedTemporaryPassword);
   }
 
   private String loadTemplate() {

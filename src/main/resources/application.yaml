@@ -72,7 +72,7 @@ mopl:
 
   mail:
     temporary-password:
-      from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM}
+      from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}
 
   aws:
     access-key: ${AWS_ACCESS_KEY}
