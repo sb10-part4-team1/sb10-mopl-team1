@@ -5,13 +5,11 @@ import com.sb10.mopl.auth.event.TemporaryPasswordIssuedEvent;
 import com.sb10.mopl.auth.repository.TemporaryPasswordRepository;
 import com.sb10.mopl.auth.util.TemporaryPasswordGenerator;
 import com.sb10.mopl.user.entity.User;
-import com.sb10.mopl.user.exception.UserErrorCode;
-import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,12 +32,12 @@ public class TemporaryPasswordService {
 
   @Transactional
   public void resetPassword(String email) {
-    User user =
-        userRepository
-            .findByEmailAndIsDeletedFalse(email)
-            .orElseThrow(
-                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("email", email)));
+    Optional<User> maybeUser = userRepository.findByEmailAndIsDeletedFalse(email);
+    if (maybeUser.isEmpty()) {
+      return;
+    }
 
+    User user = maybeUser.get();
     temporaryPasswordRepository.deleteByUserId(user.getId());
 
     String temporaryPassword = temporaryPasswordGenerator.generate();
