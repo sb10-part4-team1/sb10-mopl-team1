@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sb10.mopl.auth.entity.TemporaryPassword;
+import com.sb10.mopl.auth.exception.AuthErrorCode;
 import com.sb10.mopl.auth.repository.JwtSessionRepository;
 import com.sb10.mopl.auth.repository.RefreshTokenRepository;
 import com.sb10.mopl.auth.repository.TemporaryPasswordRepository;
@@ -141,7 +142,7 @@ class TemporaryPasswordResetIntegrationTest {
                 .param("password", TEMPORARY_PASSWORD)
                 .with(csrf()))
         .andExpect(status().isUnauthorized())
-        .andExpect(jsonPath("$.code").value("AUTH01"));
+        .andExpect(jsonPath("$.code").value(AuthErrorCode.AUTHENTICATION_FAILED.getCode()));
   }
 
   @Test
@@ -155,7 +156,8 @@ class TemporaryPasswordResetIntegrationTest {
     mockMvc
         .perform(
             patch("/api/users/{userId}/password", user.getId())
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + temporaryPasswordTokens.accessToken())
+                .header(
+                    HttpHeaders.AUTHORIZATION, "Bearer " + temporaryPasswordTokens.accessToken())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of("password", "new-password")))
                 .with(csrf()))
