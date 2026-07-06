@@ -18,10 +18,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
     name = "follows",
-    indexes = {
-      @Index(name = "idx_follows_follower_id", columnList = "follower_id"),
-      @Index(name = "idx_follows_followee_id", columnList = "followee_id")
-    },
+    indexes = {@Index(name = "idx_follows_followee_id", columnList = "followee_id")},
     uniqueConstraints = {
       @UniqueConstraint(
           name = "uq_follows_follower_id_followee_id",
