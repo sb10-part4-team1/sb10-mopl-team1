@@ -123,8 +123,7 @@ public class SecurityConfig {
     http.csrf(
             csrf ->
                 csrf.ignoringRequestMatchers(
-                        "/h2-console/**",
-                        "/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
+                        "/h2-console/**", "/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
                     .csrfTokenRepository(csrfTokenRepository())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
