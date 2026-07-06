@@ -3,6 +3,7 @@ package com.sb10.mopl.content.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sb10.mopl.config.JpaAuditingConfig;
+import com.sb10.mopl.config.QuerydslConfig;
 import com.sb10.mopl.content.entity.Tag;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 @DataJpaTest
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(JpaAuditingConfig.class)
+@Import({JpaAuditingConfig.class, QuerydslConfig.class})
 class TagRepositoryTest {
 
   @Autowired private TagRepository tagRepository;

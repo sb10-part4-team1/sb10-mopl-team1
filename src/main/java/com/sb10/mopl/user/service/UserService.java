@@ -1,5 +1,8 @@
 package com.sb10.mopl.user.service;
 
+import com.sb10.mopl.auth.service.AuthSessionService;
+import com.sb10.mopl.auth.service.TemporaryPasswordService;
+import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
@@ -8,6 +11,7 @@ import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.mapper.UserMapper;
 import com.sb10.mopl.user.repository.UserRepository;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +25,8 @@ public class UserService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final UserMapper userMapper;
+  private final AuthSessionService authSessionService;
+  private final TemporaryPasswordService temporaryPasswordService;
 
   @Transactional
   public UserDto signUp(UserCreateRequest userCreateRequest) {
@@ -41,5 +47,28 @@ public class UserService {
     } catch (DataIntegrityViolationException e) {
       throw new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS, Map.of("email", email), e);
     }
+  }
+
+  @Transactional
+  public void changePassword(
+      UUID targetUserId, UUID requesterUserId, ChangePasswordRequest changePasswordRequest) {
+    if (!targetUserId.equals(requesterUserId)) {
+      throw new UserException(
+          UserErrorCode.USER_ACCESS_DENIED,
+          Map.of("userId", targetUserId, "requesterId", requesterUserId));
+    }
+
+    User user =
+        userRepository
+            .findById(targetUserId)
+            .orElseThrow(
+                () ->
+                    new UserException(
+                        UserErrorCode.USER_NOT_FOUND, Map.of("userId", targetUserId)));
+
+    String encodedPassword = passwordEncoder.encode(changePasswordRequest.password());
+    user.changePassword(encodedPassword);
+    temporaryPasswordService.deleteByUserId(targetUserId);
+    authSessionService.invalidateAllByUserId(targetUserId);
   }
 }

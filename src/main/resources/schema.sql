@@ -31,8 +31,11 @@ CREATE TABLE IF NOT EXISTS "contents" (
     "average_rating"     NUMERIC(2,1) DEFAULT 0.0    NOT NULL,
     "review_count"       INT                         NOT NULL,
     "watcher_count"      BIGINT                      NOT NULL,
+    "provider"           VARCHAR(20)  DEFAULT 'MANUAL' NOT NULL,
+    "provider_id"        VARCHAR(100)                NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
-    "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL
+    "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
+    CONSTRAINT "UQ_CONTENTS_PROVIDER_ID" UNIQUE ("provider", "provider_id")
 );
 
 -- 태그 테이블
@@ -67,11 +70,22 @@ CREATE TABLE IF NOT EXISTS "temporary_passwords" (
 -- 토큰 테이블
 CREATE TABLE IF NOT EXISTS "refresh_tokens" (
     "id"                 UUID                        NOT NULL PRIMARY KEY,
-    "user_id"            UUID                        NOT NULL,
-    "token"              TEXT                        NOT NULL UNIQUE,
+    "user_id"            UUID                        NOT NULL UNIQUE,
+    "token"              VARCHAR(64)                 NOT NULL UNIQUE,
     "expires_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     CONSTRAINT "FK_USERS_TO_REFRESH_TOKENS"
+        FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE
+);
+
+-- JWT 세션 테이블
+CREATE TABLE IF NOT EXISTS "jwt_sessions" (
+    "id"                 UUID                        NOT NULL PRIMARY KEY,
+    "user_id"            UUID                        NOT NULL UNIQUE,
+    "session_id"         UUID                        NOT NULL UNIQUE,
+    "expires_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
+    "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
+    CONSTRAINT "FK_USERS_TO_JWT_SESSIONS"
         FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE
 );
 
@@ -94,7 +108,7 @@ CREATE TABLE IF NOT EXISTS "follows" (
     "follower_id"        UUID                        NOT NULL,
     "followee_id"        UUID                        NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
-    CONSTRAINT "UQ_FOLLOWS_RELATION"
+    CONSTRAINT "UQ_FOLLOWS_FOLLOWER_ID_FOLLOWEE_ID"
         UNIQUE ("follower_id", "followee_id"),
     CONSTRAINT "CK_FOLLOWS_SELF"
         CHECK ("follower_id" <> "followee_id"),
@@ -126,9 +140,12 @@ CREATE TABLE IF NOT EXISTS "playlists" (
     "description"        TEXT                        NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "updated_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
-    CONSTRAINT "FK_USERS_TO_PLAYLISTS"
+     CONSTRAINT "FK_USERS_TO_PLAYLISTS"
         FOREIGN KEY ("owner_id") REFERENCES "users" ("id") ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS "idx_playlists_owner_id"
+    ON "playlists" ("owner_id");
 
 -- 재생목록-컨텐츠 매핑 테이블 (복합 유니크 하단 배치)
 CREATE TABLE IF NOT EXISTS "playlist_contents" (
@@ -239,10 +256,7 @@ CREATE TABLE IF NOT EXISTS "content_reviews" (
 -- ==========================================
 -- 성능 최적화를 위한 조회용 인덱스 (INDEX)
 -- ==========================================
-CREATE INDEX IF NOT EXISTS "IDX_REFRESH_TOKENS_USER"
-    ON "refresh_tokens" ("user_id");
-
-CREATE INDEX IF NOT EXISTS "IDX_FOLLOWS_FOLLOWEE"
+CREATE INDEX IF NOT EXISTS "IDX_FOLLOWS_FOLLOWEE_ID"
     ON "follows" ("followee_id");
 
 CREATE INDEX IF NOT EXISTS "IDX_CONTENT_TAGS_TAG"
@@ -262,3 +276,6 @@ CREATE INDEX IF NOT EXISTS "IDX_WATCHING_SESSION_WATCHER"
 
 CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_CREATED_AT"
     ON "contents" ("created_at");
+
+CREATE INDEX IF NOT EXISTS "IDX_PLAYLIST_CONTENTS_CONTENT"
+    ON "playlist_contents" ("content_id");

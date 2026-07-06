@@ -1,0 +1,428 @@
+package com.sb10.mopl.playlist.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+
+import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.common.pagination.SortDirection;
+import com.sb10.mopl.playlist.dto.PlaylistCreateRequest;
+import com.sb10.mopl.playlist.dto.PlaylistDto;
+import com.sb10.mopl.playlist.dto.PlaylistOwnerDto;
+import com.sb10.mopl.playlist.dto.PlaylistUpdateRequest;
+import com.sb10.mopl.playlist.entity.Playlist;
+import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
+import com.sb10.mopl.playlist.exception.PlaylistException;
+import com.sb10.mopl.playlist.mapper.PlaylistMapper;
+import com.sb10.mopl.playlist.repository.PlaylistRepository;
+import com.sb10.mopl.user.entity.User;
+import com.sb10.mopl.user.exception.UserException;
+import com.sb10.mopl.user.repository.UserRepository;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
+
+@ExtendWith(MockitoExtension.class)
+class PlaylistServiceImplTest {
+
+  @Mock private PlaylistRepository playlistRepository;
+
+  @Mock private UserRepository userRepository;
+
+  @Mock private PlaylistMapper playlistMapper;
+
+  @InjectMocks private PlaylistServiceImpl playlistService;
+
+  private UUID playlistId;
+  private UUID ownerId;
+  private UUID otherUserId;
+
+  private User owner;
+
+  private Playlist playlist;
+
+  private PlaylistCreateRequest createRequest;
+  private PlaylistUpdateRequest updateRequest;
+  private PlaylistDto playlistDto;
+
+  @BeforeEach
+  void setUp() {
+    playlistId = UUID.randomUUID();
+    ownerId = UUID.randomUUID();
+    otherUserId = UUID.randomUUID();
+
+    owner = createUser(ownerId);
+
+    createRequest = new PlaylistCreateRequest("플레이리스트 제목", "플레이리스트 설명");
+    updateRequest = new PlaylistUpdateRequest("수정된 제목", "수정된 설명");
+
+    playlist = createPlaylist(playlistId, owner, "플레이리스트 제목", "플레이리스트 설명");
+    playlistDto = createPlaylistDto(playlist);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 생성 성공")
+  void create_success() {
+    // given
+    given(userRepository.findById(ownerId)).willReturn(Optional.of(owner));
+    given(playlistMapper.toEntity(owner, createRequest)).willReturn(playlist);
+    given(playlistRepository.save(playlist)).willReturn(playlist);
+    given(playlistMapper.toDto(playlist)).willReturn(playlistDto);
+
+    // when
+    PlaylistDto result = playlistService.create(createRequest, ownerId);
+
+    // then
+    assertThat(result).isEqualTo(playlistDto);
+    verify(playlistRepository).save(playlist);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 생성 실패 - 소유자가 존재하지 않음")
+  void create_fail_ownerNotFound() {
+    // given
+    given(userRepository.findById(ownerId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> playlistService.create(createRequest, ownerId))
+        .isInstanceOf(UserException.class);
+
+    verify(playlistRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 단건 조회 성공")
+  void findById_success() {
+    // given
+    given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.of(playlist));
+    given(playlistMapper.toDto(playlist)).willReturn(playlistDto);
+
+    // when
+    PlaylistDto result = playlistService.findById(playlistId);
+
+    // then
+    assertThat(result).isEqualTo(playlistDto);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 단건 조회 실패 - 플레이리스트가 존재하지 않음")
+  void findById_fail_playlistNotFound() {
+    // given
+    given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> playlistService.findById(playlistId))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.PLAYLIST_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 수정 성공")
+  void update_success() {
+    // given
+    given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.of(playlist));
+    given(playlistMapper.toDto(playlist)).willReturn(playlistDto);
+
+    // when
+    PlaylistDto result = playlistService.update(playlistId, updateRequest, ownerId);
+
+    // then
+    assertThat(result).isEqualTo(playlistDto);
+    assertThat(playlist.getTitle()).isEqualTo(updateRequest.title());
+    assertThat(playlist.getDescription()).isEqualTo(updateRequest.description());
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 수정 실패 - 플레이리스트가 존재하지 않음")
+  void update_fail_playlistNotFound() {
+    // given
+    given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> playlistService.update(playlistId, updateRequest, ownerId))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.PLAYLIST_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 수정 실패 - 소유자가 아님")
+  void update_fail_unauthorizedOwner() {
+    // given
+    given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.of(playlist));
+
+    // when & then
+    assertThatThrownBy(() -> playlistService.update(playlistId, updateRequest, otherUserId))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 삭제 성공")
+  void delete_success() {
+    // given
+    given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.of(playlist));
+
+    // when
+    playlistService.delete(playlistId, ownerId);
+
+    // then
+    verify(playlistRepository).delete(playlist);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 삭제 실패 - 플레이리스트가 존재하지 않음")
+  void delete_fail_playlistNotFound() {
+    // given
+    given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> playlistService.delete(playlistId, ownerId))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.PLAYLIST_NOT_FOUND);
+
+    verify(playlistRepository, never()).delete(any());
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 삭제 실패 - 소유자가 아님")
+  void delete_fail_unauthorizedOwner() {
+    // given
+    given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.of(playlist));
+
+    // when & then
+    assertThatThrownBy(() -> playlistService.delete(playlistId, otherUserId))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.UNAUTHORIZED_PLAYLIST_ACCESS);
+
+    verify(playlistRepository, never()).delete(any());
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 성공")
+  void findAll_success() {
+    // given
+    given(
+            playlistRepository.findAllByUpdatedAtCursorDesc(
+                isNull(), eq(ownerId), isNull(), isNull(), any(Pageable.class)))
+        .willReturn(List.of(playlist));
+    given(playlistMapper.toDto(playlist)).willReturn(playlistDto);
+    given(playlistRepository.countBySearchCondition(null, ownerId)).willReturn(1L);
+
+    // when
+    CursorPageResponse<PlaylistDto> result =
+        playlistService.findAll(
+            null, ownerId, null, null, null, 10, "updatedAt", SortDirection.DESCENDING);
+
+    // then
+    assertThat(result.data()).containsExactly(playlistDto);
+    assertThat(result.hasNext()).isFalse();
+    assertThat(result.totalCount()).isEqualTo(1L);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 성공 - 다음 페이지가 있음")
+  void findAll_success_hasNext() {
+    // given
+    Playlist nextPlaylist = createPlaylist(UUID.randomUUID(), owner, "다음 플레이리스트", "다음 설명");
+
+    given(
+            playlistRepository.findAllByUpdatedAtCursorDesc(
+                isNull(), eq(ownerId), isNull(), isNull(), any(Pageable.class)))
+        .willReturn(List.of(playlist, nextPlaylist));
+    given(playlistMapper.toDto(playlist)).willReturn(playlistDto);
+    given(playlistRepository.countBySearchCondition(null, ownerId)).willReturn(2L);
+
+    // when
+    CursorPageResponse<PlaylistDto> result =
+        playlistService.findAll(
+            null, ownerId, null, null, null, 1, "updatedAt", SortDirection.DESCENDING);
+
+    // then
+    assertThat(result.data()).containsExactly(playlistDto);
+    assertThat(result.hasNext()).isTrue();
+    assertThat(result.nextCursor()).isEqualTo(playlist.getUpdatedAt().toString());
+    assertThat(result.nextIdAfter()).isEqualTo(playlist.getId());
+    assertThat(result.totalCount()).isEqualTo(2L);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - cursor와 idAfter 중 하나만 전달")
+  void findAll_fail_cursorAndIdAfterMismatch() {
+    // given
+    String cursor = Instant.now().toString();
+
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null, ownerId, null, cursor, null, 10, "updatedAt", SortDirection.DESCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - 지원하지 않는 정렬 기준")
+  void findAll_fail_invalidSortBy() {
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null, ownerId, null, null, null, 10, "createdAt", SortDirection.DESCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - 지원하지 않는 정렬 방향")
+  void findAll_fail_invalidSortDirection() {
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null, ownerId, null, null, null, 10, "updatedAt", SortDirection.ASCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - limit이 1보다 작음")
+  void findAll_fail_invalidLimitLessThanOne() {
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null, ownerId, null, null, null, 0, "updatedAt", SortDirection.DESCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - limit이 최대값을 초과함")
+  void findAll_fail_invalidLimitGreaterThanMax() {
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null, ownerId, null, null, null, 101, "updatedAt", SortDirection.DESCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - cursor 형식이 올바르지 않음")
+  void findAll_fail_invalidCursorFormat() {
+    // given
+    UUID idAfter = UUID.randomUUID();
+
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null,
+                    ownerId,
+                    null,
+                    "invalid-cursor",
+                    idAfter,
+                    10,
+                    "updatedAt",
+                    SortDirection.DESCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - 구독자 기준 조회 미지원")
+  void findAll_fail_subscriberIdUnsupported() {
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null,
+                    ownerId,
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    10,
+                    "updatedAt",
+                    SortDirection.DESCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - 구독자 수 정렬 미지원")
+  void findAll_fail_subscriberCountUnsupported() {
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null,
+                    ownerId,
+                    null,
+                    null,
+                    null,
+                    10,
+                    "subscriberCount",
+                    SortDirection.DESCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  // 테스트용 User 생성 후 id 주입
+  private User createUser(UUID userId) {
+    User user = User.createUser("테스트유저", "test@example.com", "password", null);
+    ReflectionTestUtils.setField(user, "id", userId);
+    return user;
+  }
+
+  // 테스트용 Playlist 생성 후 id, updatedAt 주입
+  private Playlist createPlaylist(UUID playlistId, User owner, String title, String description) {
+    Playlist playlist = new Playlist(owner, title, description);
+    ReflectionTestUtils.setField(playlist, "id", playlistId);
+    ReflectionTestUtils.setField(playlist, "updatedAt", Instant.now());
+    return playlist;
+  }
+
+  // 테스트 검증에 사용할 PlaylistDto 생성
+  private PlaylistDto createPlaylistDto(Playlist playlist) {
+    PlaylistOwnerDto ownerDto = new PlaylistOwnerDto(playlist.getOwner().getId(), "테스트유저", null);
+
+    return new PlaylistDto(
+        playlist.getId(),
+        ownerDto,
+        playlist.getTitle(),
+        playlist.getDescription(),
+        playlist.getUpdatedAt(),
+        0L,
+        false,
+        List.of());
+  }
+}

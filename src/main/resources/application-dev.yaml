@@ -28,3 +28,10 @@ logging:
   level:
     root: info
     org.hibernate.SQL: info
+
+mopl:
+  datasource:
+    api-pool-name: HikariPool-Dev-API
+    api-pool-size: 15
+    batch-pool-name: HikariPool-Dev-Batch
+    batch-pool-size: 5

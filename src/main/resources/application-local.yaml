@@ -8,7 +8,7 @@ spring:
 
   datasource:
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE # PostgreSQL 모드 활성화
+    url: jdbc:h2:mem:localdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE # PostgreSQL 모드 활성화
     username: sa
     password:
 
@@ -32,3 +32,10 @@ logging:
     root: info
     org.hibernate.SQL: debug # SQL 쿼리를 상세하게 보고 싶을 때
     org.hibernate.orm.jdbc.bind: trace # 쿼리에 들어가는 파라미터(?, ?) 바인딩 값까지 보기
+
+mopl:
+  datasource:
+    api-pool-name: HikariPool-Local-API
+    api-pool-size: 10
+    batch-pool-name: HikariPool-Local-Batch
+    batch-pool-size: 5

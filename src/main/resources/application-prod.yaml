@@ -31,3 +31,18 @@ springdoc:
     enabled: false # 운영에서는 스웨거 문서 숨김 (필요시 true 후 인증 보안 걸기)
   swagger-ui:
     enabled: false
+
+mopl:
+  jwt:
+    refresh-token-cookie:
+      secure: true
+
+  datasource:
+    api-pool-name: HikariPool-Prod-API
+    api-pool-size: 30
+    batch-pool-name: HikariPool-Prod-Batch
+    batch-pool-size: 5
+
+  mail:
+    temporary-password:
+      from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}

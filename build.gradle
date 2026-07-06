@@ -69,6 +69,11 @@ dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-security'
   // implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
+  // JJWT
+  implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+  runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+  runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
   // Database
   runtimeOnly 'com.h2database:h2'
   runtimeOnly 'org.postgresql:postgresql'
@@ -88,12 +93,29 @@ dependencies {
   annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
   annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
+  // Querydsl
+  implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+  annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
+  annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+  annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+  // WebClient
+  implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+  // Spring Batch
+  implementation 'org.springframework.boot:spring-boot-starter-batch'
+
+  // Spring retry, Circuit Breaker
+  implementation 'org.springframework.retry:spring-retry'
+  implementation 'org.springframework.boot:spring-boot-starter-aop' // retry 동작에 필요
+  implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
+  implementation 'io.github.resilience4j:resilience4j-reactor:2.2.0' // WebClient + 서킷브레이커 연동
+
   // Test
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
   testImplementation 'org.springframework.batch:spring-batch-test'
 
-  // Security Test - 임시 비활성화
-  // testImplementation 'org.springframework.security:spring-security-test'
+  testImplementation 'org.springframework.security:spring-security-test'
 
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

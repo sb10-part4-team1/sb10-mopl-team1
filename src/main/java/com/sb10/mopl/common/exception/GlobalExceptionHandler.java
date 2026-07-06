@@ -1,17 +1,23 @@
 package com.sb10.mopl.common.exception;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.PropertyAccessException;
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -64,27 +70,117 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * DTO 등의 @Valid 검증이 실패했을 때 발생하는 예외를 처리합니다. 각 필드별 검증 실패 메시지를 details 맵에 담아 SYS01 코드와 함께 400 Bad
-   * Request를 반환합니다. 보안을 위해 원본 입력값(rejectedValue)은 응답과 로그에서 제외합니다.
+   * DTO 등의 검증 및 바인딩이 실패했을 때 발생하는 예외를 처리합니다. 각 필드별 검증 실패 메시지를 details 맵에 담아 SYS01 코드와 함께 400 Bad
+   * Request를 반환합니다. 타입 변환 에러가 있는 경우, 커스텀 컨버터 등에서 발생한 상세 예외 메시지(예: 지원하지 않는 정렬 방향)를 추출해 반환합니다. 보안을 위해
+   * 원본 입력값(rejectedValue)은 응답과 로그에서 제외합니다.
    *
-   * @param ex 발생한 MethodArgumentNotValidException 인스턴스
+   * @param ex 발생한 BindException 또는 MethodArgumentNotValidException 인스턴스
    * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
    */
-  @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<ErrorResponse> handleValidationException(
-      MethodArgumentNotValidException ex) {
+  @ExceptionHandler(BindException.class)
+  public ResponseEntity<ErrorResponse> handleBindException(BindException ex) {
     SystemErrorCode errorCode = SystemErrorCode.INVALID_INPUT_VALUE;
 
     Map<String, Object> details = new HashMap<>();
     for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
       String field = fieldError.getField();
-      String message = String.valueOf(fieldError.getDefaultMessage());
+      String message = null;
+
+      // 바인딩 에러(타입 변환 에러 등)인 경우 컨버터 등에서 발생시킨 가장 구체적인 원인 메시지 추출
+      if (fieldError.isBindingFailure()) {
+        try {
+          PropertyAccessException pae = fieldError.unwrap(PropertyAccessException.class);
+          if (pae instanceof TypeMismatchException tme
+              && tme.getRequiredType() != null
+              && tme.getRequiredType().isEnum()) {
+            message =
+                "지원하지 않는 값입니다. (선택 가능한 값: "
+                    + Arrays.toString(tme.getRequiredType().getEnumConstants())
+                    + ")";
+          } else {
+            message = "올바르지 않은 형식입니다.";
+          }
+        } catch (Exception ignored) {
+          // PropertyAccessException으로 unwrapping할 수 없는 오류인 경우, 기본 에러 메시지(defaultMessage)로 폴백합니다.
+        }
+      }
+
+      // 바인딩 에러가 아닌 경우(@Valid 검증에 실패한 경우)
+      if (message == null) {
+        message = String.valueOf(fieldError.getDefaultMessage());
+      }
+
       details.merge(
           field, message, (existing, incoming) -> String.valueOf(existing) + "; " + incoming);
     }
 
     log.warn(
-        "[ValidationException] Code: {}, Message: {}, Details: {}",
+        "[BindException] Code: {}, Message: {}, Details: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        details);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), details);
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  /**
+   * 요청 파라미터 타입 변환에 실패했을 때 발생하는 예외를 처리합니다. 예: enum 값 변환 실패, UUID 형식 오류 등
+   *
+   * <p>{@code @RequestParam}으로 전달된 값이 컨트롤러 메서드 파라미터 타입으로 변환되지 못한 경우 SYS01 코드와 함께 400 Bad Request를
+   * 반환합니다.
+   *
+   * @param ex 발생한 TypeMismatchException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
+   */
+  @ExceptionHandler(TypeMismatchException.class)
+  public ResponseEntity<ErrorResponse> handleTypeMismatchException(TypeMismatchException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.INVALID_INPUT_VALUE;
+
+    String field = "message";
+    if (ex instanceof MethodArgumentTypeMismatchException methodEx) {
+      field = methodEx.getName();
+    }
+
+    Class<?> requiredType = ex.getRequiredType();
+
+    String message =
+        requiredType != null && requiredType.isEnum()
+            ? "지원하지 않는 값입니다. (선택 가능한 값: " + Arrays.toString(requiredType.getEnumConstants()) + ")"
+            : "올바르지 않은 형식입니다.";
+
+    Map<String, Object> details = Map.of(field, message);
+
+    log.warn(
+        "[TypeMismatchException] Type: {}, Code: {}, Message: {}, Details: {}",
+        ex.getClass().getName(),
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        details);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), details);
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  /**
+   * 필수 요청 파라미터가 누락되었을 때 발생하는 예외를 처리합니다. 예: required=true인 @RequestParam 값이 없는 경우
+   *
+   * @param ex 발생한 MissingServletRequestParameterException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
+   */
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+      MissingServletRequestParameterException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.INVALID_INPUT_VALUE;
+
+    Map<String, Object> details = Map.of(ex.getParameterName(), "필수 요청 파라미터입니다.");
+
+    log.warn(
+        "[MissingServletRequestParameterException] Code: {}, Message: {}, Details: {}",
         errorCode.getCode(),
         errorCode.getMessage(),
         details);
@@ -219,6 +315,30 @@ public class GlobalExceptionHandler {
     ErrorResponse errorResponse =
         new ErrorResponse(
             errorCode.getCode(), errorCode.getMessage(), Map.of("message", ex.getMessage()));
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  /**
+   * DB 무결성 제약 조건 위반 예외를 처리합니다. 예: UNIQUE 제약 조건 위반, FK 제약 조건 위반 등
+   *
+   * @param ex 발생한 DataIntegrityViolationException 인스턴스
+   * @return 에러 메시지 데이터와 HTTP 상태 코드를 포함한 ResponseEntity
+   */
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+      DataIntegrityViolationException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.DATA_INTEGRITY_VIOLATION;
+
+    log.warn(
+        "[DataIntegrityViolationException] Code: {}, Message: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        ex);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            errorCode.getCode(), errorCode.getMessage(), Map.of("message", errorCode.getMessage()));
 
     return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
   }

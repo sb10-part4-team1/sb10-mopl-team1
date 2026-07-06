@@ -11,9 +11,34 @@ spring:
   config:
     import: optional:file:.env[.properties]
 
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    protocol: smtp
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT_MS:5000}
+          timeout: ${MAIL_READ_TIMEOUT_MS:5000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT_MS:5000}
+
   batch:
+    jdbc:
+      initialize-schema: always   # 배치 메타 테이블 자동 생성
     job:
-      enabled: false # 프로젝트 실행 시 배치 잡 실행 여부
+      enabled: false # 프로젝트 실행 시 배치 잡 실행 여부 → 스케줄러로만 실행
+
+  task:
+    scheduling:
+      pool:
+        size: 2 # 스케줄러가 동시에 실행될 수 있는 크기(tmdb, sports)
 
     # 공통 JPA 설정 (포맷팅 및 성능 최적화 배치 크기 지정)
   jpa:
@@ -34,10 +59,40 @@ spring:
 
   ### 프로젝트 환경 변수 설정
 mopl:
+  jwt:
+    secret: ${MOPL_JWT_SECRET}
+    access-token-expiration: ${MOPL_JWT_ACCESS_TOKEN_EXPIRATION:PT1H}
+    refresh-token-expiration: ${MOPL_JWT_REFRESH_TOKEN_EXPIRATION:P14D}
+    refresh-token-cookie:
+      name: REFRESH_TOKEN
+      path: /api/auth
+      http-only: true
+      secure: ${MOPL_REFRESH_TOKEN_COOKIE_SECURE:false}
+      same-site: ${MOPL_REFRESH_TOKEN_COOKIE_SAME_SITE:Lax}
+
+  mail:
+    temporary-password:
+      from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}
+
   aws:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
     region: ${AWS_REGION:ap-northeast-2}
+
+  external-api:
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000
+
+  tmdb:
+    api:
+      token: ${TMDB_BEARER_TOKEN}
+      base-url: https://api.themoviedb.org/3
+    batch:
+      max-pages: ${TMDB_MAX_PAGES:10}
+  sports:
+    api:
+      base-url: https://www.thesportsdb.com/api/v1/json/123
+
 
 # 로깅 레벨 설정
 logging:

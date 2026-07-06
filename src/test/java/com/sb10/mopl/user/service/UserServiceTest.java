@@ -11,6 +11,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sb10.mopl.auth.service.AuthSessionService;
+import com.sb10.mopl.auth.service.TemporaryPasswordService;
+import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
@@ -20,6 +23,7 @@ import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.mapper.UserMapper;
 import com.sb10.mopl.user.repository.UserRepository;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +44,10 @@ class UserServiceTest {
   @Mock private PasswordEncoder passwordEncoder;
 
   @Mock private UserMapper userMapper;
+
+  @Mock private AuthSessionService authSessionService;
+
+  @Mock private TemporaryPasswordService temporaryPasswordService;
 
   @InjectMocks private UserService userService;
 
@@ -137,5 +145,83 @@ class UserServiceTest {
     verify(passwordEncoder).encode("password123");
     verify(userRepository).saveAndFlush(any(User.class));
     verify(userMapper, never()).toDto(any());
+  }
+
+  @Test
+  @DisplayName("비밀번호 변경 시 새 비밀번호를 암호화해 저장하고 기존 세션을 모두 무효화한다")
+  void changePassword_success_whenRequesterIsTargetUser() {
+    // given
+    UUID userId = UUID.randomUUID();
+    User user = User.createUser("test-user", "user@example.com", "old-encoded-password", null);
+    ChangePasswordRequest request = new ChangePasswordRequest("new-password");
+
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+    when(passwordEncoder.encode("new-password")).thenReturn("new-encoded-password");
+
+    // when
+    userService.changePassword(userId, userId, request);
+
+    // then
+    String changedPassword = (String) ReflectionTestUtils.getField(user, "password");
+
+    assertAll(
+        () -> assertNotEquals("new-password", changedPassword),
+        () -> assertEquals("new-encoded-password", changedPassword));
+
+    verify(userRepository).findById(userId);
+    verify(passwordEncoder).encode("new-password");
+    verify(temporaryPasswordService).deleteByUserId(userId);
+    verify(authSessionService).invalidateAllByUserId(userId);
+  }
+
+  @Test
+  @DisplayName("요청자가 본인이 아니면 비밀번호 변경에 실패한다")
+  void changePassword_fail_whenRequesterIsNotTargetUser() {
+    // given
+    UUID targetUserId = UUID.randomUUID();
+    UUID requesterUserId = UUID.randomUUID();
+    ChangePasswordRequest request = new ChangePasswordRequest("new-password");
+
+    // when
+    UserException exception =
+        assertThrows(
+            UserException.class,
+            () -> userService.changePassword(targetUserId, requesterUserId, request));
+
+    // then
+    assertAll(
+        () -> assertEquals(UserErrorCode.USER_ACCESS_DENIED, exception.getErrorCode()),
+        () -> assertEquals(targetUserId, exception.getDetails().get("userId")),
+        () -> assertEquals(requesterUserId, exception.getDetails().get("requesterId")));
+
+    verify(userRepository, never()).findById(any());
+    verify(passwordEncoder, never()).encode(any());
+    verify(temporaryPasswordService, never()).deleteByUserId(any());
+    verify(authSessionService, never()).invalidateAllByUserId(any());
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 사용자이면 비밀번호 변경에 실패한다")
+  void changePassword_fail_whenUserDoesNotExist() {
+    // given
+    UUID userId = UUID.randomUUID();
+    ChangePasswordRequest request = new ChangePasswordRequest("new-password");
+
+    when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+    // when
+    UserException exception =
+        assertThrows(
+            UserException.class, () -> userService.changePassword(userId, userId, request));
+
+    // then
+    assertAll(
+        () -> assertEquals(UserErrorCode.USER_NOT_FOUND, exception.getErrorCode()),
+        () -> assertEquals(userId, exception.getDetails().get("userId")));
+
+    verify(userRepository).findById(userId);
+    verify(passwordEncoder, never()).encode(any());
+    verify(temporaryPasswordService, never()).deleteByUserId(any());
+    verify(authSessionService, never()).invalidateAllByUserId(any());
   }
 }
