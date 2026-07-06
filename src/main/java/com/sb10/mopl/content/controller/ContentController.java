@@ -12,6 +12,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -30,6 +31,7 @@ public class ContentController {
 
   private final ContentService contentService;
 
+  @PreAuthorize("hasRole('ADMIN')")
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ContentDto> create(
       @RequestPart("request") @Valid ContentCreateRequest request,
@@ -39,6 +41,7 @@ public class ContentController {
     return ResponseEntity.created(location).body(contentDto);
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ContentDto> update(
       @PathVariable UUID id,
@@ -48,6 +51,7 @@ public class ContentController {
     return ResponseEntity.ok(contentDto);
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @DeleteMapping(value = "/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     contentService.delete(id);
