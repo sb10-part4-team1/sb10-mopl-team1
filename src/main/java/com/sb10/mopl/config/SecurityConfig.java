@@ -20,6 +20,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -45,6 +46,7 @@ import org.springframework.util.PathMatcher;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // 컨트롤러 내 @PreAuthorize 메서드 보안 활성화
 @EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfig {
 
@@ -68,8 +70,6 @@ public class SecurityConfig {
     pathMatcher("/swagger-ui/**"),
     pathMatcher("/swagger-ui.html"),
     pathMatcher("/api/test/batch/**"), // FIXME: 나중에 지워야 할 부분,
-    pathMatcher("/api/admin/batch/**"), // FIXME : 나중에 지워야 할 부분,
-    pathMatcher("/api/content/**"), // FIXME: 나중에 지워야 할 부분,
     methodAndPathMatcher(HttpMethod.OPTIONS, "/**"),
     methodAndPathMatcher(HttpMethod.POST, "/api/users"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-in"),
@@ -82,7 +82,11 @@ public class SecurityConfig {
   private static final RequestMatcher[] ADMIN_ENDPOINT_MATCHERS = {
     methodAndPathMatcher(HttpMethod.GET, "/api/users"),
     methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/role"),
-    methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/locked")
+    methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/locked"),
+    pathMatcher("/api/admin/batch/**"), // 관리자 배치 제어 권한 제한
+    methodAndPathMatcher(HttpMethod.POST, "/api/content/**"), // 콘텐츠 등록(POST) 권한 제한
+    methodAndPathMatcher(HttpMethod.PUT, "/api/content/**"), // 콘텐츠 수정(PUT) 권한 제한
+    methodAndPathMatcher(HttpMethod.DELETE, "/api/content/**") // 콘텐츠 삭제(DELETE) 권한 제한
   };
 
   private static RequestMatcher pathMatcher(String pattern) {
@@ -117,8 +121,7 @@ public class SecurityConfig {
             csrf ->
                 csrf.ignoringRequestMatchers(
                         "/h2-console/**",
-                        "/api/test/batch/**",
-                        "/api/admin/batch/**") // FIXME: 나중에 지워야 할 부분,
+                        "/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
                     .csrfTokenRepository(csrfTokenRepository())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
