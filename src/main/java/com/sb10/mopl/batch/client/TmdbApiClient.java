@@ -1,9 +1,9 @@
 package com.sb10.mopl.batch.client;
 
-import com.sb10.mopl.batch.dto.TmdbApiResponse;
 import com.sb10.mopl.batch.exception.BatchErrorCode;
 import com.sb10.mopl.batch.exception.BatchException;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.retry.annotation.Backoff;
@@ -25,7 +25,8 @@ public class TmdbApiClient {
   }
 
   /*
-   * TMDB 오픈 API로부터 인기 영화 또는 TV 시리즈 콘텐츠 목록을 가져옵니다.
+   * TMDB 오픈 API로부터 데이터를 가져옵니다.
+   * page 파라미터가 null일 경우 쿼리 파라미터에서 제외됩니다. (예: 장르 목록 수집 시)
    * 429, 500 계열, 네트워크 지연 발생 시 최대 3회(총 4회 시도) 지수 백오프 재시도를 수행합니다.
    */
   @Retryable(
@@ -36,9 +37,9 @@ public class TmdbApiClient {
       },
       maxAttempts = 4,
       backoff = @Backoff(delay = 2000, multiplier = 2.0))
-  public TmdbApiResponse fetch(String path, int page) {
+  public <T> T fetch(String path, Integer page, Class<T> responseType) {
     try {
-      TmdbApiResponse response =
+      T response =
           restClient
               .get()
               .uri(
@@ -46,10 +47,10 @@ public class TmdbApiClient {
                       uriBuilder
                           .path(path)
                           .queryParam("language", "ko-KR")
-                          .queryParam("page", page)
+                          .queryParamIfPresent("page", Optional.ofNullable(page))
                           .build())
               .retrieve()
-              .body(TmdbApiResponse.class);
+              .body(responseType);
 
       if (response == null) {
         log.error("TMDB 응답 바디 누락(null) - path: {}, page: {}", path, page);
