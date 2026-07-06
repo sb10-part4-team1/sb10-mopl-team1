@@ -34,6 +34,14 @@ logging:
     org.hibernate.orm.jdbc.bind: trace # 쿼리에 들어가는 파라미터(?, ?) 바인딩 값까지 보기
 
 mopl:
+  admin:
+    initializer:
+      enabled: ${MOPL_ADMIN_INITIALIZER_ENABLED:true}
+    account:
+      email: ${MOPL_ADMIN_EMAIL:admin@mopl.com}
+      name: ${MOPL_ADMIN_NAME:admin}
+      password: ${MOPL_ADMIN_PASSWORD:admin1234!}
+
   datasource:
     api-pool-name: HikariPool-Local-API
     api-pool-size: 10

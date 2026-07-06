@@ -74,6 +74,15 @@ mopl:
     temporary-password:
       from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}
 
+  admin:
+    initializer:
+      enabled: ${MOPL_ADMIN_INITIALIZER_ENABLED:false}
+      overwrite-password: ${MOPL_ADMIN_OVERWRITE_PASSWORD:false}
+    account:
+      email: ${MOPL_ADMIN_EMAIL:}
+      name: ${MOPL_ADMIN_NAME:}
+      password: ${MOPL_ADMIN_PASSWORD:}
+
   aws:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
