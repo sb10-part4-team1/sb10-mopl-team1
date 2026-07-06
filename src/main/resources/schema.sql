@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS "follows" (
     "follower_id"        UUID                        NOT NULL,
     "followee_id"        UUID                        NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
-    CONSTRAINT "UQ_FOLLOWS_RELATION"
+    CONSTRAINT "UQ_FOLLOWS_FOLLOWER_ID_FOLLOWEE_ID"
         UNIQUE ("follower_id", "followee_id"),
     CONSTRAINT "CK_FOLLOWS_SELF"
         CHECK ("follower_id" <> "followee_id"),
@@ -256,7 +256,7 @@ CREATE TABLE IF NOT EXISTS "content_reviews" (
 -- ==========================================
 -- 성능 최적화를 위한 조회용 인덱스 (INDEX)
 -- ==========================================
-CREATE INDEX IF NOT EXISTS "IDX_FOLLOWS_FOLLOWEE"
+CREATE INDEX IF NOT EXISTS "IDX_FOLLOWS_FOLLOWEE_ID"
     ON "follows" ("followee_id");
 
 CREATE INDEX IF NOT EXISTS "IDX_CONTENT_TAGS_TAG"

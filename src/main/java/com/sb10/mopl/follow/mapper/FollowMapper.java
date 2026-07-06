@@ -1,7 +1,7 @@
 package com.sb10.mopl.follow.mapper;
 
-import com.sb10.mopl.follow.dto.FollowCreateRequest;
 import com.sb10.mopl.follow.dto.FollowDto;
+import com.sb10.mopl.follow.dto.FollowRequest;
 import com.sb10.mopl.follow.entity.Follow;
 import java.util.UUID;
 import org.mapstruct.Mapper;
@@ -9,7 +9,7 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface FollowMapper {
 
-  default Follow toEntity(UUID followerId, FollowCreateRequest request) {
+  default Follow toEntity(UUID followerId, FollowRequest request) {
     return new Follow(followerId, request.followeeId());
   }
 
