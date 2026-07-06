@@ -67,15 +67,14 @@ public class TmdbGenreCache {
 
   private void initializeCache(
       String path, Map<Integer, String> translationMap, Map<String, Tag> tagMap) {
-    // 1. TMDB 장르 API 호출하여 번역기 맵(ID -> 한글명) 구성
+    // 1. TMDB 장르 API 호출 후 유효한 데이터만 사전 취합
     TmdbGenreListDto genreResponse = tmdbApiClient.fetch(path, null, TmdbGenreListDto.class);
-    List<TmdbGenreDto> genres = genreResponse.genres();
+    List<TmdbGenreDto> validGenres =
+        genreResponse.genres().stream().filter(g -> g.id() != null && g.name() != null).toList();
 
-    genres.stream()
-        .filter(g -> g.id() != null && g.name() != null)
-        .forEach(g -> translationMap.put(g.id(), g.name()));
-
-    List<String> genreNames = genres.stream().map(TmdbGenreDto::name).toList();
+    // 2. 사전에 걸러진 깨끗한 리스트만 활용하여 번역기 맵 및 이름 목록 구성
+    validGenres.forEach(g -> translationMap.put(g.id(), g.name()));
+    List<String> genreNames = validGenres.stream().map(TmdbGenreDto::name).toList();
 
     // 2. DB에 기존에 저장된 장르 태그 조회
     Map<String, Tag> existingTagMap =
