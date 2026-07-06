@@ -26,7 +26,8 @@ public class CacheConfig {
   public CacheManager batchCacheManager() {
     CaffeineCacheManager caffeineCacheManager = new CaffeineCacheManager();
 
-    caffeineCacheManager.setCaffeine( // 저장 최대 용량 10000개, 30분 뒤 만료
+    // 저장 최대 용량 10000개, 30분 뒤 만료
+    caffeineCacheManager.setCaffeine(
         Caffeine.newBuilder().maximumSize(10000).expireAfterAccess(30, TimeUnit.MINUTES));
 
     caffeineCacheManager.setCacheNames(List.of("sportsVenues"));
@@ -40,7 +41,8 @@ public class CacheConfig {
   public CacheManager queryCacheManager() {
     CaffeineCacheManager caffeineCacheManager = new CaffeineCacheManager();
 
-    caffeineCacheManager.setCaffeine( // 저장 최대 용량 50000개, 24시간 뒤 만료
+    // 저장 최대 용량 50000개, 24시간 뒤 만료
+    caffeineCacheManager.setCaffeine(
         Caffeine.newBuilder().maximumSize(50000).expireAfterWrite(24, TimeUnit.HOURS));
 
     caffeineCacheManager.setCacheNames(List.of("contents", "playlists"));
