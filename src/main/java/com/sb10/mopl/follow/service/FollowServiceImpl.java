@@ -24,15 +24,7 @@ public class FollowServiceImpl implements FollowService {
   @Override
   @Transactional
   public FollowDto follow(UUID followerId, FollowRequest request) {
-    UUID followeeId = request.followeeId();
-
-    if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
-      throw new FollowException(
-          FollowErrorCode.FOLLOW_ALREADY_EXISTS,
-          Map.of(
-              "followerId", followerId,
-              "followeeId", followeeId));
-    }
+    validateFollowNotExists(followerId, request.followeeId());
 
     Follow follow = followMapper.toEntity(followerId, request);
     Follow savedFollow = followRepository.save(follow);
@@ -43,6 +35,22 @@ public class FollowServiceImpl implements FollowService {
   @Override
   @Transactional
   public void unfollow(UUID userId, UUID followId) {
+    Follow follow = getFollowOwnedBy(followId, userId);
+
+    followRepository.delete(follow);
+  }
+
+  // 이미 팔로우한 관계인지 검증
+  private void validateFollowNotExists(UUID followerId, UUID followeeId) {
+    if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
+      throw new FollowException(
+          FollowErrorCode.FOLLOW_ALREADY_EXISTS,
+          Map.of("followerId", followerId, "followeeId", followeeId));
+    }
+  }
+
+  // 팔로우 존재 여부와 요청자 권한을 함께 검증
+  private Follow getFollowOwnedBy(UUID followId, UUID userId) {
     Follow follow =
         followRepository
             .findById(followId)
@@ -51,15 +59,17 @@ public class FollowServiceImpl implements FollowService {
                     new FollowException(
                         FollowErrorCode.FOLLOW_NOT_FOUND, Map.of("followId", followId)));
 
+    validateFollowOwner(follow, userId);
+
+    return follow;
+  }
+
+  // 팔로우 요청자 권한 검증
+  private void validateFollowOwner(Follow follow, UUID userId) {
     if (!follow.getFollowerId().equals(userId)) {
       throw new FollowException(
           FollowErrorCode.UNAUTHORIZED_FOLLOW_ACCESS,
-          Map.of(
-              "userId", userId,
-              "followId", followId,
-              "followerId", follow.getFollowerId()));
+          Map.of("followId", follow.getId(), "userId", userId));
     }
-
-    followRepository.delete(follow);
   }
 }
