@@ -17,18 +17,16 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @Table(
-  name = "follows",
-  indexes = {
-    @Index(name = "idx_follows_follower_id", columnList = "follower_id"),
-    @Index(name = "idx_follows_followee_id", columnList = "followee_id")
-  },
-  uniqueConstraints = {
-    @UniqueConstraint(
-      name = "uq_follows_follower_id_followee_id",
-      columnNames = {"follower_id", "followee_id"}
-    )
-  }
-)
+    name = "follows",
+    indexes = {
+      @Index(name = "idx_follows_follower_id", columnList = "follower_id"),
+      @Index(name = "idx_follows_followee_id", columnList = "followee_id")
+    },
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "uq_follows_follower_id_followee_id",
+          columnNames = {"follower_id", "followee_id"})
+    })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Follow extends BaseEntity {
 
@@ -42,11 +40,13 @@ public class Follow extends BaseEntity {
 
   private static void validateCreate(UUID followerId, UUID followeeId) {
     DomainValidator.start()
-      .check(followerId == null, "followerId", "팔로우 요청자는 필수입니다.")
-      .check(followeeId == null, "followeeId", "팔로우 대상자는 필수입니다.")
-      .check(followerId != null && followerId.equals(followeeId), "followeeId", "자기 자신은 팔로우할 수 없습니다.")
-      .orThrow(
-        details -> new FollowException(FollowErrorCode.INVALID_FOLLOW_VALUE, details));
+        .check(followerId == null, "followerId", "팔로우 요청자는 필수입니다.")
+        .check(followeeId == null, "followeeId", "팔로우 대상자는 필수입니다.")
+        .check(
+            followerId != null && followerId.equals(followeeId),
+            "followeeId",
+            "자기 자신은 팔로우할 수 없습니다.")
+        .orThrow(details -> new FollowException(FollowErrorCode.INVALID_FOLLOW_VALUE, details));
   }
 
   public Follow(UUID followerId, UUID followeeId) {
@@ -55,6 +55,3 @@ public class Follow extends BaseEntity {
     this.followeeId = followeeId;
   }
 }
-
-
-
