@@ -1,6 +1,7 @@
 package com.sb10.mopl.user.service;
 
 import com.sb10.mopl.auth.service.AuthSessionService;
+import com.sb10.mopl.auth.service.TemporaryPasswordService;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
@@ -25,6 +26,7 @@ public class UserService {
   private final PasswordEncoder passwordEncoder;
   private final UserMapper userMapper;
   private final AuthSessionService authSessionService;
+  private final TemporaryPasswordService temporaryPasswordService;
 
   @Transactional
   public UserDto signUp(UserCreateRequest userCreateRequest) {
@@ -66,6 +68,7 @@ public class UserService {
 
     String encodedPassword = passwordEncoder.encode(changePasswordRequest.password());
     user.changePassword(encodedPassword);
+    temporaryPasswordService.deleteByUserId(targetUserId);
     authSessionService.invalidateAllByUserId(targetUserId);
   }
 }

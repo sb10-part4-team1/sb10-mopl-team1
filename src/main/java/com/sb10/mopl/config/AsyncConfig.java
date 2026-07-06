@@ -28,6 +28,18 @@ public class AsyncConfig implements AsyncConfigurer, WebMvcConfigurer {
     return executor;
   }
 
+  @Bean(name = "mailExecutor")
+  public ThreadPoolTaskExecutor mailExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(2);
+    executor.setMaxPoolSize(4);
+    executor.setQueueCapacity(100);
+    executor.setThreadNamePrefix("mail-worker-");
+    executor.setTaskDecorator(new MdcTaskDecorator());
+    executor.initialize();
+    return executor;
+  }
+
   @Override
   public Executor getAsyncExecutor() {
     return ioExecutor();
