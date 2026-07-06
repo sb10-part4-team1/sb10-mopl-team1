@@ -16,12 +16,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sb10.mopl.auth.service.AuthSessionService;
-import com.sb10.mopl.config.JpaAuditingConfig;
-import com.sb10.mopl.config.QuerydslConfig;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.repository.UserRepository;
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,32 +26,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@DataJpaTest(
-    properties = {"spring.sql.init.mode=never", "spring.jpa.hibernate.ddl-auto=create-drop"})
-@Import({JpaAuditingConfig.class, QuerydslConfig.class})
-@Transactional(propagation = Propagation.NOT_SUPPORTED)
+@SpringBootTest(
+    properties = {
+      "spring.datasource.url=jdbc:h2:mem:admin_initializer_test;"
+          + "MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE"
+    })
+@ActiveProfiles("test")
 class AdminAccountInitializerTest {
 
   private static final String ADMIN_EMAIL = "admin@example.com";
   private static final String ADMIN_NAME = "mopl-admin";
   private static final String ADMIN_PASSWORD = "admin-password123";
 
-  private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
   private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
-  @Autowired private UserRepository userRepository;
+  @Autowired private PasswordEncoder passwordEncoder;
 
-  @Autowired private EntityManager entityManager;
+  @Autowired private UserRepository userRepository;
 
   @Autowired private PlatformTransactionManager transactionManager;
 
@@ -129,11 +124,9 @@ class AdminAccountInitializerTest {
         User.createAdmin(ADMIN_NAME, ADMIN_EMAIL, passwordEncoder.encode("old-password123"), null);
     admin.changeLocked(true);
     final UUID adminId = userRepository.saveAndFlush(admin).getId();
-    entityManager.clear();
 
     // when
     initializer(false).run(null);
-    entityManager.clear();
 
     // then
     User calibratedAdmin = findAdminAccount();
@@ -151,11 +144,9 @@ class AdminAccountInitializerTest {
     final String oldPasswordHash = passwordEncoder.encode("old-password123");
     User admin = User.createAdmin(ADMIN_NAME, ADMIN_EMAIL, oldPasswordHash, null);
     userRepository.saveAndFlush(admin);
-    entityManager.clear();
 
     // when
     initializer(false).run(null);
-    entityManager.clear();
 
     // then
     User unchangedAdmin = findAdminAccount();
@@ -171,11 +162,9 @@ class AdminAccountInitializerTest {
     final String oldPasswordHash = passwordEncoder.encode("old-password123");
     User admin = User.createAdmin(ADMIN_NAME, ADMIN_EMAIL, oldPasswordHash, null);
     final UUID adminId = userRepository.saveAndFlush(admin).getId();
-    entityManager.clear();
 
     // when
     initializer(true).run(null);
-    entityManager.clear();
 
     // then
     User changedAdmin = findAdminAccount();
@@ -195,13 +184,11 @@ class AdminAccountInitializerTest {
         User.createUser(
             "existing-user", ADMIN_EMAIL, passwordEncoder.encode("user-password123"), null);
     userRepository.saveAndFlush(user);
-    entityManager.clear();
 
     // when
     IllegalStateException exception =
         assertThrows(IllegalStateException.class, () -> initializer(false).run(null));
 
-    entityManager.clear();
     User existingUser = userRepository.findByEmail(ADMIN_EMAIL).orElseThrow();
 
     // then
@@ -222,13 +209,11 @@ class AdminAccountInitializerTest {
         User.createAdmin(ADMIN_NAME, ADMIN_EMAIL, passwordEncoder.encode("old-password123"), null);
     deletedAdmin.softDelete();
     userRepository.saveAndFlush(deletedAdmin);
-    entityManager.clear();
 
     // when
     IllegalStateException exception =
         assertThrows(IllegalStateException.class, () -> initializer(false).run(null));
 
-    entityManager.clear();
     User existingUser = userRepository.findByEmail(ADMIN_EMAIL).orElseThrow();
 
     // then
