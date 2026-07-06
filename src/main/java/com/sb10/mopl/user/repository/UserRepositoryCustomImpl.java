@@ -77,8 +77,16 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
   }
 
   private BooleanExpression cursorCondition(UserSearchRequest request) {
-    if (request.cursor() == null || request.cursor().isBlank() || request.idAfter() == null) {
+    boolean hasCursor = request.cursor() != null && !request.cursor().isBlank();
+    boolean hasIdAfter = request.idAfter() != null;
+
+    if (!hasCursor && !hasIdAfter) {
       return null;
+    }
+
+    if (hasCursor != hasIdAfter) {
+      throw new UserException(
+          UserErrorCode.INVALID_USER_VALUE, Map.of("cursor", "cursor와 idAfter는 함께 전달되어야 합니다."));
     }
 
     boolean isAsc = request.sortDirection() == SortDirection.ASCENDING;

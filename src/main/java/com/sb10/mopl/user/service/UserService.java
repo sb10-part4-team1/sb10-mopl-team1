@@ -25,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService {
 
-  private static final int MAX_USER_PAGE_LIMIT = 100;
-
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final UserMapper userMapper;
@@ -108,21 +106,6 @@ public class UserService {
     if (hasCursor != hasIdAfter) {
       throw new UserException(
           UserErrorCode.INVALID_USER_VALUE, Map.of("cursor", "cursor와 idAfter는 함께 전달되어야 합니다."));
-    }
-
-    if (request.limit() == null || request.limit() <= 0 || request.limit() > MAX_USER_PAGE_LIMIT) {
-      throw new UserException(
-          UserErrorCode.INVALID_USER_VALUE,
-          Map.of("limit", "limit은 1 이상 " + MAX_USER_PAGE_LIMIT + " 이하여야 합니다."));
-    }
-
-    if (request.sortBy() == null) {
-      throw new UserException(UserErrorCode.INVALID_USER_VALUE, Map.of("sortBy", "정렬 기준은 필수입니다."));
-    }
-
-    if (request.sortDirection() == null) {
-      throw new UserException(
-          UserErrorCode.INVALID_USER_VALUE, Map.of("sortDirection", "정렬 방향은 필수입니다."));
     }
   }
 
