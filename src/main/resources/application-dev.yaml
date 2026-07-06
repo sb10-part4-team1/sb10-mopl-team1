@@ -30,14 +30,6 @@ logging:
     org.hibernate.SQL: info
 
 mopl:
-  admin:
-    initializer:
-      enabled: ${MOPL_ADMIN_INITIALIZER_ENABLED:true}
-    account:
-      email: ${MOPL_ADMIN_EMAIL:admin@mopl.com}
-      name: ${MOPL_ADMIN_NAME:admin}
-      password: ${MOPL_ADMIN_PASSWORD:admin1234!}
-
   datasource:
     api-pool-name: HikariPool-Dev-API
     api-pool-size: 15

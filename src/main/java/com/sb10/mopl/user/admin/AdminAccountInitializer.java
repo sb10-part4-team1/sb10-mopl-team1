@@ -1,5 +1,6 @@
 package com.sb10.mopl.user.admin;
 
+import com.sb10.mopl.auth.service.AuthSessionService;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.repository.UserRepository;
@@ -7,9 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Component
@@ -19,9 +21,10 @@ public class AdminAccountInitializer implements ApplicationRunner {
   private final AdminAccountProperties adminAccountProperties;
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final AuthSessionService authSessionService;
+  private final TransactionTemplate transactionTemplate;
 
   @Override
-  @Transactional
   public void run(ApplicationArguments args) {
     if (!adminAccountProperties.enabled()) {
       log.info("Admin account initialization is disabled.");
@@ -40,9 +43,27 @@ public class AdminAccountInitializer implements ApplicationRunner {
     adminAccountProperties.validateForInitialization();
 
     String email = adminAccountProperties.email();
+    try {
+      transactionTemplate.executeWithoutResult(
+          status -> initializeAdminAccountInTransaction(email));
+    } catch (AdminAccountCreateConflictException e) {
+      log.info("Admin account was created concurrently. email={}", email);
+      transactionTemplate.executeWithoutResult(status -> calibrateExistingAdminAccount(email));
+    }
+  }
+
+  private void initializeAdminAccountInTransaction(String email) {
     userRepository
         .findByEmail(email)
         .ifPresentOrElse(this::calibrateAdminAccount, this::createAdminAccount);
+  }
+
+  private void calibrateExistingAdminAccount(String email) {
+    User admin =
+        userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> new IllegalStateException("Admin account was not found."));
+    calibrateAdminAccount(admin);
   }
 
   private void calibrateAdminAccount(User admin) {
@@ -69,6 +90,7 @@ public class AdminAccountInitializer implements ApplicationRunner {
 
     if (changed) {
       userRepository.flush();
+      authSessionService.invalidateAllByUserId(admin.getId());
       log.info("Calibrated existing admin account. email={}", admin.getEmail());
       return;
     }
@@ -81,7 +103,18 @@ public class AdminAccountInitializer implements ApplicationRunner {
     User admin =
         User.createAdmin(
             adminAccountProperties.name(), adminAccountProperties.email(), encodedPassword, null);
-    userRepository.saveAndFlush(admin);
+    try {
+      userRepository.saveAndFlush(admin);
+    } catch (DataIntegrityViolationException e) {
+      throw new AdminAccountCreateConflictException(e);
+    }
     log.info("Created initial admin account. email={}", adminAccountProperties.email());
+  }
+
+  private static class AdminAccountCreateConflictException extends RuntimeException {
+
+    private AdminAccountCreateConflictException(Throwable cause) {
+      super(cause);
+    }
   }
 }

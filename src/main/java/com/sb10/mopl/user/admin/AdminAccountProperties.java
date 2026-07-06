@@ -46,5 +46,11 @@ public record AdminAccountProperties(Initializer initializer, Account account) {
 
   public record Initializer(boolean enabled, boolean overwritePassword) {}
 
-  public record Account(String email, String name, String password) {}
+  public record Account(String email, String name, String password) {
+
+    @Override
+    public String toString() {
+      return "Account[email=" + email + ", name=" + name + ", password=****]";
+    }
+  }
 }

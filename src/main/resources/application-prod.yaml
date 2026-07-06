@@ -33,10 +33,6 @@ springdoc:
     enabled: false
 
 mopl:
-  admin:
-    initializer:
-      enabled: ${MOPL_ADMIN_INITIALIZER_ENABLED:true}
-
   jwt:
     refresh-token-cookie:
       secure: true
