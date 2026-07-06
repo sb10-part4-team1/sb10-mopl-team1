@@ -8,14 +8,19 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sb10.mopl.batch.cache.TmdbGenreCache;
 import com.sb10.mopl.batch.client.TmdbApiClient;
 import com.sb10.mopl.batch.dto.TmdbApiResponse;
 import com.sb10.mopl.batch.dto.TmdbContentDto;
+import com.sb10.mopl.batch.dto.TmdbGenreListDto;
+import com.sb10.mopl.batch.dto.TmdbGenreListDto.TmdbGenreDto;
 import com.sb10.mopl.batch.mapper.TmdbContentMapper;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.content.repository.ContentRepository;
+import com.sb10.mopl.content.repository.TagRepository;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,18 +45,36 @@ class TmdbJobTest {
 
   @Autowired private ContentRepository contentRepository;
 
+  @Autowired private TagRepository tagRepository;
+
+  @Autowired private TmdbGenreCache tmdbGenreCache;
+
   @MockitoBean private TmdbApiClient tmdbApiClient;
 
   @MockitoBean private TmdbContentMapper tmdbContentMapper;
 
   @BeforeEach
   void setUp() {
+    // given: TMDB 영화 및 TV 장르 API 모킹 - 실제 API를 호출하지 않도록 방어
+    TmdbGenreListDto mockGenreList =
+        new TmdbGenreListDto(
+            List.of(
+                new TmdbGenreDto(28, "액션"),
+                new TmdbGenreDto(878, "SF"),
+                new TmdbGenreDto(18, "드라마")));
+    when(tmdbApiClient.fetch("/genre/movie/list", null, TmdbGenreListDto.class))
+        .thenReturn(mockGenreList);
+    when(tmdbApiClient.fetch("/genre/tv/list", null, TmdbGenreListDto.class))
+        .thenReturn(mockGenreList);
+
     contentRepository.deleteAllInBatch();
+    tagRepository.deleteAllInBatch();
   }
 
   @AfterEach
   void tearDown() {
     contentRepository.deleteAllInBatch();
+    tagRepository.deleteAllInBatch();
   }
 
   @Test
@@ -60,13 +83,12 @@ class TmdbJobTest {
       throws Exception {
     // given: 영화 1페이지 DTO 구성
     TmdbContentDto normalMovie =
-        new TmdbContentDto(1L, "정상 영화", null, "정상 설명", "/path.jpg", List.of(1));
+        new TmdbContentDto(1L, "정상 영화", null, "정상 설명", "/path.jpg", Set.of(1));
     TmdbContentDto missingTitleMovie =
-        new TmdbContentDto(2L, null, null, "설명은 있음", "/path.jpg", List.of(1));
-    TmdbContentDto noPosterMovie =
-        new TmdbContentDto(3L, "포스터 없는 영화", null, "설명", null, List.of(1));
+        new TmdbContentDto(2L, null, null, "설명은 있음", "/path.jpg", Set.of(1));
+    TmdbContentDto noPosterMovie = new TmdbContentDto(3L, "포스터 없는 영화", null, "설명", null, Set.of(1));
     TmdbContentDto missingIdMovie =
-        new TmdbContentDto(null, "ID 없는 영화", null, "설명", "/path.jpg", List.of(1));
+        new TmdbContentDto(null, "ID 없는 영화", null, "설명", "/path.jpg", Set.of(1));
 
     // 영화 1페이지 API 응답 모킹 (totalPages = 2 설정)
     TmdbApiResponse movieResponsePage1 = TmdbApiResponse.empty();
@@ -75,26 +97,29 @@ class TmdbJobTest {
         "results",
         List.of(normalMovie, missingTitleMovie, noPosterMovie, missingIdMovie));
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponsePage1, "totalPages", 2);
-    when(tmdbApiClient.fetch("/movie/popular", 1)).thenReturn(movieResponsePage1);
+    when(tmdbApiClient.fetch("/movie/popular", 1, TmdbApiResponse.class))
+        .thenReturn(movieResponsePage1);
 
     // 영화 2페이지 DTO 구성 (다중 페이지 순회 검증용)
     TmdbContentDto noOverviewMovie =
-        new TmdbContentDto(4L, "설명 없는 영화", null, null, "/path.jpg", List.of(1));
+        new TmdbContentDto(4L, "설명 없는 영화", null, null, "/path.jpg", Set.of(1));
     TmdbApiResponse movieResponsePage2 = TmdbApiResponse.empty();
     org.springframework.test.util.ReflectionTestUtils.setField(
         movieResponsePage2, "results", List.of(noOverviewMovie));
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponsePage2, "totalPages", 2);
-    when(tmdbApiClient.fetch("/movie/popular", 2)).thenReturn(movieResponsePage2);
+    when(tmdbApiClient.fetch("/movie/popular", 2, TmdbApiResponse.class))
+        .thenReturn(movieResponsePage2);
 
     // TV 시리즈 1페이지 DTO 구성 (TV Step 실행 검증용 - name 필드 사용으로 TV 시리즈 구분)
     TmdbContentDto normalTv =
-        new TmdbContentDto(5L, null, "정상 TV시리즈", "TV 설명", "/tv.jpg", List.of(1));
+        new TmdbContentDto(5L, null, "정상 TV시리즈", "TV 설명", "/tv.jpg", Set.of(1));
     TmdbApiResponse tvResponsePage1 = TmdbApiResponse.empty();
     org.springframework.test.util.ReflectionTestUtils.setField(
         tvResponsePage1, "results", List.of(normalTv));
     org.springframework.test.util.ReflectionTestUtils.setField(tvResponsePage1, "totalPages", 1);
-    when(tmdbApiClient.fetch("/tv/popular", 1)).thenReturn(tvResponsePage1);
-    when(tmdbApiClient.fetch("/tv/popular", 2)).thenReturn(TmdbApiResponse.empty());
+    when(tmdbApiClient.fetch("/tv/popular", 1, TmdbApiResponse.class)).thenReturn(tvResponsePage1);
+    when(tmdbApiClient.fetch("/tv/popular", 2, TmdbApiResponse.class))
+        .thenReturn(TmdbApiResponse.empty());
 
     // 매퍼는 실제 자바 코드 동작을 수행하도록 모킹
     when(tmdbContentMapper.toEntity(any())).thenCallRealMethod();
@@ -141,18 +166,19 @@ class TmdbJobTest {
     // given: 에러를 유발할 DTO 6개 구성
     List<TmdbContentDto> errorMovies =
         List.of(
-            new TmdbContentDto(1L, "에러 영화1", null, "설명", "/p1.jpg", List.of(1)),
-            new TmdbContentDto(2L, "에러 영화2", null, "설명", "/p2.jpg", List.of(1)),
-            new TmdbContentDto(3L, "에러 영화3", null, "설명", "/p3.jpg", List.of(1)),
-            new TmdbContentDto(4L, "에러 영화4", null, "설명", "/p4.jpg", List.of(1)),
-            new TmdbContentDto(5L, "에러 영화5", null, "설명", "/p5.jpg", List.of(1)),
-            new TmdbContentDto(6L, "에러 영화6", null, "설명", "/p6.jpg", List.of(1)));
+            new TmdbContentDto(1L, "에러 영화1", null, "설명", "/p1.jpg", Set.of(1)),
+            new TmdbContentDto(2L, "에러 영화2", null, "설명", "/p2.jpg", Set.of(1)),
+            new TmdbContentDto(3L, "에러 영화3", null, "설명", "/p3.jpg", Set.of(1)),
+            new TmdbContentDto(4L, "에러 영화4", null, "설명", "/p4.jpg", Set.of(1)),
+            new TmdbContentDto(5L, "에러 영화5", null, "설명", "/p5.jpg", Set.of(1)),
+            new TmdbContentDto(6L, "에러 영화6", null, "설명", "/p6.jpg", Set.of(1)));
 
     TmdbApiResponse mockMovieResponse = TmdbApiResponse.empty();
     org.springframework.test.util.ReflectionTestUtils.setField(
         mockMovieResponse, "results", errorMovies);
     org.springframework.test.util.ReflectionTestUtils.setField(mockMovieResponse, "totalPages", 1);
-    when(tmdbApiClient.fetch("/movie/popular", 1)).thenReturn(mockMovieResponse);
+    when(tmdbApiClient.fetch("/movie/popular", 1, TmdbApiResponse.class))
+        .thenReturn(mockMovieResponse);
 
     // 매퍼에서 RuntimeException을 던지도록 모킹하여 에러 발생 시뮬레이션
     when(tmdbContentMapper.toEntity(any())).thenThrow(new RuntimeException("테스트용 변환 실패 예외"));
@@ -174,7 +200,7 @@ class TmdbJobTest {
         .containsExactly("tmdbMovieStep");
 
     // TV API는 전혀 호출되지 않았음을 보장
-    verify(tmdbApiClient, never()).fetch(eq("/tv/popular"), anyInt());
+    verify(tmdbApiClient, never()).fetch(eq("/tv/popular"), anyInt(), eq(TmdbApiResponse.class));
   }
 
   @Test
@@ -182,18 +208,20 @@ class TmdbJobTest {
   void tmdbJob_saveDifferentMoviesWithSameTitleAndDeduplicateSameId() throws Exception {
     // 1. [1차 실행] 동명 영화 Dracula 1992 (ID=100) & Dracula 2014 (ID=200) 등록
     TmdbContentDto dracula1992 =
-        new TmdbContentDto(100L, "드라큘라", null, "1992년작 영화", "/dracula1992.jpg", List.of(1));
+        new TmdbContentDto(100L, "드라큘라", null, "1992년작 영화", "/dracula1992.jpg", Set.of(1));
     TmdbContentDto dracula2014 =
-        new TmdbContentDto(200L, "드라큘라", null, "2014년작 영화", "/dracula2014.jpg", List.of(1));
+        new TmdbContentDto(200L, "드라큘라", null, "2014년작 영화", "/dracula2014.jpg", Set.of(1));
 
     TmdbApiResponse movieResponse1 = TmdbApiResponse.empty();
     org.springframework.test.util.ReflectionTestUtils.setField(
         movieResponse1, "results", List.of(dracula1992, dracula2014));
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponse1, "totalPages", 1);
-    when(tmdbApiClient.fetch("/movie/popular", 1)).thenReturn(movieResponse1);
+    when(tmdbApiClient.fetch("/movie/popular", 1, TmdbApiResponse.class))
+        .thenReturn(movieResponse1);
 
     // TV는 비어있음
-    when(tmdbApiClient.fetch("/tv/popular", 1)).thenReturn(TmdbApiResponse.empty());
+    when(tmdbApiClient.fetch("/tv/popular", 1, TmdbApiResponse.class))
+        .thenReturn(TmdbApiResponse.empty());
 
     // 매퍼는 실제 호출 사용
     when(tmdbContentMapper.toEntity(any())).thenCallRealMethod();
@@ -216,12 +244,13 @@ class TmdbJobTest {
 
     // 2. [2차 실행] 동일한 Dracula 1992 (ID=100) & 신규 Dracula 2020 (ID=300) 등록
     TmdbContentDto dracula300 =
-        new TmdbContentDto(300L, "드라큘라", null, "2020년작 영화", "/dracula2020.jpg", List.of(1));
+        new TmdbContentDto(300L, "드라큘라", null, "2020년작 영화", "/dracula2020.jpg", Set.of(1));
     TmdbApiResponse movieResponse2 = TmdbApiResponse.empty();
     org.springframework.test.util.ReflectionTestUtils.setField(
         movieResponse2, "results", List.of(dracula1992, dracula300)); // ID=100은 이미 DB에 있음!
     org.springframework.test.util.ReflectionTestUtils.setField(movieResponse2, "totalPages", 1);
-    when(tmdbApiClient.fetch("/movie/popular", 1)).thenReturn(movieResponse2);
+    when(tmdbApiClient.fetch("/movie/popular", 1, TmdbApiResponse.class))
+        .thenReturn(movieResponse2);
 
     // 2차 기동
     JobExecution secondRun =

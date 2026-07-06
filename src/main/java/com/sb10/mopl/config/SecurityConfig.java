@@ -71,6 +71,8 @@ public class SecurityConfig {
     pathMatcher("/swagger-ui/**"),
     pathMatcher("/swagger-ui.html"),
     pathMatcher("/api/test/batch/**"), // FIXME: 나중에 지워야 할 부분,
+    pathMatcher("/api/admin/batch/**"), // FIXME : 나중에 지워야 할 부분,
+    pathMatcher("/api/content/**"), // FIXME: 나중에 지워야 할 부분,
     methodAndPathMatcher(HttpMethod.OPTIONS, "/**"),
     methodAndPathMatcher(HttpMethod.POST, "/api/users"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-in"),
@@ -86,6 +88,24 @@ public class SecurityConfig {
     methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/locked")
   };
 
+  private static RequestMatcher pathMatcher(String pattern) {
+    return request -> PATH_MATCHER.match(pattern, path(request));
+  }
+
+  private static RequestMatcher methodAndPathMatcher(HttpMethod method, String pattern) {
+    return request ->
+        method.matches(request.getMethod()) && PATH_MATCHER.match(pattern, path(request));
+  }
+
+  private static String path(HttpServletRequest request) {
+    String requestUri = request.getRequestURI();
+    String contextPath = request.getContextPath();
+    if (contextPath == null || contextPath.isBlank()) {
+      return requestUri;
+    }
+    return requestUri.substring(contextPath.length());
+  }
+
   @Bean
   public SecurityFilterChain securityFilterChain(
       HttpSecurity http,
@@ -99,7 +119,9 @@ public class SecurityConfig {
     http.csrf(
             csrf ->
                 csrf.ignoringRequestMatchers(
-                        "/h2-console/**", "/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
+                        "/h2-console/**",
+                        "/api/test/batch/**",
+                        "/api/admin/batch/**") // FIXME: 나중에 지워야 할 부분,
                     .csrfTokenRepository(csrfTokenRepository())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
@@ -201,23 +223,5 @@ public class SecurityConfig {
   @Bean
   public Clock clock() {
     return Clock.systemUTC();
-  }
-
-  private static RequestMatcher pathMatcher(String pattern) {
-    return request -> PATH_MATCHER.match(pattern, path(request));
-  }
-
-  private static RequestMatcher methodAndPathMatcher(HttpMethod method, String pattern) {
-    return request ->
-        method.matches(request.getMethod()) && PATH_MATCHER.match(pattern, path(request));
-  }
-
-  private static String path(HttpServletRequest request) {
-    String requestUri = request.getRequestURI();
-    String contextPath = request.getContextPath();
-    if (contextPath == null || contextPath.isBlank()) {
-      return requestUri;
-    }
-    return requestUri.substring(contextPath.length());
   }
 }
