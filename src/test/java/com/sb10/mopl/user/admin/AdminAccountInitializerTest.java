@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -140,6 +141,49 @@ class AdminAccountInitializerTest {
     assertAll(
         () -> assertEquals(UserRole.ADMIN, calibratedAdmin.getRole()),
         () -> assertFalse(calibratedAdmin.isLocked()));
+    verify(authSessionService).invalidateAllByUserId(adminId);
+  }
+
+  @Test
+  @DisplayName("비밀번호 덮어쓰기 정책이 꺼져 있으면 기존 관리자 비밀번호를 유지한다")
+  void run_success_whenPasswordOverwriteIsDisabled() {
+    // given
+    final String oldPasswordHash = passwordEncoder.encode("old-password123");
+    User admin = User.createAdmin(ADMIN_NAME, ADMIN_EMAIL, oldPasswordHash, null);
+    userRepository.saveAndFlush(admin);
+    entityManager.clear();
+
+    // when
+    initializer(false).run(null);
+    entityManager.clear();
+
+    // then
+    User unchangedAdmin = findAdminAccount();
+
+    assertEquals(oldPasswordHash, unchangedAdmin.passwordHash());
+    verify(authSessionService, never()).invalidateAllByUserId(any());
+  }
+
+  @Test
+  @DisplayName("비밀번호 덮어쓰기 정책이 켜져 있으면 설정 비밀번호로 교체한다")
+  void run_success_whenPasswordOverwriteIsEnabled() {
+    // given
+    final String oldPasswordHash = passwordEncoder.encode("old-password123");
+    User admin = User.createAdmin(ADMIN_NAME, ADMIN_EMAIL, oldPasswordHash, null);
+    final UUID adminId = userRepository.saveAndFlush(admin).getId();
+    entityManager.clear();
+
+    // when
+    initializer(true).run(null);
+    entityManager.clear();
+
+    // then
+    User changedAdmin = findAdminAccount();
+    String changedPasswordHash = changedAdmin.passwordHash();
+
+    assertAll(
+        () -> assertNotEquals(oldPasswordHash, changedPasswordHash),
+        () -> assertTrue(passwordEncoder.matches(ADMIN_PASSWORD, changedPasswordHash)));
     verify(authSessionService).invalidateAllByUserId(adminId);
   }
 
