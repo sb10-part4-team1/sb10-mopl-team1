@@ -11,6 +11,24 @@ spring:
   config:
     import: optional:file:.env[.properties]
 
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    protocol: smtp
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT_MS:5000}
+          timeout: ${MAIL_READ_TIMEOUT_MS:5000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT_MS:5000}
+
   batch:
     jdbc:
       initialize-schema: always   # 배치 메타 테이블 자동 생성
@@ -51,6 +69,10 @@ mopl:
       http-only: true
       secure: ${MOPL_REFRESH_TOKEN_COOKIE_SECURE:false}
       same-site: ${MOPL_REFRESH_TOKEN_COOKIE_SAME_SITE:Lax}
+
+  mail:
+    temporary-password:
+      from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}
 
   aws:
     access-key: ${AWS_ACCESS_KEY}
