@@ -46,9 +46,8 @@ public class AdminAccountInitializer implements ApplicationRunner {
     try {
       transactionTemplate.executeWithoutResult(
           status -> initializeAdminAccountInTransaction(email));
-    } catch (AdminAccountCreateConflictException e) {
-      log.info("Admin account was created concurrently. email={}", email);
-      transactionTemplate.executeWithoutResult(status -> calibrateExistingAdminAccount(email));
+    } catch (AdminAccountCreateException e) {
+      recoverFromCreateFailure(email, e);
     }
   }
 
@@ -64,6 +63,16 @@ public class AdminAccountInitializer implements ApplicationRunner {
             .findByEmail(email)
             .orElseThrow(() -> new IllegalStateException("Admin account was not found."));
     calibrateAdminAccount(admin);
+  }
+
+  private void recoverFromCreateFailure(String email, AdminAccountCreateException createFailure) {
+    try {
+      transactionTemplate.executeWithoutResult(status -> calibrateExistingAdminAccount(email));
+      log.info("Recovered admin account initialization after create conflict. email={}", email);
+    } catch (RuntimeException recoveryFailure) {
+      createFailure.addSuppressed(recoveryFailure);
+      throw createFailure;
+    }
   }
 
   private void calibrateAdminAccount(User admin) {
@@ -106,14 +115,14 @@ public class AdminAccountInitializer implements ApplicationRunner {
     try {
       userRepository.saveAndFlush(admin);
     } catch (DataIntegrityViolationException e) {
-      throw new AdminAccountCreateConflictException(e);
+      throw new AdminAccountCreateException(e);
     }
     log.info("Created initial admin account. email={}", adminAccountProperties.email());
   }
 
-  private static class AdminAccountCreateConflictException extends RuntimeException {
+  private static class AdminAccountCreateException extends RuntimeException {
 
-    private AdminAccountCreateConflictException(Throwable cause) {
+    private AdminAccountCreateException(Throwable cause) {
       super(cause);
     }
   }
