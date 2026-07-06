@@ -60,6 +60,16 @@ class AdminAccountInitializerTest {
   }
 
   @Test
+  @DisplayName("초기화 기능이 비활성화되어 있으면 관리자 계정을 생성하지 않는다")
+  void run_success_whenInitializerIsDisabled() {
+    // when
+    initializer(false, false).run(null);
+
+    // then
+    assertTrue(userRepository.findAll().isEmpty());
+  }
+
+  @Test
   @DisplayName("관리자 계정이 없으면 설정값으로 최초 관리자 계정을 생성한다")
   void run_success_whenAdminAccountDoesNotExist() {
     // when
@@ -239,14 +249,23 @@ class AdminAccountInitializerTest {
   }
 
   private AdminAccountInitializer initializer(boolean overwritePassword) {
-    return initializer(overwritePassword, userRepository);
+    return initializer(true, overwritePassword, userRepository);
+  }
+
+  private AdminAccountInitializer initializer(boolean enabled, boolean overwritePassword) {
+    return initializer(enabled, overwritePassword, userRepository);
   }
 
   private AdminAccountInitializer initializer(
       boolean overwritePassword, UserRepository targetUserRepository) {
+    return initializer(true, overwritePassword, targetUserRepository);
+  }
+
+  private AdminAccountInitializer initializer(
+      boolean enabled, boolean overwritePassword, UserRepository targetUserRepository) {
     AdminAccountProperties properties =
         new AdminAccountProperties(
-            new AdminAccountProperties.Initializer(true, overwritePassword),
+            new AdminAccountProperties.Initializer(enabled, overwritePassword),
             new AdminAccountProperties.Account(ADMIN_EMAIL, ADMIN_NAME, ADMIN_PASSWORD));
     return new AdminAccountInitializer(
         properties,
