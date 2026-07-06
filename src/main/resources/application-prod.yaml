@@ -36,8 +36,13 @@ mopl:
   jwt:
     refresh-token-cookie:
       secure: true
+
   datasource:
     api-pool-name: HikariPool-Prod-API
     api-pool-size: 30
     batch-pool-name: HikariPool-Prod-Batch
     batch-pool-size: 5
+
+  mail:
+    temporary-password:
+      from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}

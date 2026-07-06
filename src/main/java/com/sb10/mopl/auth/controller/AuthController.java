@@ -1,18 +1,23 @@
 package com.sb10.mopl.auth.controller;
 
+import com.sb10.mopl.auth.dto.request.ResetPasswordRequest;
 import com.sb10.mopl.auth.dto.response.JwtDto;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.user.MoplUserDetails;
 import com.sb10.mopl.auth.service.AuthTokenService;
 import com.sb10.mopl.auth.service.AuthTokenService.ReissuedToken;
+import com.sb10.mopl.auth.service.TemporaryPasswordService;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private final AuthTokenService authTokenService;
+  private final TemporaryPasswordService temporaryPasswordService;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
   private final JwtProvider jwtProvider;
 
@@ -51,5 +57,12 @@ public class AuthController {
     return new JwtDto(
         userDto,
         jwtProvider.createAccessToken(new MoplUserDetails(user), reissuedToken.sessionId()));
+  }
+
+  @PostMapping("/reset-password")
+  public ResponseEntity<Void> resetPassword(
+      @Valid @RequestBody ResetPasswordRequest resetPasswordRequest) {
+    temporaryPasswordService.resetPassword(resetPasswordRequest.email());
+    return ResponseEntity.noContent().build();
   }
 }
