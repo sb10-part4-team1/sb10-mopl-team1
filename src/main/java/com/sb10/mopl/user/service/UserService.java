@@ -2,14 +2,17 @@ package com.sb10.mopl.user.service;
 
 import com.sb10.mopl.auth.service.AuthSessionService;
 import com.sb10.mopl.auth.service.TemporaryPasswordService;
+import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.mapper.UserMapper;
 import com.sb10.mopl.user.repository.UserRepository;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+  private static final int MAX_USER_PAGE_LIMIT = 100;
 
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
@@ -70,5 +75,72 @@ public class UserService {
     user.changePassword(encodedPassword);
     temporaryPasswordService.deleteByUserId(targetUserId);
     authSessionService.invalidateAllByUserId(targetUserId);
+  }
+
+  @Transactional(readOnly = true)
+  public CursorPageResponse<UserDto> findUsers(UserSearchRequest request) {
+    validateFindUsersRequest(request);
+
+    List<User> users = userRepository.findAllByCondition(request);
+    boolean hasNext = users.size() > request.limit();
+    List<User> pageUsers = hasNext ? users.subList(0, request.limit()) : users;
+    List<UserDto> data = pageUsers.stream().map(userMapper::toDto).toList();
+    User lastUser = hasNext && !pageUsers.isEmpty() ? pageUsers.get(pageUsers.size() - 1) : null;
+    long totalCount = userRepository.countByCondition(request);
+
+    return new CursorPageResponse<>(
+        data,
+        getNextCursor(lastUser, request.sortBy()),
+        getNextIdAfter(lastUser),
+        hasNext,
+        totalCount,
+        request.sortBy().name(),
+        request.sortDirection());
+  }
+
+  private void validateFindUsersRequest(UserSearchRequest request) {
+    if (request == null) {
+      throw new UserException(UserErrorCode.INVALID_USER_VALUE, Map.of("request", "요청 값은 필수입니다."));
+    }
+
+    boolean hasCursor = request.cursor() != null && !request.cursor().isBlank();
+    boolean hasIdAfter = request.idAfter() != null;
+    if (hasCursor != hasIdAfter) {
+      throw new UserException(
+          UserErrorCode.INVALID_USER_VALUE, Map.of("cursor", "cursor와 idAfter는 함께 전달되어야 합니다."));
+    }
+
+    if (request.limit() == null || request.limit() <= 0 || request.limit() > MAX_USER_PAGE_LIMIT) {
+      throw new UserException(
+          UserErrorCode.INVALID_USER_VALUE,
+          Map.of("limit", "limit은 1 이상 " + MAX_USER_PAGE_LIMIT + " 이하여야 합니다."));
+    }
+
+    if (request.sortBy() == null) {
+      throw new UserException(UserErrorCode.INVALID_USER_VALUE, Map.of("sortBy", "정렬 기준은 필수입니다."));
+    }
+
+    if (request.sortDirection() == null) {
+      throw new UserException(
+          UserErrorCode.INVALID_USER_VALUE, Map.of("sortDirection", "정렬 방향은 필수입니다."));
+    }
+  }
+
+  private String getNextCursor(User lastUser, UserSearchRequest.SortBy sortBy) {
+    if (lastUser == null) {
+      return null;
+    }
+
+    return switch (sortBy) {
+      case name -> lastUser.getName();
+      case email -> lastUser.getEmail();
+      case createdAt -> lastUser.getCreatedAt().toString();
+      case isLocked -> Boolean.toString(lastUser.isLocked());
+      case role -> lastUser.getRole().name();
+    };
+  }
+
+  private UUID getNextIdAfter(User lastUser) {
+    return lastUser == null ? null : lastUser.getId();
   }
 }
