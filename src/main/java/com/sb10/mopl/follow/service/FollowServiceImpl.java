@@ -40,6 +40,20 @@ public class FollowServiceImpl implements FollowService {
     followRepository.delete(follow);
   }
 
+  // 현재 로그인한 사용자가 특정 유저를 팔로우 중인지 조회
+  @Override
+  public FollowDto findFollowedByMe(UUID followerId, UUID followeeId) {
+    Follow follow = getFollowByFollowerAndFollowee(followerId, followeeId);
+
+    return followMapper.toDto(follow);
+  }
+
+  // 특정 유저를 팔로우하는 사람 수 조회
+  @Override
+  public long countFollowers(UUID followeeId) {
+    return followRepository.countByFolloweeId(followeeId);
+  }
+
   // 이미 팔로우한 관계인지 검증
   private void validateFollowNotExists(UUID followerId, UUID followeeId) {
     if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
@@ -71,5 +85,16 @@ public class FollowServiceImpl implements FollowService {
           FollowErrorCode.UNAUTHORIZED_FOLLOW_ACCESS,
           Map.of("followId", follow.getId(), "userId", userId));
     }
+  }
+
+  // 팔로워와 팔로우 대상자로 팔로우 관계 조회
+  private Follow getFollowByFollowerAndFollowee(UUID followerId, UUID followeeId) {
+    return followRepository
+        .findByFollowerIdAndFolloweeId(followerId, followeeId)
+        .orElseThrow(
+            () ->
+                new FollowException(
+                    FollowErrorCode.FOLLOW_NOT_FOUND,
+                    Map.of("followerId", followerId, "followeeId", followeeId)));
   }
 }
