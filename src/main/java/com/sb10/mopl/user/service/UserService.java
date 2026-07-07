@@ -5,6 +5,7 @@ import com.sb10.mopl.auth.service.TemporaryPasswordService;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
@@ -73,6 +74,11 @@ public class UserService {
     user.changePassword(encodedPassword);
     temporaryPasswordService.deleteByUserId(targetUserId);
     authSessionService.invalidateAllByUserId(targetUserId);
+  }
+
+  @Transactional
+  public void updateRole(
+      UUID targetUserId, UUID requesterUserId, UserRoleUpdateRequest userRoleUpdateRequest) {
   }
 
   @Transactional(readOnly = true)
