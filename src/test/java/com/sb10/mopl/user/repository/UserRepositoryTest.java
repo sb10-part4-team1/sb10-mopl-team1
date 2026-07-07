@@ -18,6 +18,8 @@ import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import jakarta.persistence.EntityManager;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,6 +35,10 @@ import org.springframework.dao.DataIntegrityViolationException;
     properties = {"spring.sql.init.mode=never", "spring.jpa.hibernate.ddl-auto=create-drop"})
 @Import({JpaAuditingConfig.class, QuerydslConfig.class})
 class UserRepositoryTest {
+
+  private static final Instant FIRST_CREATED_AT = Instant.parse("2026-01-01T00:00:00Z");
+  private static final Instant SECOND_CREATED_AT = Instant.parse("2026-01-01T00:00:01Z");
+  private static final Instant THIRD_CREATED_AT = Instant.parse("2026-01-01T00:00:02Z");
 
   @Autowired private UserRepository userRepository;
 
@@ -96,15 +102,7 @@ class UserRepositoryTest {
     entityManager.clear();
 
     UserSearchRequest request =
-        new UserSearchRequest(
-            "ALPHA",
-            UserRole.USER,
-            true,
-            null,
-            null,
-            10,
-            SortDirection.ASCENDING,
-            UserSearchRequest.SortBy.email);
+        filteredRequest("ALPHA", UserRole.USER, true, UserSearchRequest.SortBy.email);
 
     // when
     List<User> users = userRepository.findAllByCondition(request);
@@ -117,13 +115,13 @@ class UserRepositoryTest {
 
   @Test
   @DisplayName("사용자 목록 조회 - name, email, createdAt, isLocked, role 정렬을 지원한다")
-  void findAllByCondition_success_whenSortingBySupportedFields() throws InterruptedException {
+  void findAllByCondition_success_whenSortingBySupportedFields() {
     // given
-    final User charlie = saveUser("charlie", "charlie@example.com", UserRole.USER, false);
-    Thread.sleep(10);
-    final User alice = saveUser("alice", "alice@example.com", UserRole.ADMIN, true);
-    Thread.sleep(10);
-    final User bob = saveUser("bob", "bob@example.com", UserRole.USER, false);
+    final User charlie =
+        saveUser("charlie", "charlie@example.com", UserRole.USER, false, FIRST_CREATED_AT);
+    final User alice =
+        saveUser("alice", "alice@example.com", UserRole.ADMIN, true, SECOND_CREATED_AT);
+    final User bob = saveUser("bob", "bob@example.com", UserRole.USER, false, THIRD_CREATED_AT);
 
     entityManager.flush();
     entityManager.clear();
@@ -163,24 +161,13 @@ class UserRepositoryTest {
     entityManager.clear();
 
     UserSearchRequest firstPageRequest =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            SortDirection.ASCENDING,
-            UserSearchRequest.SortBy.name);
+        cursorRequest(null, null, 2, SortDirection.ASCENDING, UserSearchRequest.SortBy.name);
     List<User> firstPageWithLookAhead = userRepository.findAllByCondition(firstPageRequest);
     List<User> firstPage = firstPageWithLookAhead.subList(0, 2);
     User lastUser = firstPage.get(firstPage.size() - 1);
 
     UserSearchRequest secondPageRequest =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
+        cursorRequest(
             lastUser.getName(),
             lastUser.getId(),
             2,
@@ -202,36 +189,24 @@ class UserRepositoryTest {
 
   @Test
   @DisplayName("사용자 목록 조회 - createdAt 커서로 다음 페이지를 조회한다")
-  void findAllByCondition_success_whenUsingCreatedAtCursor() throws InterruptedException {
+  void findAllByCondition_success_whenUsingCreatedAtCursor() {
     // given
-    saveUser("first-user", "first@example.com", UserRole.USER, false);
-    Thread.sleep(10);
-    saveUser("second-user", "second@example.com", UserRole.USER, false);
-    Thread.sleep(10);
-    final User third = saveUser("third-user", "third@example.com", UserRole.USER, false);
+    saveUser("first-user", "first@example.com", UserRole.USER, false, FIRST_CREATED_AT);
+    saveUser("second-user", "second@example.com", UserRole.USER, false, SECOND_CREATED_AT);
+    final User third =
+        saveUser("third-user", "third@example.com", UserRole.USER, false, THIRD_CREATED_AT);
 
     entityManager.flush();
     entityManager.clear();
 
     UserSearchRequest firstPageRequest =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            SortDirection.ASCENDING,
-            UserSearchRequest.SortBy.createdAt);
+        cursorRequest(null, null, 2, SortDirection.ASCENDING, UserSearchRequest.SortBy.createdAt);
     List<User> firstPageWithLookAhead = userRepository.findAllByCondition(firstPageRequest);
     List<User> firstPage = firstPageWithLookAhead.subList(0, 2);
     User lastUser = firstPage.get(firstPage.size() - 1);
 
     UserSearchRequest secondPageRequest =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
+        cursorRequest(
             lastUser.getCreatedAt().toString(),
             lastUser.getId(),
             2,
@@ -260,24 +235,13 @@ class UserRepositoryTest {
     entityManager.clear();
 
     UserSearchRequest ascendingFirstPageRequest =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            SortDirection.ASCENDING,
-            UserSearchRequest.SortBy.isLocked);
+        cursorRequest(null, null, 2, SortDirection.ASCENDING, UserSearchRequest.SortBy.isLocked);
     List<User> ascendingFirstPageWithLookAhead =
         userRepository.findAllByCondition(ascendingFirstPageRequest);
     User ascendingLastUser = ascendingFirstPageWithLookAhead.subList(0, 2).get(1);
 
     UserSearchRequest ascendingSecondPageRequest =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
+        cursorRequest(
             Boolean.toString(ascendingLastUser.isLocked()),
             ascendingLastUser.getId(),
             2,
@@ -285,10 +249,7 @@ class UserRepositoryTest {
             UserSearchRequest.SortBy.isLocked);
 
     UserSearchRequest descendingSecondPageRequest =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
+        cursorRequest(
             Boolean.toString(lockedUser.isLocked()),
             lockedUser.getId(),
             10,
@@ -319,10 +280,7 @@ class UserRepositoryTest {
     entityManager.clear();
 
     UserSearchRequest request =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
+        cursorRequest(
             admin.getRole().name(),
             admin.getId(),
             10,
@@ -344,10 +302,7 @@ class UserRepositoryTest {
     // given
     User user = saveUser("test-user", "user@example.com", UserRole.USER, false);
     UserSearchRequest request =
-        new UserSearchRequest(
-            null,
-            null,
-            null,
+        cursorRequest(
             "not-an-instant",
             user.getId(),
             10,
@@ -362,9 +317,23 @@ class UserRepositoryTest {
 
   private List<User> findUsersSortedBy(
       UserSearchRequest.SortBy sortBy, SortDirection sortDirection) {
-    UserSearchRequest request =
-        new UserSearchRequest(null, null, null, null, null, 10, sortDirection, sortBy);
+    UserSearchRequest request = cursorRequest(null, null, 10, sortDirection, sortBy);
     return userRepository.findAllByCondition(request);
+  }
+
+  private UserSearchRequest filteredRequest(
+      String emailLike, UserRole roleEqual, Boolean isLocked, UserSearchRequest.SortBy sortBy) {
+    return new UserSearchRequest(
+        emailLike, roleEqual, isLocked, null, null, 10, SortDirection.ASCENDING, sortBy);
+  }
+
+  private UserSearchRequest cursorRequest(
+      String cursor,
+      UUID idAfter,
+      int limit,
+      SortDirection sortDirection,
+      UserSearchRequest.SortBy sortBy) {
+    return new UserSearchRequest(null, null, null, cursor, idAfter, limit, sortDirection, sortBy);
   }
 
   private User saveUser(String name, String email, UserRole role, boolean locked) {
@@ -374,5 +343,16 @@ class UserRepositoryTest {
             : User.createUser(name, email, "encoded-password", null);
     user.changeLocked(locked);
     return userRepository.saveAndFlush(user);
+  }
+
+  private User saveUser(
+      String name, String email, UserRole role, boolean locked, Instant createdAt) {
+    User user = saveUser(name, email, role, locked);
+    entityManager
+        .createNativeQuery("update users set created_at = :createdAt where id = :id")
+        .setParameter("createdAt", Timestamp.from(createdAt))
+        .setParameter("id", user.getId())
+        .executeUpdate();
+    return user;
   }
 }
