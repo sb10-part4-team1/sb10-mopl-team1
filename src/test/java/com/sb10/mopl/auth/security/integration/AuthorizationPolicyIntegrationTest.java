@@ -137,7 +137,7 @@ class AuthorizationPolicyIntegrationTest {
   }
 
   @Test
-  @DisplayName("관리자는 사용자 목록 조회, 권한 변경, 계정 잠금 API에 접근할 수 있다")
+  @DisplayName("관리자는 사용자 목록 조회와 계정 잠금 API에 접근할 수 있다")
   void adminApi_returnsOk_whenAdminRequestsUserManagementEndpoints() throws Exception {
     final UUID userId = UUID.randomUUID();
 
@@ -154,12 +154,6 @@ class AuthorizationPolicyIntegrationTest {
         .andExpect(jsonPath("$.totalCount").value(0))
         .andExpect(jsonPath("$.sortBy").value("name"))
         .andExpect(jsonPath("$.sortDirection").value("ASCENDING"));
-
-    mockMvc
-        .perform(
-            patch("/api/users/{userId}/role", userId).with(authority(UserRole.ADMIN)).with(csrf()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.message").value("admin role"));
 
     mockMvc
         .perform(
@@ -219,11 +213,6 @@ class AuthorizationPolicyIntegrationTest {
     @GetMapping("/api-docs/test-public")
     MessageResponse publicApiDocs() {
       return new MessageResponse("public api docs");
-    }
-
-    @PatchMapping("/api/users/{userId}/role")
-    MessageResponse role() {
-      return new MessageResponse("admin role");
     }
 
     @PatchMapping("/api/users/{userId}/locked")

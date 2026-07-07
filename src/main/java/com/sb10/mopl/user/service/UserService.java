@@ -5,6 +5,7 @@ import com.sb10.mopl.auth.service.TemporaryPasswordService;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
@@ -72,6 +73,24 @@ public class UserService {
     String encodedPassword = passwordEncoder.encode(changePasswordRequest.password());
     user.changePassword(encodedPassword);
     temporaryPasswordService.deleteByUserId(targetUserId);
+    authSessionService.invalidateAllByUserId(targetUserId);
+  }
+
+  @Transactional
+  public void updateRole(UUID targetUserId, UserRoleUpdateRequest userRoleUpdateRequest) {
+    User user =
+        userRepository
+            .findByIdAndIsDeletedFalse(targetUserId)
+            .orElseThrow(
+                () ->
+                    new UserException(
+                        UserErrorCode.USER_NOT_FOUND, Map.of("userId", targetUserId)));
+
+    if (user.getRole() == userRoleUpdateRequest.role()) {
+      return;
+    }
+
+    user.changeRole(userRoleUpdateRequest.role());
     authSessionService.invalidateAllByUserId(targetUserId);
   }
 

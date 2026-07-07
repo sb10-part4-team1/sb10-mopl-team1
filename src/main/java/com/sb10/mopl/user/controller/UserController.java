@@ -5,6 +5,7 @@ import com.sb10.mopl.auth.security.user.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.service.UserService;
@@ -41,6 +42,13 @@ public class UserController {
       @Valid @RequestBody ChangePasswordRequest request,
       @CurrentUser AuthenticatedUser currentUser) {
     userService.changePassword(userId, currentUser.id(), request);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PatchMapping("/{userId}/role")
+  public ResponseEntity<Void> updateRole(
+      @PathVariable UUID userId, @Valid @RequestBody UserRoleUpdateRequest request) {
+    userService.updateRole(userId, request);
     return ResponseEntity.noContent().build();
   }
 
