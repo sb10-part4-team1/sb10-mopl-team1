@@ -87,7 +87,7 @@ public class UserService {
 
     User user =
         userRepository
-            .findById(targetUserId)
+            .findByIdAndIsDeletedFalse(targetUserId)
             .orElseThrow(
                 () ->
                     new UserException(
