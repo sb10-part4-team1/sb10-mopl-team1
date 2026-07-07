@@ -128,9 +128,18 @@ class AuthorizationPolicyIntegrationTest {
     final UUID userId = UUID.randomUUID();
 
     mockMvc
-        .perform(get("/api/users").with(authority(UserRole.ADMIN)))
+        .perform(
+            get("/api/users")
+                .param("limit", "20")
+                .param("sortBy", "name")
+                .param("sortDirection", "ASCENDING")
+                .with(authority(UserRole.ADMIN)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.message").value("admin users"));
+        .andExpect(jsonPath("$.data").isArray())
+        .andExpect(jsonPath("$.hasNext").value(false))
+        .andExpect(jsonPath("$.totalCount").value(0))
+        .andExpect(jsonPath("$.sortBy").value("name"))
+        .andExpect(jsonPath("$.sortDirection").value("ASCENDING"));
 
     mockMvc
         .perform(
@@ -196,11 +205,6 @@ class AuthorizationPolicyIntegrationTest {
     @GetMapping("/api-docs/test-public")
     MessageResponse publicApiDocs() {
       return new MessageResponse("public api docs");
-    }
-
-    @GetMapping("/api/users")
-    MessageResponse users() {
-      return new MessageResponse("admin users");
     }
 
     @PatchMapping("/api/users/{userId}/role")
