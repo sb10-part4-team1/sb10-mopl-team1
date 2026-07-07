@@ -77,8 +77,7 @@ public class UserService {
   }
 
   @Transactional
-  public void updateRole(
-      UUID targetUserId, UUID requesterUserId, UserRoleUpdateRequest userRoleUpdateRequest) {
+  public void updateRole(UUID targetUserId, UserRoleUpdateRequest userRoleUpdateRequest) {
     User user =
         userRepository
             .findByIdAndIsDeletedFalse(targetUserId)
