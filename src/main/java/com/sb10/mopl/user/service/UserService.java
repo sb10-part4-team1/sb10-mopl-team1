@@ -79,12 +79,6 @@ public class UserService {
   @Transactional
   public void updateRole(
       UUID targetUserId, UUID requesterUserId, UserRoleUpdateRequest userRoleUpdateRequest) {
-    if (targetUserId.equals(requesterUserId)) {
-      throw new UserException(
-          UserErrorCode.USER_ACCESS_DENIED,
-          Map.of("userId", targetUserId, "requesterId", requesterUserId));
-    }
-
     User user =
         userRepository
             .findByIdAndIsDeletedFalse(targetUserId)
