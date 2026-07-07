@@ -4,20 +4,20 @@ import com.sb10.mopl.common.entity.BaseEntity;
 import com.sb10.mopl.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 
 @Getter
 @Entity
 @Table(
     name = "direct_messages",
-    uniqueConstraints = {
-      @UniqueConstraint(
+    indexes = {
+      @Index(
           name = "IDX_DM_CONVERSATION_TIME",
-          columnNames = {"conversation_id", "created_at"})
+          columnList = "conversation_id, created_at")
     })
 public class DirectMessage extends BaseEntity {
 
