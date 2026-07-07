@@ -2,7 +2,7 @@ package com.sb10.mopl.batch.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
+import java.util.Set;
 import org.springframework.util.StringUtils;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -12,7 +12,7 @@ public record TmdbContentDto(
     String name, // TV 전용 제목
     String overview, // Description
     @JsonProperty("poster_path") String posterPath, // ThumbnailUrl
-    @JsonProperty("genre_ids") List<Integer> genreIds) { // Tag
+    @JsonProperty("genre_ids") Set<Integer> genreIds) { // Tag
 
   /** Movie: title 필드 사용 TV: name 필드 사용 */
   public String resolveTitle() {

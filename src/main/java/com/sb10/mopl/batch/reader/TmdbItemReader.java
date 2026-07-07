@@ -66,7 +66,7 @@ public class TmdbItemReader implements ItemReader<TmdbContentDto> {
     log.info("TMDB 인기 {} API 호출 - page: {}", typeName, page);
 
     String path = (contentType == ContentType.MOVIE) ? "/movie/popular" : "/tv/popular";
-    TmdbApiResponse response = tmdbApiClient.fetch(path, page);
+    TmdbApiResponse response = tmdbApiClient.fetch(path, page, TmdbApiResponse.class);
 
     List<TmdbContentDto> results = response.getResults();
     // API 응답 구조 붕괴 상황에 대한 명확한 예외 처리
