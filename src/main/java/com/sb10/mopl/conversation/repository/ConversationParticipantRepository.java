@@ -13,16 +13,16 @@ public interface ConversationParticipantRepository
 
   @Query(
       """
-    SELECT p FROM ConversationParticipant p
-    WHERE p.conversation.id = :conversationId AND p.user.id <> :myUserId
-    """)
+      SELECT p FROM ConversationParticipant p
+      WHERE p.conversation.id = :conversationId AND p.user.id <> :myUserId
+      """)
   Optional<ConversationParticipant> findOtherParticipant(UUID conversationId, UUID myUserId);
 
   @Query(
       """
-    SELECT p FROM ConversationParticipant p
-    JOIN FETCH p.user
-    WHERE p.conversation.id IN :conversationIds AND p.user.id <> :myUserId
-    """)
+      SELECT p FROM ConversationParticipant p
+      JOIN FETCH p.user
+      WHERE p.conversation.id IN :conversationIds AND p.user.id <> :myUserId
+      """)
   List<ConversationParticipant> findOtherParticipants(List<UUID> conversationIds, UUID myUserId);
 }

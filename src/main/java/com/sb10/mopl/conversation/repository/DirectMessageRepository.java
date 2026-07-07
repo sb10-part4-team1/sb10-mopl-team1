@@ -15,26 +15,26 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, UU
 
   @Query(
       """
-    SELECT dm FROM DirectMessage dm
-    JOIN FETCH dm.sender
-    JOIN FETCH dm.receiver
-    WHERE dm.id IN (
-      SELECT dm2.id FROM DirectMessage dm2
-      WHERE dm2.conversation.id IN :conversationIds
-      AND dm2.createdAt = (
-        SELECT MAX(dm3.createdAt) FROM DirectMessage dm3
-        WHERE dm3.conversation.id = dm2.conversation.id
+      SELECT dm FROM DirectMessage dm
+      JOIN FETCH dm.sender
+      JOIN FETCH dm.receiver
+      WHERE dm.id IN (
+        SELECT dm2.id FROM DirectMessage dm2
+        WHERE dm2.conversation.id IN :conversationIds
+        AND dm2.createdAt = (
+          SELECT MAX(dm3.createdAt) FROM DirectMessage dm3
+          WHERE dm3.conversation.id = dm2.conversation.id
+        )
       )
-    )
-    """)
+      """)
   List<DirectMessage> findLastMessagesByConversationIds(List<UUID> conversationIds);
 
   @Query(
       """
-    SELECT DISTINCT dm.conversation.id FROM DirectMessage dm
-    WHERE dm.conversation.id IN :conversationIds
-    AND dm.receiver.id = :receiverId
-    AND dm.isRead = false
-    """)
+      SELECT DISTINCT dm.conversation.id FROM DirectMessage dm
+      WHERE dm.conversation.id IN :conversationIds
+      AND dm.receiver.id = :receiverId
+      AND dm.isRead = false
+      """)
   List<UUID> findConversationIdsWithUnreadMessages(List<UUID> conversationIds, UUID receiverId);
 }

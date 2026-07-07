@@ -18,7 +18,6 @@ import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,9 +28,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ConversationService {
 
   private final ConversationRepository conversationRepository;
@@ -42,7 +43,6 @@ public class ConversationService {
   private final ConversationMapper conversationMapper;
 
   // 대화 생성
-  @Transactional
   public ConversationDto createConversation(UUID requestUserId, ConversationCreateRequest request) {
     UUID withUserId = request.withUserId();
 
@@ -81,6 +81,8 @@ public class ConversationService {
     return toDto(conversation, requestUserId);
   }
 
+  // 대화 조회
+  @Transactional(readOnly = true)
   public CursorPageResponse<ConversationDto> findConversations(
       UUID myUserId, ConversationSearchRequest request) {
     List<Conversation> result = conversationRepository.search(myUserId, request);
@@ -111,6 +113,7 @@ public class ConversationService {
   }
 
   // 특정 대화 조회
+  @Transactional(readOnly = true)
   public ConversationDto findConversation(UUID myUserId, UUID conversationId) {
     Conversation conversation =
         conversationRepository
@@ -134,6 +137,7 @@ public class ConversationService {
   }
 
   // 특정 사용자와의 대화 조회
+  @Transactional(readOnly = true)
   public ConversationDto findConversationWithUser(UUID myUserId, UUID withUserId) {
     Conversation conversation =
         conversationRepository
