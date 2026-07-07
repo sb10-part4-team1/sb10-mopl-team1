@@ -236,7 +236,6 @@ class UserServiceTest {
   void updateRole_success_whenRoleChanges() {
     // given
     UUID targetUserId = UUID.randomUUID();
-    UUID requesterUserId = UUID.randomUUID();
     User user = User.createUser("test-user", "user@example.com", "encoded-password", null);
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
@@ -253,31 +252,10 @@ class UserServiceTest {
   }
 
   @Test
-  @DisplayName("관리자는 자기 자신의 권한도 변경할 수 있다")
-  void updateRole_success_whenRequesterIsTargetUser() {
-    // given
-    UUID userId = UUID.randomUUID();
-    User user = User.createUser("test-user", "user@example.com", "encoded-password", null);
-    UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
-
-    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.of(user));
-
-    // when
-    userService.updateRole(userId, request);
-
-    // then
-    assertEquals(UserRole.ADMIN, user.getRole());
-
-    verify(userRepository).findByIdAndIsDeletedFalse(userId);
-    verify(authSessionService).invalidateAllByUserId(userId);
-  }
-
-  @Test
   @DisplayName("이미 같은 권한이면 세션을 무효화하지 않는다")
   void updateRole_success_whenRoleIsSame() {
     // given
     UUID targetUserId = UUID.randomUUID();
-    UUID requesterUserId = UUID.randomUUID();
     User user = User.createAdmin("test-admin", "admin@example.com", "encoded-password", null);
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
@@ -298,7 +276,6 @@ class UserServiceTest {
   void updateRole_fail_whenUserDoesNotExist() {
     // given
     UUID targetUserId = UUID.randomUUID();
-    UUID requesterUserId = UUID.randomUUID();
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
     when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.empty());
