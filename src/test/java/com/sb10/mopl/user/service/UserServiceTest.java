@@ -18,6 +18,7 @@ import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
@@ -227,6 +228,68 @@ class UserServiceTest {
     verify(userRepository).findById(userId);
     verify(passwordEncoder, never()).encode(any());
     verify(temporaryPasswordService, never()).deleteByUserId(any());
+    verify(authSessionService, never()).invalidateAllByUserId(any());
+  }
+
+  @Test
+  @DisplayName("권한 변경 시 대상 사용자의 권한을 변경하고 기존 세션을 모두 무효화한다")
+  void updateRole_success_whenRoleChanges() {
+    // given
+    UUID targetUserId = UUID.randomUUID();
+    User user = User.createUser("test-user", "user@example.com", "encoded-password", null);
+    UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
+
+    when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.of(user));
+
+    // when
+    userService.updateRole(targetUserId, request);
+
+    // then
+    assertEquals(UserRole.ADMIN, user.getRole());
+
+    verify(userRepository).findByIdAndIsDeletedFalse(targetUserId);
+    verify(authSessionService).invalidateAllByUserId(targetUserId);
+  }
+
+  @Test
+  @DisplayName("이미 같은 권한이면 세션을 무효화하지 않는다")
+  void updateRole_success_whenRoleIsSame() {
+    // given
+    UUID targetUserId = UUID.randomUUID();
+    User user = User.createAdmin("test-admin", "admin@example.com", "encoded-password", null);
+    UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
+
+    when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.of(user));
+
+    // when
+    userService.updateRole(targetUserId, request);
+
+    // then
+    assertEquals(UserRole.ADMIN, user.getRole());
+
+    verify(userRepository).findByIdAndIsDeletedFalse(targetUserId);
+    verify(authSessionService, never()).invalidateAllByUserId(any());
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 사용자이면 권한 변경에 실패한다")
+  void updateRole_fail_whenUserDoesNotExist() {
+    // given
+    UUID targetUserId = UUID.randomUUID();
+    UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
+
+    when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.empty());
+
+    // when
+    UserException exception =
+        assertThrows(UserException.class, () -> userService.updateRole(targetUserId, request));
+
+    // then
+    assertAll(
+        () -> assertEquals(UserErrorCode.USER_NOT_FOUND, exception.getErrorCode()),
+        () -> assertEquals(targetUserId, exception.getDetails().get("userId")));
+
+    verify(userRepository).findByIdAndIsDeletedFalse(targetUserId);
     verify(authSessionService, never()).invalidateAllByUserId(any());
   }
 
