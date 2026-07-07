@@ -138,6 +138,37 @@ class AdminRoleUpdateIntegrationTest {
         .andExpect(jsonPath("$.message").value("authenticated"));
   }
 
+  @Test
+  @DisplayName("관리자는 자기 자신의 권한을 변경할 수 있고 기존 인증 상태가 정리된다")
+  void updateRole_updatesOwnRoleAndInvalidatesOwnTokens_whenAdminRequestsSelf() throws Exception {
+    User adminUser = saveUser(UserRole.ADMIN, ADMIN_EMAIL);
+    SignInTokens adminTokens = signIn(mockMvc, objectMapper, jwtProperties, ADMIN_EMAIL, PASSWORD);
+
+    mockMvc
+        .perform(authenticatedGet(PROTECTED_API_PATH, adminTokens.accessToken()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.message").value("authenticated"));
+
+    mockMvc
+        .perform(
+            patch("/api/users/{userId}/role", adminUser.getId())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminTokens.accessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(roleRequest(UserRole.USER))
+                .with(csrf()))
+        .andExpect(status().isNoContent());
+
+    User updatedAdminUser = userRepository.findById(adminUser.getId()).orElseThrow();
+
+    assertAll(
+        () -> assertEquals(UserRole.USER, updatedAdminUser.getRole()),
+        () -> assertEquals(0L, jwtSessionRepository.count()),
+        () -> assertEquals(0L, refreshTokenRepository.count()));
+
+    expectAccessTokenUnauthorized(mockMvc, PROTECTED_API_PATH, adminTokens.accessToken());
+    expectRefreshTokenUnauthorized(mockMvc, adminTokens.refreshToken());
+  }
+
   private User saveUser(UserRole role, String email) {
     User user =
         role == UserRole.ADMIN
