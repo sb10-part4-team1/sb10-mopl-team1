@@ -339,6 +339,41 @@ class UserServiceTest {
   }
 
   @Test
+  @DisplayName("사용자 목록 조회 - 정렬 기준에 맞는 다음 커서를 반환한다")
+  void findUsers_success_whenNextCursorUsesRequestedSortField() {
+    assertNextCursorForSortBy(
+        UserSearchRequest.SortBy.email,
+        userWithIdentity(
+            UUID.randomUUID(),
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "email-user",
+            "cursor-email@example.com",
+            UserRole.USER,
+            false),
+        "cursor-email@example.com");
+    assertNextCursorForSortBy(
+        UserSearchRequest.SortBy.isLocked,
+        userWithIdentity(
+            UUID.randomUUID(),
+            Instant.parse("2026-06-25T00:00:00Z"),
+            "locked-user",
+            "locked@example.com",
+            UserRole.USER,
+            true),
+        "true");
+    assertNextCursorForSortBy(
+        UserSearchRequest.SortBy.role,
+        userWithIdentity(
+            UUID.randomUUID(),
+            Instant.parse("2026-06-26T00:00:00Z"),
+            "admin-user",
+            "admin@example.com",
+            UserRole.ADMIN,
+            false),
+        "ADMIN");
+  }
+
+  @Test
   @DisplayName("사용자 목록 조회 - cursor와 idAfter는 함께 전달되어야 한다")
   void findUsers_fail_whenOnlyOneCursorValueIsProvided() {
     // given
@@ -389,6 +424,34 @@ class UserServiceTest {
     ReflectionTestUtils.setField(user, "id", id);
     ReflectionTestUtils.setField(user, "createdAt", createdAt);
     return user;
+  }
+
+  private void assertNextCursorForSortBy(
+      UserSearchRequest.SortBy sortBy, User pageUser, String expectedNextCursor) {
+    User lookAhead =
+        userWithIdentity(
+            UUID.randomUUID(),
+            pageUser.getCreatedAt().plusSeconds(1),
+            pageUser.getName() + "-next",
+            "next-" + pageUser.getEmail(),
+            UserRole.USER,
+            false);
+    UserSearchRequest request =
+        new UserSearchRequest(null, null, null, null, null, 1, SortDirection.ASCENDING, sortBy);
+    UserDto pageUserDto = toDto(pageUser);
+
+    when(userRepository.findAllByCondition(request)).thenReturn(List.of(pageUser, lookAhead));
+    when(userRepository.countByCondition(request)).thenReturn(2L);
+    when(userMapper.toDto(pageUser)).thenReturn(pageUserDto);
+
+    CursorPageResponse<UserDto> result = userService.findUsers(request);
+
+    assertAll(
+        () -> assertThat(result.data()).containsExactly(pageUserDto),
+        () -> assertEquals(expectedNextCursor, result.nextCursor()),
+        () -> assertEquals(pageUser.getId(), result.nextIdAfter()),
+        () -> assertTrue(result.hasNext()),
+        () -> assertEquals(sortBy.name(), result.sortBy()));
   }
 
   private UserDto toDto(User user) {

@@ -201,6 +201,144 @@ class UserRepositoryTest {
   }
 
   @Test
+  @DisplayName("사용자 목록 조회 - createdAt 커서로 다음 페이지를 조회한다")
+  void findAllByCondition_success_whenUsingCreatedAtCursor() throws InterruptedException {
+    // given
+    saveUser("first-user", "first@example.com", UserRole.USER, false);
+    Thread.sleep(10);
+    saveUser("second-user", "second@example.com", UserRole.USER, false);
+    Thread.sleep(10);
+    final User third = saveUser("third-user", "third@example.com", UserRole.USER, false);
+
+    entityManager.flush();
+    entityManager.clear();
+
+    UserSearchRequest firstPageRequest =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            SortDirection.ASCENDING,
+            UserSearchRequest.SortBy.createdAt);
+    List<User> firstPageWithLookAhead = userRepository.findAllByCondition(firstPageRequest);
+    List<User> firstPage = firstPageWithLookAhead.subList(0, 2);
+    User lastUser = firstPage.get(firstPage.size() - 1);
+
+    UserSearchRequest secondPageRequest =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            lastUser.getCreatedAt().toString(),
+            lastUser.getId(),
+            2,
+            SortDirection.ASCENDING,
+            UserSearchRequest.SortBy.createdAt);
+
+    // when
+    List<User> secondPage = userRepository.findAllByCondition(secondPageRequest);
+
+    // then
+    assertThat(firstPageWithLookAhead).hasSize(3);
+    assertThat(secondPage).extracting(User::getId).containsExactly(third.getId());
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 - isLocked 커서로 다음 페이지를 조회한다")
+  void findAllByCondition_success_whenUsingIsLockedCursor() {
+    // given
+    User lockedUser = saveUser("locked-user", "locked@example.com", UserRole.USER, true);
+    final User unlockedFirst =
+        saveUser("unlocked-first", "unlocked-first@example.com", UserRole.USER, false);
+    final User unlockedSecond =
+        saveUser("unlocked-second", "unlocked-second@example.com", UserRole.USER, false);
+
+    entityManager.flush();
+    entityManager.clear();
+
+    UserSearchRequest ascendingFirstPageRequest =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            SortDirection.ASCENDING,
+            UserSearchRequest.SortBy.isLocked);
+    List<User> ascendingFirstPageWithLookAhead =
+        userRepository.findAllByCondition(ascendingFirstPageRequest);
+    User ascendingLastUser = ascendingFirstPageWithLookAhead.subList(0, 2).get(1);
+
+    UserSearchRequest ascendingSecondPageRequest =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            Boolean.toString(ascendingLastUser.isLocked()),
+            ascendingLastUser.getId(),
+            2,
+            SortDirection.ASCENDING,
+            UserSearchRequest.SortBy.isLocked);
+
+    UserSearchRequest descendingSecondPageRequest =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            Boolean.toString(lockedUser.isLocked()),
+            lockedUser.getId(),
+            10,
+            SortDirection.DESCENDING,
+            UserSearchRequest.SortBy.isLocked);
+
+    // when
+    List<User> ascendingSecondPage = userRepository.findAllByCondition(ascendingSecondPageRequest);
+    List<User> descendingSecondPage =
+        userRepository.findAllByCondition(descendingSecondPageRequest);
+
+    // then
+    assertThat(ascendingSecondPage).extracting(User::getId).containsExactly(lockedUser.getId());
+    assertThat(descendingSecondPage)
+        .extracting(User::getId)
+        .containsExactlyInAnyOrder(unlockedFirst.getId(), unlockedSecond.getId());
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 - role 커서로 다음 페이지를 조회한다")
+  void findAllByCondition_success_whenUsingRoleCursor() {
+    // given
+    User admin = saveUser("admin-user", "admin@example.com", UserRole.ADMIN, false);
+    User userA = saveUser("user-a", "user-a@example.com", UserRole.USER, false);
+    User userB = saveUser("user-b", "user-b@example.com", UserRole.USER, false);
+
+    entityManager.flush();
+    entityManager.clear();
+
+    UserSearchRequest request =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            admin.getRole().name(),
+            admin.getId(),
+            10,
+            SortDirection.ASCENDING,
+            UserSearchRequest.SortBy.role);
+
+    // when
+    List<User> users = userRepository.findAllByCondition(request);
+
+    // then
+    assertThat(users)
+        .extracting(User::getId)
+        .containsExactlyInAnyOrder(userA.getId(), userB.getId());
+  }
+
+  @Test
   @DisplayName("사용자 목록 조회 - cursor 형식이 정렬 기준과 맞지 않으면 예외가 발생한다")
   void findAllByCondition_fail_whenCursorIsMalformed() {
     // given
