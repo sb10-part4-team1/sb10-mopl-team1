@@ -24,6 +24,7 @@ import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.config.WebMvcConfig;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.UserRole;
@@ -282,6 +283,90 @@ class UserControllerTest {
   }
 
   @Test
+  @DisplayName("권한 변경 요청이 유효하면 204 No Content를 반환한다")
+  void updateRole_success_whenRequestIsValid() throws Exception {
+    // given
+    UUID targetUserId = UUID.randomUUID();
+    UUID requesterUserId = UUID.randomUUID();
+    authenticate(requesterUserId, UserRole.ADMIN);
+    Map<String, String> request = Map.of("role", "ADMIN");
+
+    // when & then
+    mockMvc
+        .perform(
+            patch("/api/users/{userId}/role", targetUserId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isNoContent());
+
+    ArgumentCaptor<UserRoleUpdateRequest> captor =
+        ArgumentCaptor.forClass(UserRoleUpdateRequest.class);
+    verify(userService).updateRole(eq(targetUserId), captor.capture());
+
+    assertEquals(UserRole.ADMIN, captor.getValue().role());
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 사용자이면 권한 변경 요청에 404 Not Found를 반환한다")
+  void updateRole_fail_whenUserDoesNotExist() throws Exception {
+    // given
+    UUID targetUserId = UUID.randomUUID();
+    UUID requesterUserId = UUID.randomUUID();
+    authenticate(requesterUserId, UserRole.ADMIN);
+    Map<String, String> request = Map.of("role", "ADMIN");
+
+    doThrow(new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", targetUserId)))
+        .when(userService)
+        .updateRole(eq(targetUserId), any(UserRoleUpdateRequest.class));
+
+    // when & then
+    mockMvc
+        .perform(
+            patch("/api/users/{userId}/role", targetUserId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isNotFound());
+
+    verify(userService).updateRole(eq(targetUserId), any(UserRoleUpdateRequest.class));
+  }
+
+  @Test
+  @DisplayName("권한 변경 요청에서 role 값이 지원하지 않는 값이면 400 Bad Request를 반환한다")
+  void updateRole_fail_whenRoleIsInvalid() throws Exception {
+    // given
+    authenticate(UUID.randomUUID(), UserRole.ADMIN);
+    Map<String, String> request = Map.of("role", "MANAGER");
+
+    // when & then
+    mockMvc
+        .perform(
+            patch("/api/users/{userId}/role", UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
+  @DisplayName("권한 변경 요청에서 role이 누락되면 400 Bad Request를 반환한다")
+  void updateRole_fail_whenRoleIsMissing() throws Exception {
+    // given
+    authenticate(UUID.randomUUID(), UserRole.ADMIN);
+    Map<String, String> request = Map.of();
+
+    // when & then
+    mockMvc
+        .perform(
+            patch("/api/users/{userId}/role", UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
   @DisplayName("사용자 목록 조회 요청이 유효하면 200 OK와 CursorPageResponse를 반환한다")
   void findUsers_success_whenRequestIsValid() throws Exception {
     // given
@@ -413,11 +498,14 @@ class UserControllerTest {
   }
 
   private void authenticate(UUID userId) {
-    AuthenticatedUser currentUser =
-        new AuthenticatedUser(userId, "current-user@example.com", UserRole.USER);
+    authenticate(userId, UserRole.USER);
+  }
+
+  private void authenticate(UUID userId, UserRole role) {
+    AuthenticatedUser currentUser = new AuthenticatedUser(userId, "current-user@example.com", role);
     SecurityContextHolder.getContext()
         .setAuthentication(
             UsernamePasswordAuthenticationToken.authenticated(
-                currentUser, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+                currentUser, null, List.of(new SimpleGrantedAuthority(role.authorityName()))));
   }
 }
