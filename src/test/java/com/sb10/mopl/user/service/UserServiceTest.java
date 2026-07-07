@@ -1,5 +1,6 @@
 package com.sb10.mopl.user.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -13,8 +14,11 @@ import static org.mockito.Mockito.when;
 
 import com.sb10.mopl.auth.service.AuthSessionService;
 import com.sb10.mopl.auth.service.TemporaryPasswordService;
+import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
@@ -23,6 +27,7 @@ import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.mapper.UserMapper;
 import com.sb10.mopl.user.repository.UserRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -223,5 +228,177 @@ class UserServiceTest {
     verify(passwordEncoder, never()).encode(any());
     verify(temporaryPasswordService, never()).deleteByUserId(any());
     verify(authSessionService, never()).invalidateAllByUserId(any());
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 - limit 다음 항목이 있으면 다음 커서 정보를 반환한다")
+  void findUsers_success_whenNextPageExists() {
+    // given
+    User first =
+        userWithIdentity(
+            UUID.randomUUID(),
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "alice",
+            "alice@example.com",
+            UserRole.USER,
+            false);
+    User second =
+        userWithIdentity(
+            UUID.randomUUID(),
+            Instant.parse("2026-06-25T00:00:00Z"),
+            "bob",
+            "bob@example.com",
+            UserRole.ADMIN,
+            true);
+    User lookAhead =
+        userWithIdentity(
+            UUID.randomUUID(),
+            Instant.parse("2026-06-26T00:00:00Z"),
+            "charlie",
+            "charlie@example.com",
+            UserRole.USER,
+            false);
+    UserSearchRequest request =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            SortDirection.ASCENDING,
+            UserSearchRequest.SortBy.name);
+    UserDto firstDto = toDto(first);
+    UserDto secondDto = toDto(second);
+
+    when(userRepository.findAllByCondition(request)).thenReturn(List.of(first, second, lookAhead));
+    when(userRepository.countByCondition(request)).thenReturn(3L);
+    when(userMapper.toDto(first)).thenReturn(firstDto);
+    when(userMapper.toDto(second)).thenReturn(secondDto);
+
+    // when
+    CursorPageResponse<UserDto> result = userService.findUsers(request);
+
+    // then
+    assertAll(
+        () -> assertThat(result.data()).containsExactly(firstDto, secondDto),
+        () -> assertEquals("bob", result.nextCursor()),
+        () -> assertEquals(second.getId(), result.nextIdAfter()),
+        () -> assertTrue(result.hasNext()),
+        () -> assertEquals(3L, result.totalCount()),
+        () -> assertEquals("name", result.sortBy()),
+        () -> assertEquals(SortDirection.ASCENDING, result.sortDirection()));
+
+    verify(userRepository).findAllByCondition(request);
+    verify(userRepository).countByCondition(request);
+    verify(userMapper).toDto(first);
+    verify(userMapper).toDto(second);
+    verify(userMapper, never()).toDto(lookAhead);
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 - 다음 페이지가 없으면 다음 커서 정보를 반환하지 않는다")
+  void findUsers_success_whenNextPageDoesNotExist() {
+    // given
+    User user =
+        userWithIdentity(
+            UUID.randomUUID(),
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "alice",
+            "alice@example.com",
+            UserRole.USER,
+            false);
+    UserSearchRequest request =
+        new UserSearchRequest(
+            null,
+            UserRole.USER,
+            false,
+            null,
+            null,
+            2,
+            SortDirection.DESCENDING,
+            UserSearchRequest.SortBy.createdAt);
+    UserDto userDto = toDto(user);
+
+    when(userRepository.findAllByCondition(request)).thenReturn(List.of(user));
+    when(userRepository.countByCondition(request)).thenReturn(1L);
+    when(userMapper.toDto(user)).thenReturn(userDto);
+
+    // when
+    CursorPageResponse<UserDto> result = userService.findUsers(request);
+
+    // then
+    assertAll(
+        () -> assertThat(result.data()).containsExactly(userDto),
+        () -> assertEquals(null, result.nextCursor()),
+        () -> assertEquals(null, result.nextIdAfter()),
+        () -> assertFalse(result.hasNext()),
+        () -> assertEquals(1L, result.totalCount()),
+        () -> assertEquals("createdAt", result.sortBy()),
+        () -> assertEquals(SortDirection.DESCENDING, result.sortDirection()));
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 - cursor와 idAfter는 함께 전달되어야 한다")
+  void findUsers_fail_whenOnlyOneCursorValueIsProvided() {
+    // given
+    UserSearchRequest requestWithCursorOnly =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            "alice",
+            null,
+            10,
+            SortDirection.ASCENDING,
+            UserSearchRequest.SortBy.name);
+    UserSearchRequest requestWithIdAfterOnly =
+        new UserSearchRequest(
+            null,
+            null,
+            null,
+            null,
+            UUID.randomUUID(),
+            10,
+            SortDirection.ASCENDING,
+            UserSearchRequest.SortBy.name);
+
+    // when
+    UserException cursorOnlyException =
+        assertThrows(UserException.class, () -> userService.findUsers(requestWithCursorOnly));
+    UserException idAfterOnlyException =
+        assertThrows(UserException.class, () -> userService.findUsers(requestWithIdAfterOnly));
+
+    // then
+    assertAll(
+        () -> assertEquals(UserErrorCode.INVALID_USER_VALUE, cursorOnlyException.getErrorCode()),
+        () -> assertEquals(UserErrorCode.INVALID_USER_VALUE, idAfterOnlyException.getErrorCode()));
+
+    verify(userRepository, never()).findAllByCondition(any());
+    verify(userRepository, never()).countByCondition(any());
+    verify(userMapper, never()).toDto(any());
+  }
+
+  private User userWithIdentity(
+      UUID id, Instant createdAt, String name, String email, UserRole role, boolean locked) {
+    User user =
+        role == UserRole.ADMIN
+            ? User.createAdmin(name, email, "encoded-password", null)
+            : User.createUser(name, email, "encoded-password", null);
+    user.changeLocked(locked);
+    ReflectionTestUtils.setField(user, "id", id);
+    ReflectionTestUtils.setField(user, "createdAt", createdAt);
+    return user;
+  }
+
+  private UserDto toDto(User user) {
+    return new UserDto(
+        user.getId(),
+        user.getCreatedAt(),
+        user.getEmail(),
+        user.getName(),
+        user.getProfileImageUrl(),
+        user.getRole(),
+        user.isLocked());
   }
 }
