@@ -13,7 +13,8 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, UU
 
   boolean existsByConversationIdAndReceiverIdAndIsReadFalse(UUID conversationId, UUID receiverId);
 
-  @Query("""
+  @Query(
+      """
     SELECT dm FROM DirectMessage dm
     JOIN FETCH dm.sender
     JOIN FETCH dm.receiver
@@ -28,7 +29,8 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, UU
     """)
   List<DirectMessage> findLastMessagesByConversationIds(List<UUID> conversationIds);
 
-  @Query("""
+  @Query(
+      """
     SELECT DISTINCT dm.conversation.id FROM DirectMessage dm
     WHERE dm.conversation.id IN :conversationIds
     AND dm.receiver.id = :receiverId

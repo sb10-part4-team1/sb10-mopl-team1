@@ -23,18 +23,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 @Table(
-  name = "conversation_participants",
-  indexes = {
-    @Index(
-      name = "IDX_CONV_PARTICIPANTS_USER",
-      columnList = "user_id"
-    )
-  }
-)
+    name = "conversation_participants",
+    indexes = {@Index(name = "IDX_CONV_PARTICIPANTS_USER", columnList = "user_id")})
 public class ConversationParticipant {
 
-  @EmbeddedId
-  private ConversationParticipantId id;
+  @EmbeddedId private ConversationParticipantId id;
 
   @MapsId("conversationId")
   @ManyToOne(fetch = FetchType.LAZY)

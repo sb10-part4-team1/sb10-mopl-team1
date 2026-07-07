@@ -10,5 +10,4 @@ public interface ConversationRepositoryCustom {
   List<Conversation> search(UUID myUserId, ConversationSearchRequest request);
 
   long countConversations(UUID myUserId, ConversationSearchRequest request);
-
 }

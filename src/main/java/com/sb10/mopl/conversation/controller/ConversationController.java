@@ -30,9 +30,8 @@ public class ConversationController {
   // 대화 생성
   @PostMapping
   public ResponseEntity<ConversationDto> createConversation(
-    @AuthenticationPrincipal MoplUserDetails userDetails,
-    @Valid @RequestBody ConversationCreateRequest request
-  ) {
+      @AuthenticationPrincipal MoplUserDetails userDetails,
+      @Valid @RequestBody ConversationCreateRequest request) {
     ConversationDto dto = conversationService.createConversation(userDetails.getId(), request);
     return ResponseEntity.ok(dto);
   }
@@ -40,34 +39,26 @@ public class ConversationController {
   // 대화 목록 조회
   @GetMapping
   public ResponseEntity<CursorPageResponse<ConversationDto>> findConversations(
-    @AuthenticationPrincipal MoplUserDetails userDetails,
-    @ModelAttribute @Valid ConversationSearchRequest request
-  ) {
-    CursorPageResponse<ConversationDto> response = conversationService.findConversations(
-      userDetails.getId(), request
-    );
+      @AuthenticationPrincipal MoplUserDetails userDetails,
+      @ModelAttribute @Valid ConversationSearchRequest request) {
+    CursorPageResponse<ConversationDto> response =
+        conversationService.findConversations(userDetails.getId(), request);
     return ResponseEntity.ok(response);
   }
 
   // 특정 사용자와의 대화 조회
   @GetMapping("/with")
   public ResponseEntity<ConversationDto> findConversationWithUser(
-    @AuthenticationPrincipal MoplUserDetails userDetails,
-    @RequestParam UUID userId
-  ) {
-    ConversationDto dto = conversationService.findConversationWithUser(userDetails.getId(),
-      userId);
+      @AuthenticationPrincipal MoplUserDetails userDetails, @RequestParam UUID userId) {
+    ConversationDto dto = conversationService.findConversationWithUser(userDetails.getId(), userId);
     return ResponseEntity.ok(dto);
   }
 
   // 특정 대화 조회
   @GetMapping("/{conversationId}")
   public ResponseEntity<ConversationDto> findConversation(
-    @AuthenticationPrincipal MoplUserDetails userDetails,
-    @PathVariable UUID conversationId
-  ) {
-    ConversationDto dto = conversationService.findConversation(userDetails.getId(),
-      conversationId);
+      @AuthenticationPrincipal MoplUserDetails userDetails, @PathVariable UUID conversationId) {
+    ConversationDto dto = conversationService.findConversation(userDetails.getId(), conversationId);
     return ResponseEntity.ok(dto);
   }
 }

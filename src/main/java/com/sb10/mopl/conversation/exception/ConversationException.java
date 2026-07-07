@@ -9,9 +9,8 @@ public class ConversationException extends MoplException {
     super(errorCode, details);
   }
 
-
   public ConversationException(
-    ConversationErrorCode errorCode, Map<String, Object> details, Throwable cause) {
+      ConversationErrorCode errorCode, Map<String, Object> details, Throwable cause) {
     super(errorCode, details, cause);
   }
 }

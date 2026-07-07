@@ -17,11 +17,10 @@ public interface ConversationMapper {
   @Mapping(target = "lastestMessage", source = "lastMessage")
   @Mapping(target = "hasUnread", source = "hasUnread")
   ConversationDto toDto(
-    Conversation conversation,
-    ConversationParticipant otherParticipant,
-    DirectMessage lastMessage,
-    boolean hasUnread
-  );
+      Conversation conversation,
+      ConversationParticipant otherParticipant,
+      DirectMessage lastMessage,
+      boolean hasUnread);
 
   @Mapping(target = "conversationId", source = "directMessage.conversation.id")
   DirectMessageDto toDto(DirectMessage directMessage);

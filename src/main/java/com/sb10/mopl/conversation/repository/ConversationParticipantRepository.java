@@ -9,15 +9,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface ConversationParticipantRepository
-  extends JpaRepository<ConversationParticipant, ConversationParticipantId> {
+    extends JpaRepository<ConversationParticipant, ConversationParticipantId> {
 
-  @Query("""
+  @Query(
+      """
     SELECT p FROM ConversationParticipant p
     WHERE p.conversation.id = :conversationId AND p.user.id <> :myUserId
     """)
   Optional<ConversationParticipant> findOtherParticipant(UUID conversationId, UUID myUserId);
 
-  @Query("""
+  @Query(
+      """
     SELECT p FROM ConversationParticipant p
     JOIN FETCH p.user
     WHERE p.conversation.id IN :conversationIds AND p.user.id <> :myUserId

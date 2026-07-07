@@ -15,9 +15,7 @@ import lombok.Getter;
 @Table(
     name = "direct_messages",
     indexes = {
-      @Index(
-          name = "IDX_DM_CONVERSATION_TIME",
-          columnList = "conversation_id, created_at")
+      @Index(name = "IDX_DM_CONVERSATION_TIME", columnList = "conversation_id, created_at")
     })
 public class DirectMessage extends BaseEntity {
 

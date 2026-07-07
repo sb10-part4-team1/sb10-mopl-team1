@@ -8,6 +8,4 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(name = "conversations")
-public class Conversation extends BaseUpdatableEntity {
-
-}
+public class Conversation extends BaseUpdatableEntity {}
