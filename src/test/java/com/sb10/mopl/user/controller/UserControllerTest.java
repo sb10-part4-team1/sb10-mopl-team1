@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -18,9 +19,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.security.user.CurrentUserArgumentResolver;
 import com.sb10.mopl.common.exception.GlobalExceptionHandler;
+import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.config.WebMvcConfig;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.exception.UserErrorCode;
@@ -273,6 +277,137 @@ class UserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isBadRequest());
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 요청이 유효하면 200 OK와 CursorPageResponse를 반환한다")
+  void findUsers_success_whenRequestIsValid() throws Exception {
+    // given
+    UUID firstUserId = UUID.randomUUID();
+    UUID requestIdAfter = UUID.randomUUID();
+    UUID responseNextIdAfter = UUID.randomUUID();
+    UserDto firstUser =
+        new UserDto(
+            firstUserId,
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "locked-user@example.com",
+            "locked-user",
+            null,
+            UserRole.USER,
+            true);
+    CursorPageResponse<UserDto> response =
+        new CursorPageResponse<>(
+            List.of(firstUser),
+            "locked-user",
+            responseNextIdAfter,
+            true,
+            3L,
+            "name",
+            SortDirection.ASCENDING);
+
+    when(userService.findUsers(any(UserSearchRequest.class))).thenReturn(response);
+
+    // when & then
+    mockMvc
+        .perform(
+            get("/api/users")
+                .param("emailLike", "USER")
+                .param("roleEqual", "USER")
+                .param("isLocked", "true")
+                .param("cursor", "alice")
+                .param("idAfter", requestIdAfter.toString())
+                .param("limit", "10")
+                .param("sortBy", "name")
+                .param("sortDirection", "ASCENDING"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].id").value(firstUserId.toString()))
+        .andExpect(jsonPath("$.data[0].createdAt").value("2026-06-24T00:00:00Z"))
+        .andExpect(jsonPath("$.data[0].email").value("locked-user@example.com"))
+        .andExpect(jsonPath("$.data[0].name").value("locked-user"))
+        .andExpect(jsonPath("$.data[0].profileImageUrl").doesNotExist())
+        .andExpect(jsonPath("$.data[0].role").value("USER"))
+        .andExpect(jsonPath("$.data[0].locked").value(true))
+        .andExpect(jsonPath("$.data[0].password").doesNotExist())
+        .andExpect(jsonPath("$.nextCursor").value("locked-user"))
+        .andExpect(jsonPath("$.nextIdAfter").value(responseNextIdAfter.toString()))
+        .andExpect(jsonPath("$.hasNext").value(true))
+        .andExpect(jsonPath("$.totalCount").value(3))
+        .andExpect(jsonPath("$.sortBy").value("name"))
+        .andExpect(jsonPath("$.sortDirection").value("ASCENDING"));
+
+    ArgumentCaptor<UserSearchRequest> captor = ArgumentCaptor.forClass(UserSearchRequest.class);
+    verify(userService).findUsers(captor.capture());
+    UserSearchRequest capturedRequest = captor.getValue();
+
+    assertAll(
+        () -> assertEquals("USER", capturedRequest.emailLike()),
+        () -> assertEquals(UserRole.USER, capturedRequest.roleEqual()),
+        () -> assertEquals(true, capturedRequest.isLocked()),
+        () -> assertEquals("alice", capturedRequest.cursor()),
+        () -> assertEquals(requestIdAfter, capturedRequest.idAfter()),
+        () -> assertEquals(10, capturedRequest.limit()),
+        () -> assertEquals(SortDirection.ASCENDING, capturedRequest.sortDirection()),
+        () -> assertEquals(UserSearchRequest.SortBy.name, capturedRequest.sortBy()));
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 요청에서 limit이 누락되면 400 Bad Request를 반환한다")
+  void findUsers_fail_whenLimitIsMissing() throws Exception {
+    // when & then
+    mockMvc
+        .perform(get("/api/users").param("sortBy", "name").param("sortDirection", "ASCENDING"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"));
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 요청에서 sortBy가 지원하지 않는 값이면 400 Bad Request를 반환한다")
+  void findUsers_fail_whenSortByIsInvalid() throws Exception {
+    // when & then
+    mockMvc
+        .perform(
+            get("/api/users")
+                .param("limit", "10")
+                .param("sortBy", "unsupported")
+                .param("sortDirection", "ASCENDING"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"));
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 요청에서 sortDirection이 지원하지 않는 값이면 400 Bad Request를 반환한다")
+  void findUsers_fail_whenSortDirectionIsInvalid() throws Exception {
+    // when & then
+    mockMvc
+        .perform(
+            get("/api/users")
+                .param("limit", "10")
+                .param("sortBy", "name")
+                .param("sortDirection", "INVALID"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"));
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
+  @DisplayName("사용자 목록 조회 요청에서 limit이 100을 초과하면 400 Bad Request를 반환한다")
+  void findUsers_fail_whenLimitExceedsMaximum() throws Exception {
+    // when & then
+    mockMvc
+        .perform(
+            get("/api/users")
+                .param("limit", "101")
+                .param("sortBy", "name")
+                .param("sortDirection", "ASCENDING"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"));
 
     verifyNoInteractions(userService);
   }

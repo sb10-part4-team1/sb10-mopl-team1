@@ -82,6 +82,20 @@ class AuthorizationPolicyIntegrationTest {
   }
 
   @Test
+  @DisplayName("비로그인 사용자는 사용자 목록 조회 API 호출 시 401을 받는다")
+  void userList_returnsUnauthorized_whenAnonymousUserRequestsAdminEndpoint() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/users")
+                .param("limit", "20")
+                .param("sortBy", "name")
+                .param("sortDirection", "ASCENDING")
+                .with(anonymous()))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("AUTH01"));
+  }
+
+  @Test
   @DisplayName("PATCH API 요청에 CSRF 토큰이 없으면 403을 반환한다")
   void patchApi_returnsForbidden_whenCsrfTokenIsMissing() throws Exception {
     mockMvc
