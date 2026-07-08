@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -72,9 +73,17 @@ public class ReviewServiceImpl implements ReviewService {
     // 요청 DTO를 Review 엔티티로 변환
     Review review = reviewMapper.toEntity(request, content, user);
 
-    // 리뷰 저장
-    Review savedReview = reviewRepository.save(review);
-    return reviewMapper.toDto(savedReview);
+    try {
+      // 리뷰 저장 후 즉시 flush하여 DB 유니크 제약 위반을 현재 try-catch 안에서 감지
+      Review savedReview = reviewRepository.saveAndFlush(review);
+      return reviewMapper.toDto(savedReview);
+    } catch (DataIntegrityViolationException e) {
+      // 동시 요청으로 유니크 제약이 발생한 경우 중복 리뷰 예외로 변환
+      throw new ReviewException(
+          ReviewErrorCode.REVIEW_ALREADY_EXISTS,
+          Map.of("contentId", contentId, "userId", userId),
+          e);
+    }
   }
 
   @Override
@@ -113,8 +122,13 @@ public class ReviewServiceImpl implements ReviewService {
                 () ->
                     new ReviewException(
                         ReviewErrorCode.REVIEW_NOT_FOUND, Map.of("reviewId", reviewId)));
+
     // 리뷰 작성자 권한 검증
-    validateReviewOwner(review, userId);
+    if (!review.getUser().getId().equals(userId)) {
+      throw new ReviewException(
+          ReviewErrorCode.UNAUTHORIZED_REVIEW_ACCESS,
+          Map.of("reviewId", reviewId, "userId", userId));
+    }
 
     // 리뷰 업데이트
     review.update(request.text(), request.rating());
@@ -134,9 +148,14 @@ public class ReviewServiceImpl implements ReviewService {
                     new ReviewException(
                         ReviewErrorCode.REVIEW_NOT_FOUND, Map.of("reviewId", reviewId)));
 
-    // 사용자 권한 검증
-    validateReviewOwner(review, userId);
+    // 리뷰 작성자 권한 검증
+    if (!review.getUser().getId().equals(userId)) {
+      throw new ReviewException(
+          ReviewErrorCode.UNAUTHORIZED_REVIEW_ACCESS,
+          Map.of("reviewId", reviewId, "userId", userId));
+    }
 
+    // 리뷰 삭제
     reviewRepository.delete(review);
   }
 
@@ -169,15 +188,6 @@ public class ReviewServiceImpl implements ReviewService {
       throw new ReviewException(
           ReviewErrorCode.INVALID_REVIEW_VALUE,
           Map.of("limit", "limit은 1 이상 " + MAX_REVIEW_PAGE_LIMIT + " 이하여야 합니다."));
-    }
-  }
-
-  // 작성자 권한 검증 메서드
-  private void validateReviewOwner(Review review, UUID userId) {
-    if (!review.getUser().getId().equals(userId)) {
-      throw new ReviewException(
-          ReviewErrorCode.UNAUTHORIZED_REVIEW_ACCESS,
-          Map.of("reviewId", review.getId(), "userId", userId));
     }
   }
 
