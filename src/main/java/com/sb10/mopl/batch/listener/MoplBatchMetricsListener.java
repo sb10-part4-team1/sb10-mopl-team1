@@ -86,36 +86,20 @@ public class MoplBatchMetricsListener implements JobExecutionListener, StepExecu
     String stepName = stepExecution.getStepName();
 
     // 1. Read Count 누적
-    Counter.builder("mopl.batch.step.items.total")
-        .description("Total processed items in batch step")
-        .tags("stepName", stepName, "type", "read")
-        .register(meterRegistry)
-        .increment(stepExecution.getReadCount());
+    recordStepMetric(stepName, "read", stepExecution.getReadCount());
 
     // 2. Write Count 누적
-    Counter.builder("mopl.batch.step.items.total")
-        .description("Total processed items in batch step")
-        .tags("stepName", stepName, "type", "write")
-        .register(meterRegistry)
-        .increment(stepExecution.getWriteCount());
+    recordStepMetric(stepName, "write", stepExecution.getWriteCount());
 
     // 3. Filter Count 누적
-    Counter.builder("mopl.batch.step.items.total")
-        .description("Total processed items in batch step")
-        .tags("stepName", stepName, "type", "filter")
-        .register(meterRegistry)
-        .increment(stepExecution.getFilterCount());
+    recordStepMetric(stepName, "filter", stepExecution.getFilterCount());
 
     // 4. Skip Count 누적 (Read + Process + Write Skip 합산)
     long totalSkipCount =
         stepExecution.getReadSkipCount()
             + stepExecution.getProcessSkipCount()
             + stepExecution.getWriteSkipCount();
-    Counter.builder("mopl.batch.step.items.total")
-        .description("Total processed items in batch step")
-        .tags("stepName", stepName, "type", "skip")
-        .register(meterRegistry)
-        .increment(totalSkipCount);
+    recordStepMetric(stepName, "skip", totalSkipCount);
 
     log.info(
         "배치 스텝 메트릭 누적 완료 - Step: {}, Read: {}, Write: {}, Filter: {}, Skip: {}",
@@ -126,5 +110,13 @@ public class MoplBatchMetricsListener implements JobExecutionListener, StepExecu
         totalSkipCount);
 
     return null; // StepExecutionListener 규칙에 따라 null 반환 시 기존 ExitStatus 유지
+  }
+
+  private void recordStepMetric(String stepName, String type, long count) {
+    Counter.builder("mopl.batch.step.items.total")
+        .description("Total processed items in batch step")
+        .tags("stepName", stepName, "type", type)
+        .register(meterRegistry)
+        .increment(count);
   }
 }

@@ -8,6 +8,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /* 모든 콘텐츠 수집(배치) 스텝에서 공통으로 사용되는 영속화 라이터입니다. */
 @Slf4j
@@ -83,29 +86,11 @@ public class ContentItemWriter implements ItemWriter<Content> {
 
     // 5. [비즈니스 데이터 수집 메트릭 카운팅]
     final int chunkDuplicateCount = totalReceivedCount - distinctContents.size();
-    String contentType = chunkContents.get(0).getType().name().toLowerCase();
-    String providerName = provider.name().toLowerCase();
-
-    // 신규 수집 저장 건수 누적
-    Counter.builder("mopl.batch.collected.items.total")
-        .description("Total number of collected and processed items")
-        .tags(
-            "contentType", contentType,
-            "provider", providerName,
-            "status", "new_saved")
-        .register(meterRegistry)
-        .increment(savedCount);
-
-    // 중복으로 인해 제외된 건수 누적 (청크 내 중복 + DB 기저 중복 합산)
+    String contentType = chunkContents.get(0).getType().name().toLowerCase(Locale.ROOT);
+    String providerName = provider.name().toLowerCase(Locale.ROOT);
     int duplicateSkippedCount = chunkDuplicateCount + dbDuplicateCount;
-    Counter.builder("mopl.batch.collected.items.total")
-        .description("Total number of collected and processed items")
-        .tags(
-            "contentType", contentType,
-            "provider", providerName,
-            "status", "duplicate_skipped")
-        .register(meterRegistry)
-        .increment(duplicateSkippedCount);
+
+    recordMetricsAfterCommit(contentType, providerName, savedCount, duplicateSkippedCount);
 
     log.info(
         "[{}] 저장 완료 - 수집: {}, 신규 저장: {}, DB 중복 제외: {}, 청크 내 중복 제외: {}",
@@ -114,6 +99,44 @@ public class ContentItemWriter implements ItemWriter<Content> {
         savedCount,
         dbDuplicateCount,
         chunkDuplicateCount);
+  }
+
+  /*
+   * DB 트랜잭션이 성공적으로 커밋(Commit)된 직후에만 수집량 메트릭을 기록하는 헬퍼 메서드입니다.
+   * 롤백 시 지표가 과대 측정되는 정합성 불일치를 방지합니다.
+   */
+  private void recordMetricsAfterCommit(
+      String contentType, String providerName, int savedCount, int duplicateSkippedCount) {
+    Runnable recordTask =
+        () -> {
+          incrementCollectedItemsCounter(contentType, providerName, "new_saved", savedCount);
+          incrementCollectedItemsCounter(
+              contentType, providerName, "duplicate_skipped", duplicateSkippedCount);
+        };
+
+    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              recordTask.run();
+            }
+          });
+    } else {
+      recordTask.run();
+    }
+  }
+
+  /*
+   * 공통 메트릭 카운터를 증가시키는 내부 헬퍼 메서드입니다.
+   */
+  private void incrementCollectedItemsCounter(
+      String contentType, String providerName, String status, int count) {
+    Counter.builder("mopl.batch.collected.items.total")
+        .description("Total number of collected and processed items")
+        .tags("contentType", contentType, "provider", providerName, "status", status)
+        .register(meterRegistry)
+        .increment(count);
   }
 
   private record ProviderKey(ContentProvider provider, String providerId) {}
