@@ -5,6 +5,7 @@ import com.sb10.mopl.auth.service.TemporaryPasswordService;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserLockUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
@@ -92,6 +93,24 @@ public class UserService {
 
     user.changeRole(userRoleUpdateRequest.role());
     authSessionService.invalidateAllByUserId(targetUserId);
+  }
+
+  @Transactional
+  public void updateLocked(UUID targetUserId, UserLockUpdateRequest userLockUpdateRequest) {
+    User user =
+        userRepository
+            .findByIdAndIsDeletedFalse(targetUserId)
+            .orElseThrow(
+                () ->
+                    new UserException(
+                        UserErrorCode.USER_NOT_FOUND, Map.of("userId", targetUserId)));
+
+    boolean locked = userLockUpdateRequest.locked();
+    user.changeLocked(locked);
+
+    if (locked) {
+      authSessionService.invalidateAllByUserId(targetUserId);
+    }
   }
 
   @Transactional(readOnly = true)

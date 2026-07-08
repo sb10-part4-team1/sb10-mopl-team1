@@ -5,6 +5,7 @@ import com.sb10.mopl.auth.security.user.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
+import com.sb10.mopl.user.dto.request.UserLockUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
@@ -49,6 +50,13 @@ public class UserController {
   public ResponseEntity<Void> updateRole(
       @PathVariable UUID userId, @Valid @RequestBody UserRoleUpdateRequest request) {
     userService.updateRole(userId, request);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PatchMapping("/{userId}/locked")
+  public ResponseEntity<Void> updateLocked(
+      @PathVariable UUID userId, @Valid @RequestBody UserLockUpdateRequest request) {
+    userService.updateLocked(userId, request);
     return ResponseEntity.noContent().build();
   }
 

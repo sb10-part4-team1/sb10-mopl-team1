@@ -33,7 +33,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @SpringBootTest
@@ -139,8 +138,6 @@ class AuthorizationPolicyIntegrationTest {
   @Test
   @DisplayName("관리자는 사용자 목록 조회와 계정 잠금 API에 접근할 수 있다")
   void adminApi_returnsOk_whenAdminRequestsUserManagementEndpoints() throws Exception {
-    final UUID userId = UUID.randomUUID();
-
     mockMvc
         .perform(
             get("/api/users")
@@ -155,13 +152,16 @@ class AuthorizationPolicyIntegrationTest {
         .andExpect(jsonPath("$.sortBy").value("name"))
         .andExpect(jsonPath("$.sortDirection").value("ASCENDING"));
 
+    User targetUser = saveUser(UserRole.USER, "lock-target@example.com");
+
     mockMvc
         .perform(
-            patch("/api/users/{userId}/locked", userId)
+            patch("/api/users/{userId}/locked", targetUser.getId())
                 .with(authority(UserRole.ADMIN))
-                .with(csrf()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.message").value("admin locked"));
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"locked\":true}"))
+        .andExpect(status().isNoContent());
   }
 
   @Test
@@ -213,11 +213,6 @@ class AuthorizationPolicyIntegrationTest {
     @GetMapping("/api-docs/test-public")
     MessageResponse publicApiDocs() {
       return new MessageResponse("public api docs");
-    }
-
-    @PatchMapping("/api/users/{userId}/locked")
-    MessageResponse locked() {
-      return new MessageResponse("admin locked");
     }
   }
 
