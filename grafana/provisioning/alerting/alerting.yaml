@@ -17,7 +17,7 @@ contactPoints:
             📝 **상세**: {{ .Annotations.description }}
             🏷️ **등급**: {{ .Labels.severity }}
             {{ if .Labels.jobName }}⚙️ **대상 작업**: {{ .Labels.jobName }}{{ end }}
-            
+
             🔗 **그라파나에서 확인**: {{ .GeneratorURL }}
             🔕 **이 알림 끄기 (Silence)**: {{ .SilenceURL }}
             ------------------------------------
@@ -28,7 +28,7 @@ contactPoints:
             📌 **요약**: {{ .Annotations.summary }} (해결됨)
             📝 **상세**: 배치 작업 {{ .Labels.jobName }}이(가) 정상 상태로 복구되었습니다.
             🏷️ **등급**: {{ .Labels.severity }}
-            
+
             🔗 **그라파나에서 확인**: {{ .GeneratorURL }}
             ------------------------------------
             {{ end }}
@@ -39,7 +39,7 @@ contactPoints:
 policies:
   - orgId: 1
     receiver: 'Discord Alarm'
-    group_by: ['alertname', 'jobName']
+    group_by: [ 'alertname', 'jobName' ]
     group_wait: 10s
     group_interval: 1m
     repeat_interval: 2h

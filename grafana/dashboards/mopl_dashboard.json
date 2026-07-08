@@ -59,16 +59,28 @@
             {
               "type": "value",
               "options": {
-                "1": { "text": "성공 (COMPLETED)", "color": "green" },
-                "0": { "text": "실패 (FAILED)", "color": "red" }
+                "1": {
+                  "text": "성공 (COMPLETED)",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "실패 (FAILED)",
+                  "color": "red"
+                }
               }
             }
           ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           }
         }
@@ -100,16 +112,28 @@
             {
               "type": "value",
               "options": {
-                "1": { "text": "성공 (COMPLETED)", "color": "green" },
-                "0": { "text": "실패 (FAILED)", "color": "red" }
+                "1": {
+                  "text": "성공 (COMPLETED)",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "실패 (FAILED)",
+                  "color": "red"
+                }
               }
             }
           ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           }
         }
@@ -154,9 +178,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 90 },
-              { "color": "green", "value": 98 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 98
+              }
             ]
           }
         }
@@ -189,9 +222,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 90 },
-              { "color": "green", "value": 98 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 98
+              }
             ]
           }
         }
@@ -406,9 +448,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 3 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
             ]
           }
         }
@@ -440,9 +491,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 3 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
             ]
           }
         }
@@ -651,7 +711,7 @@
       }
     }
   ],
-  "refresh": "10s",
+  "refresh": "60s",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
