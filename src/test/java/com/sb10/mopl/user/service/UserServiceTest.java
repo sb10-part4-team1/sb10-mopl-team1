@@ -27,6 +27,7 @@ import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.mapper.UserMapper;
 import com.sb10.mopl.user.repository.UserRepository;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +39,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -54,6 +56,10 @@ class UserServiceTest {
   @Mock private AuthSessionService authSessionService;
 
   @Mock private TemporaryPasswordService temporaryPasswordService;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
+
+  @Mock private Clock clock;
 
   @InjectMocks private UserService userService;
 
@@ -236,13 +242,14 @@ class UserServiceTest {
   void updateRole_success_whenRoleChanges() {
     // given
     UUID targetUserId = UUID.randomUUID();
+    UUID changedByUserId = UUID.randomUUID();
     User user = User.createUser("test-user", "user@example.com", "encoded-password", null);
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
     when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.of(user));
 
     // when
-    userService.updateRole(targetUserId, request);
+    userService.updateRole(targetUserId, changedByUserId, request);
 
     // then
     assertEquals(UserRole.ADMIN, user.getRole());
@@ -256,13 +263,14 @@ class UserServiceTest {
   void updateRole_success_whenRoleIsSame() {
     // given
     UUID targetUserId = UUID.randomUUID();
+    UUID changedByUserId = UUID.randomUUID();
     User user = User.createAdmin("test-admin", "admin@example.com", "encoded-password", null);
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
     when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.of(user));
 
     // when
-    userService.updateRole(targetUserId, request);
+    userService.updateRole(targetUserId, changedByUserId, request);
 
     // then
     assertEquals(UserRole.ADMIN, user.getRole());
@@ -276,13 +284,16 @@ class UserServiceTest {
   void updateRole_fail_whenUserDoesNotExist() {
     // given
     UUID targetUserId = UUID.randomUUID();
+    UUID changedByUserId = UUID.randomUUID();
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
     when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.empty());
 
     // when
     UserException exception =
-        assertThrows(UserException.class, () -> userService.updateRole(targetUserId, request));
+        assertThrows(
+            UserException.class,
+            () -> userService.updateRole(targetUserId, changedByUserId, request));
 
     // then
     assertAll(
