@@ -2,14 +2,17 @@ package com.sb10.mopl.playlistsubscription.entity;
 
 import com.sb10.mopl.common.entity.BaseEntity;
 import com.sb10.mopl.common.validation.DomainValidator;
+import com.sb10.mopl.playlist.entity.Playlist;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionErrorCode;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionException;
-import jakarta.persistence.Column;
+import com.sb10.mopl.user.entity.User;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,22 +31,24 @@ import lombok.NoArgsConstructor;
     })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PlaylistSubscription extends BaseEntity {
-  @Column(name = "subscriber_id", nullable = false)
-  private UUID subscriberId;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "subscriber_id", nullable = false)
+  private User subscriber;
 
-  @Column(name = "playlist_id", nullable = false)
-  private UUID playlistId;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "playlist_id", nullable = false)
+  private Playlist playlist;
 
-  public PlaylistSubscription(UUID subscriberId, UUID playlistId) {
-    validateCreate(subscriberId, playlistId);
-    this.subscriberId = subscriberId;
-    this.playlistId = playlistId;
+  public PlaylistSubscription(User subscriber, Playlist playlist) {
+    validateCreate(subscriber, playlist);
+    this.subscriber = subscriber;
+    this.playlist = playlist;
   }
 
-  private static void validateCreate(UUID subscriberId, UUID playlistId) {
+  private static void validateCreate(User subscriber, Playlist playlist) {
     DomainValidator.start()
-        .check(subscriberId == null, "subscriberId", "구독 요청자는 필수입니다.")
-        .check(playlistId == null, "playlistId", "플레이 리스트는 필수입니다.")
+        .check(subscriber == null, "subscriber", "구독 요청자는 필수입니다.")
+        .check(playlist == null, "playlist", "플레이리스트는 필수입니다.")
         .orThrow(
             details ->
                 new PlaylistSubscriptionException(
