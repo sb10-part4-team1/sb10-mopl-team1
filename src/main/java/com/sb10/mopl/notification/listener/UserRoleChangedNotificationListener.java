@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -21,6 +22,7 @@ public class UserRoleChangedNotificationListener {
 
   private final SseService sseService;
 
+  @Async("notificationExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void sendRoleChangedNotification(UserRoleChangedEvent event) {
     // TODO: Notification 엔티티가 구현되면 NotificationService에서 저장 후 DTO로 변환해 발송한다.
