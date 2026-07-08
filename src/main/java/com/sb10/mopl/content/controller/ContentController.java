@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/content")
+@RequestMapping("/api/contents")
 @RequiredArgsConstructor
 public class ContentController {
 
@@ -37,7 +37,7 @@ public class ContentController {
       @RequestPart("request") @Valid ContentCreateRequest request,
       @RequestPart(value = "thumbnail") MultipartFile thumbnail) {
     ContentDto contentDto = contentService.create(request, thumbnail);
-    URI location = URI.create("/api/content/" + contentDto.id());
+    URI location = URI.create("/api/contents/" + contentDto.id());
     return ResponseEntity.created(location).body(contentDto);
   }
 

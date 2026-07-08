@@ -15,6 +15,7 @@ import com.sb10.mopl.common.exception.GlobalExceptionHandler;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.common.pagination.SortDirectionConverter;
+import com.sb10.mopl.content.converter.ContentTypeConverter;
 import com.sb10.mopl.content.dto.ContentCreateRequest;
 import com.sb10.mopl.content.dto.ContentDto;
 import com.sb10.mopl.content.dto.ContentUpdateRequest;
@@ -44,7 +45,7 @@ import org.springframework.test.web.servlet.MockMvc;
       SecurityAutoConfiguration.class,
       SecurityFilterAutoConfiguration.class
     })
-@Import({GlobalExceptionHandler.class, SortDirectionConverter.class})
+@Import({GlobalExceptionHandler.class, SortDirectionConverter.class, ContentTypeConverter.class})
 class ContentControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -63,7 +64,15 @@ class ContentControllerTest {
     UUID mockId = UUID.randomUUID();
     ContentDto mockResponse =
         new ContentDto(
-            mockId, "MOVIE", "인셉션", "SF 영화", "/uploads/test.jpg", List.of("SF"), 0.0, 0, 0L);
+            mockId,
+            ContentType.MOVIE,
+            "인셉션",
+            "SF 영화",
+            "/uploads/test.jpg",
+            List.of("SF"),
+            0.0,
+            0,
+            0L);
 
     when(contentService.create(any(), any())).thenReturn(mockResponse);
 
@@ -81,7 +90,7 @@ class ContentControllerTest {
     // when: 컨트롤러 호출
     var resultActions =
         mockMvc.perform(
-            multipart("/api/content")
+            multipart("/api/contents")
                 .file(requestPart)
                 .file(thumbnailPart)
                 .contentType(MediaType.MULTIPART_FORM_DATA));
@@ -111,7 +120,9 @@ class ContentControllerTest {
     // when: 콘텐츠 생성 API 호출
     var resultActions =
         mockMvc.perform(
-            multipart("/api/content").file(requestPart).contentType(MediaType.MULTIPART_FORM_DATA));
+            multipart("/api/contents")
+                .file(requestPart)
+                .contentType(MediaType.MULTIPART_FORM_DATA));
 
     // then: 400 Bad Request 응답 코드를 확인
     resultActions.andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("SYS01"));
@@ -128,7 +139,7 @@ class ContentControllerTest {
     ContentDto mockResponse =
         new ContentDto(
             mockId,
-            "MOVIE",
+            ContentType.MOVIE,
             "인셉션 수정",
             "SF 영화 수정",
             "/uploads/updated.jpg",
@@ -153,7 +164,7 @@ class ContentControllerTest {
     // when: 콘텐츠 수정 API 호출
     var resultActions =
         mockMvc.perform(
-            multipart("/api/content/" + mockId)
+            multipart("/api/contents/" + mockId)
                 .file(requestPart)
                 .file(thumbnailPart)
                 .with(
@@ -190,7 +201,7 @@ class ContentControllerTest {
     // when: 콘텐츠 수정 API 호출
     var resultActions =
         mockMvc.perform(
-            multipart("/api/content/" + mockId)
+            multipart("/api/contents/" + mockId)
                 .file(requestPart)
                 .with(
                     req -> {
@@ -210,7 +221,7 @@ class ContentControllerTest {
     UUID mockId = UUID.randomUUID();
 
     // when: 콘텐츠 삭제 API 호출
-    var resultActions = mockMvc.perform(delete("/api/content/" + mockId));
+    var resultActions = mockMvc.perform(delete("/api/contents/" + mockId));
 
     // then: 204 No Content 응답 확인
     resultActions.andExpect(status().isNoContent());
@@ -227,7 +238,7 @@ class ContentControllerTest {
         .when(contentService)
         .delete(mockId);
 
-    var resultActions = mockMvc.perform(delete("/api/content/" + mockId));
+    var resultActions = mockMvc.perform(delete("/api/contents/" + mockId));
 
     // then: 404 No Content 응답 확인
     resultActions.andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("CT01"));
@@ -240,11 +251,19 @@ class ContentControllerTest {
     UUID mockId = UUID.randomUUID();
     ContentDto mockResponse =
         new ContentDto(
-            mockId, "MOVIE", "인셉션", "SF 영화", "/uploads/test.jpg", List.of("SF"), 0.0, 0, 0L);
+            mockId,
+            ContentType.MOVIE,
+            "인셉션",
+            "SF 영화",
+            "/uploads/test.jpg",
+            List.of("SF"),
+            0.0,
+            0,
+            0L);
     when(contentService.find(mockId)).thenReturn(mockResponse);
 
     // when: API 호출
-    var resultActions = mockMvc.perform(get("/api/content/" + mockId));
+    var resultActions = mockMvc.perform(get("/api/contents/" + mockId));
 
     // then: 응답 검증
     resultActions
@@ -262,7 +281,7 @@ class ContentControllerTest {
         .thenThrow(new ContentException(ContentErrorCode.CONTENT_NOT_FOUND, Map.of("id", mockId)));
 
     // when: API 호출
-    var resultActions = mockMvc.perform(get("/api/content/" + mockId));
+    var resultActions = mockMvc.perform(get("/api/contents/" + mockId));
 
     // then: 응답 검증
     resultActions.andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("CT01"));
@@ -275,7 +294,15 @@ class ContentControllerTest {
     UUID mockId = UUID.randomUUID();
     ContentDto mockResponse =
         new ContentDto(
-            mockId, "MOVIE", "인셉션", "SF 영화", "/uploads/test.jpg", List.of("SF"), 0.0, 0, 0L);
+            mockId,
+            ContentType.MOVIE,
+            "인셉션",
+            "SF 영화",
+            "/uploads/test.jpg",
+            List.of("SF"),
+            0.0,
+            0,
+            0L);
     CursorPageResponse<ContentDto> mockSlice =
         new CursorPageResponse<>(
             List.of(mockResponse), null, null, false, 1L, "createdAt", SortDirection.DESCENDING);
@@ -285,7 +312,7 @@ class ContentControllerTest {
     // when: API 호출
     var resultActions =
         mockMvc.perform(
-            get("/api/content")
+            get("/api/contents")
                 .param("sortBy", "createdAt")
                 .param("limit", "10")
                 .param("sortDirection", "DESC"));
@@ -302,7 +329,7 @@ class ContentControllerTest {
   @DisplayName("목록 조회 요청 시 정렬 기준(sortBy)이 누락되면 400 Bad Request를 반환한다")
   void findAll_returnBadRequest_whenSortByIsMissing() throws Exception {
     // when: API 호출 (sortBy 파라미터 누락)
-    var resultActions = mockMvc.perform(get("/api/content").param("limit", "10"));
+    var resultActions = mockMvc.perform(get("/api/contents").param("limit", "10"));
 
     // then: 400 Bad Request 확인
     resultActions.andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("SYS01"));
@@ -313,7 +340,7 @@ class ContentControllerTest {
   void findAll_returnBadRequest_whenSortByIsInvalid() throws Exception {
     // when: API 호출 (sortBy 파라미터가 유효하지 않은 값)
     var resultActions =
-        mockMvc.perform(get("/api/content").param("sortBy", "UNKNOWN").param("limit", "10"));
+        mockMvc.perform(get("/api/contents").param("sortBy", "UNKNOWN").param("limit", "10"));
 
     // then: 400 Bad Request 및 details.sortBy 에러 메시지 검증
     resultActions
@@ -330,7 +357,7 @@ class ContentControllerTest {
     // when: API 호출 (sortDirection 파라미터가 유효하지 않은 값)
     var resultActions =
         mockMvc.perform(
-            get("/api/content")
+            get("/api/contents")
                 .param("sortBy", "createdAt")
                 .param("limit", "10")
                 .param("sortDirection", "DOWN"));
