@@ -1,7 +1,10 @@
 package com.sb10.mopl.content.converter;
 
 import com.sb10.mopl.content.entity.ContentType;
+import com.sb10.mopl.content.exception.ContentErrorCode;
+import com.sb10.mopl.content.exception.ContentException;
 import java.util.Arrays;
+import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +22,9 @@ public class ContentTypeConverter implements Converter<String, ContentType> {
             type ->
                 type.getValue().equalsIgnoreCase(trimmed) || type.name().equalsIgnoreCase(trimmed))
         .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 콘텐츠 타입입니다: " + source));
+        .orElseThrow(
+            () ->
+                new ContentException(
+                    ContentErrorCode.INVALID_CONTENT_TYPE, Map.of("rejectedValue", source)));
   }
 }

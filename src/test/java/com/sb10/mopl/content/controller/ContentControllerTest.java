@@ -169,7 +169,7 @@ class ContentControllerTest {
                 .file(thumbnailPart)
                 .with(
                     req -> {
-                      req.setMethod("PUT");
+                      req.setMethod("PATCH");
                       return req;
                     })
                 .contentType(MediaType.MULTIPART_FORM_DATA));
@@ -205,7 +205,7 @@ class ContentControllerTest {
                 .file(requestPart)
                 .with(
                     req -> {
-                      req.setMethod("PUT");
+                      req.setMethod("PATCH");
                       return req;
                     })
                 .contentType(MediaType.MULTIPART_FORM_DATA));
