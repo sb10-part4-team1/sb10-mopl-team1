@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface DirectMessageRepository extends JpaRepository<DirectMessage, UUID> {
 
@@ -27,7 +28,8 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, UU
         )
       )
       """)
-  List<DirectMessage> findLastMessagesByConversationIds(List<UUID> conversationIds);
+  List<DirectMessage> findLastMessagesByConversationIds(
+      @Param("conversationIds") List<UUID> conversationIds);
 
   @Query(
       """
@@ -36,5 +38,6 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, UU
       AND dm.receiver.id = :receiverId
       AND dm.isRead = false
       """)
-  List<UUID> findConversationIdsWithUnreadMessages(List<UUID> conversationIds, UUID receiverId);
+  List<UUID> findConversationIdsWithUnreadMessages(
+      @Param("conversationIds") List<UUID> conversationIds, @Param("receiverId") UUID receiverId);
 }

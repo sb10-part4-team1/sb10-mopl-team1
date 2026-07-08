@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ConversationParticipantRepository
     extends JpaRepository<ConversationParticipant, ConversationParticipantId> {
@@ -16,7 +17,8 @@ public interface ConversationParticipantRepository
       SELECT p FROM ConversationParticipant p
       WHERE p.conversation.id = :conversationId AND p.user.id <> :myUserId
       """)
-  Optional<ConversationParticipant> findOtherParticipant(UUID conversationId, UUID myUserId);
+  Optional<ConversationParticipant> findOtherParticipant(
+      @Param("conversationId") UUID conversationId, @Param("myUserId") UUID myUserId);
 
   @Query(
       """
@@ -24,5 +26,6 @@ public interface ConversationParticipantRepository
       JOIN FETCH p.user
       WHERE p.conversation.id IN :conversationIds AND p.user.id <> :myUserId
       """)
-  List<ConversationParticipant> findOtherParticipants(List<UUID> conversationIds, UUID myUserId);
+  List<ConversationParticipant> findOtherParticipants(
+      @Param("conversationIds") List<UUID> conversationIds, @Param("myUserId") UUID myUserId);
 }
