@@ -7,6 +7,9 @@ import com.sb10.mopl.follow.exception.FollowErrorCode;
 import com.sb10.mopl.follow.exception.FollowException;
 import com.sb10.mopl.follow.mapper.FollowMapper;
 import com.sb10.mopl.follow.repository.FollowRepository;
+import com.sb10.mopl.user.exception.UserErrorCode;
+import com.sb10.mopl.user.exception.UserException;
+import com.sb10.mopl.user.repository.UserRepository;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +23,12 @@ public class FollowServiceImpl implements FollowService {
 
   private final FollowRepository followRepository;
   private final FollowMapper followMapper;
+  private final UserRepository userRepository;
 
   @Override
   @Transactional
   public FollowDto follow(UUID followerId, FollowRequest request) {
+    validateFolloweeExists(request.followeeId());
     validateFollowNotExists(followerId, request.followeeId());
 
     Follow follow = followMapper.toEntity(followerId, request);
@@ -85,6 +90,15 @@ public class FollowServiceImpl implements FollowService {
           FollowErrorCode.UNAUTHORIZED_FOLLOW_ACCESS,
           Map.of("followId", follow.getId(), "userId", userId));
     }
+  }
+
+  // 팔로우 대상 유저 존재 여부 검증
+  private void validateFolloweeExists(UUID followeeId) {
+    userRepository
+        .findByIdAndIsDeletedFalse(followeeId)
+        .orElseThrow(
+            () ->
+                new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("followeeId", followeeId)));
   }
 
   // 팔로워와 팔로우 대상자로 팔로우 관계 조회
