@@ -142,7 +142,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(mopl_api_calls_total{client=\"tmdb\",status=\"200\"}[5m])) / sum(rate(mopl_api_calls_total{client=\"tmdb\"}[5m])) * 100",
+          "expr": "sum(increase(mopl_api_calls_total{client=\"tmdb\",status=\"200\"}[24h])) / sum(increase(mopl_api_calls_total{client=\"tmdb\"}[24h])) * 100",
           "refId": "A"
         }
       ],
@@ -177,7 +177,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(mopl_api_calls_total{client=\"sports\",status=\"200\"}[5m])) / sum(rate(mopl_api_calls_total{client=\"sports\"}[5m])) * 100",
+          "expr": "sum(increase(mopl_api_calls_total{client=\"sports\",status=\"200\"}[24h])) / sum(increase(mopl_api_calls_total{client=\"sports\"}[24h])) * 100",
           "refId": "A"
         }
       ],
@@ -475,12 +475,12 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(mopl_api_call_duration_seconds_bucket{client=\"tmdb\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(increase(mopl_api_call_duration_seconds_bucket{client=\"tmdb\"}[24h])) by (le))",
           "refId": "A",
           "legendFormat": "p99 지연 시간"
         },
         {
-          "expr": "sum(rate(mopl_api_call_duration_seconds_sum{client=\"tmdb\"}[5m])) / sum(rate(mopl_api_call_duration_seconds_count{client=\"tmdb\"}[5m]))",
+          "expr": "sum(increase(mopl_api_call_duration_seconds_sum{client=\"tmdb\"}[24h])) / sum(increase(mopl_api_call_duration_seconds_count{client=\"tmdb\"}[24h]))",
           "refId": "B",
           "legendFormat": "평균 응답 속도"
         }
@@ -506,12 +506,12 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(mopl_api_call_duration_seconds_bucket{client=\"sports\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(increase(mopl_api_call_duration_seconds_bucket{client=\"sports\"}[24h])) by (le))",
           "refId": "A",
           "legendFormat": "p99 지연 시간"
         },
         {
-          "expr": "sum(rate(mopl_api_call_duration_seconds_sum{client=\"sports\"}[5m])) / sum(rate(mopl_api_call_duration_seconds_count{client=\"sports\"}[5m]))",
+          "expr": "sum(increase(mopl_api_call_duration_seconds_sum{client=\"sports\"}[24h])) / sum(increase(mopl_api_call_duration_seconds_count{client=\"sports\"}[24h]))",
           "refId": "B",
           "legendFormat": "평균 응답 속도"
         }
@@ -531,11 +531,11 @@
         "y": 38
       },
       "id": 106,
-      "title": "Row 7: 실행 시간 및 예외 복구 (Job Duration & Retries)",
+      "title": "Row 7: 실행 소요 시간 (Job Duration)",
       "type": "row"
     },
     {
-      "title": "TMDB Job Duration & Retries",
+      "title": "TMDB Job Duration",
       "type": "timeseries",
       "id": 15,
       "gridPos": {
@@ -552,11 +552,6 @@
           "expr": "mopl_batch_job_duration_seconds_sum{jobName=\"tmdbJob\"} / mopl_batch_job_duration_seconds_count{jobName=\"tmdbJob\"}",
           "refId": "A",
           "legendFormat": "평균 실행 소요 시간"
-        },
-        {
-          "expr": "sum(mopl_batch_retry_total{label=~\".*Tmdb.*\"}) or on() vector(0)",
-          "refId": "B",
-          "legendFormat": "Spring Retry 발생 수"
         }
       ],
       "fieldConfig": {
@@ -566,7 +561,7 @@
       }
     },
     {
-      "title": "Sports Job Duration & Retries",
+      "title": "Sports Job Duration",
       "type": "timeseries",
       "id": 16,
       "gridPos": {
@@ -583,16 +578,75 @@
           "expr": "mopl_batch_job_duration_seconds_sum{jobName=\"sportsJob\"} / mopl_batch_job_duration_seconds_count{jobName=\"sportsJob\"}",
           "refId": "A",
           "legendFormat": "평균 실행 소요 시간"
-        },
-        {
-          "expr": "sum(mopl_batch_retry_total{label=~\".*Sports.*\"}) or on() vector(0)",
-          "refId": "B",
-          "legendFormat": "Spring Retry 발생 수"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 107,
+      "title": "Row 8: 예외 복구 및 재시도 횟수 (Exception Retries)",
+      "type": "row"
+    },
+    {
+      "title": "TMDB API Retry Count",
+      "type": "timeseries",
+      "id": 17,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(mopl_batch_retry_total{label=~\".*Tmdb.*\"}) or on() vector(0)",
+          "refId": "A",
+          "legendFormat": "Spring Retry 발생 수"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "title": "Sports API Retry Count",
+      "type": "timeseries",
+      "id": 18,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(mopl_batch_retry_total{label=~\".*Sports.*\"}) or on() vector(0)",
+          "refId": "A",
+          "legendFormat": "Spring Retry 발생 수"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
         }
       }
     }

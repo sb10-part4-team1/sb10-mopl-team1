@@ -1,8 +1,6 @@
 package com.sb10.mopl.batch.controller;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
-import java.util.List;
+import com.sb10.mopl.batch.scheduler.BatchAutoRecoveryScheduler;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TestAlertController {
 
-  private final MeterRegistry meterRegistry;
+  private final BatchAutoRecoveryScheduler batchAutoRecoveryScheduler;
   private final Map<String, Double> mockConsecutiveFailures = new ConcurrentHashMap<>();
 
   /*
@@ -41,12 +39,8 @@ public class TestAlertController {
 
     log.info("[TEST-ALERT-CONTROLLER] {} 실패 게이지 강제 갱신: {} -> {}", jobName, current, next);
 
-    /* 그라파나가 수집해가는 게이지 메트릭에 강제 매핑 */
-    meterRegistry.gauge(
-        "mopl.batch.recovery.failure.consecutive",
-        List.of(Tag.of("jobName", jobName)),
-        mockConsecutiveFailures,
-        map -> map.getOrDefault(jobName, 0.0));
+    /* 실제 BatchAutoRecoveryScheduler 내부의 맵 값을 변경하여 지표를 간접 갱신시킵니다. */
+    batchAutoRecoveryScheduler.setConsecutiveFailureForTest(jobName, next);
 
     return String.format(
         "Job [%s] Consecutive Failure Gauge updated to: %.1f (3.0이 넘으면 알림이 발생합니다.)", jobName, next);
