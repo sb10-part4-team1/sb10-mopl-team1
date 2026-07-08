@@ -2,9 +2,13 @@ package com.sb10.mopl.batch.scheduler;
 
 import com.sb10.mopl.batch.exception.BatchException;
 import com.sb10.mopl.batch.service.BatchAdminService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +46,10 @@ public class BatchAutoRecoveryScheduler {
   private final BatchAdminService batchAdminService;
   private final Job sportsJob;
   private final Job tmdbJob;
+  private final MeterRegistry meterRegistry;
+
+  /* 연속 실패 상태 보관을 위한 실시간 맵 */
+  private final Map<String, Double> consecutiveFailures = new ConcurrentHashMap<>();
 
   // 이미 락이 걸리거나 치명적 에러로 알림을 보낸 JobExecution ID 목록을 기억하여 중복 스팸을 차단합니다.
   private final Set<Long> notifiedExecutionIds = ConcurrentHashMap.newKeySet();
@@ -66,10 +74,18 @@ public class BatchAutoRecoveryScheduler {
 
     log.debug("{} 실패 배치 모니터링 시작", logPrefix);
 
+    /* 연속 실패 횟수 측정을 위한 동적 게이지 등록 */
+    meterRegistry.gauge(
+        "mopl.batch.recovery.failure.consecutive",
+        List.of(Tag.of("jobName", jobName)),
+        consecutiveFailures,
+        map -> map.getOrDefault(jobName, 0.0));
+
     try {
       // 1. 중복 기동 방지 및 최근 실행 인스턴스의 FAILED 상태 조회 (서비스 공통 검증 위임)
       JobExecution lastExecution = batchAdminService.validateAndGetLastFailedExecution(jobName);
       if (lastExecution == null) {
+        consecutiveFailures.put(jobName, 0.0); // 실패 건이 없으므로 연속 실패 리셋
         return; // 복구 대상(FAILED)이 없거나 실행 이력이 없음
       }
 
@@ -81,6 +97,7 @@ public class BatchAutoRecoveryScheduler {
       // 2. 치명적 에러 감지 시 즉시 락 처리 및 관리자 알림 발송
       if (isFatalFailure(lastExecution)) {
         log.error("{} {} 배치 치명적 에러 감지로 자동 재시작 차단", logPrefix, jobName);
+        consecutiveFailures.put(jobName, 3.0); // 치명적 실패는 즉시 최종 잠금값인 3.0 설정
         notifyAdminWithDetails(lastExecution, logPrefix, "치명적 에러 감지 (재시도 불가)");
         notifiedExecutionIds.add(lastExecution.getId()); // 알림 발송 기록
         return;
@@ -90,6 +107,8 @@ public class BatchAutoRecoveryScheduler {
       List<JobExecution> executions = jobExplorer.getJobExecutions(lastExecution.getJobInstance());
       long failedCount =
           executions.stream().filter(exec -> exec.getStatus() == BatchStatus.FAILED).count();
+
+      consecutiveFailures.put(jobName, (double) failedCount); // 실시간 연속 실패 횟수 갱신
 
       // 임계 차단: 동일 인스턴스 실패 횟수가 3회 이상이면 영구 중단(Lock) 후 관리자 알림
       if (failedCount >= 3) {
@@ -101,6 +120,14 @@ public class BatchAutoRecoveryScheduler {
 
       // 4. 3회 미만일 때는 실패했던 파라미터 그대로 이어서 재시작(Restart)을 트리거합니다.
       log.warn("{} {} 배치 실패 감지로 10분 쿨다운 후 재시작 진행 (누적 실패: {}/3)", logPrefix, jobName, failedCount);
+
+      /* 복구 재기동 시도 횟수 카운터 증가 */
+      Counter.builder("mopl.batch.recovery.attempts.total")
+          .description("Total recovery scheduler attempts")
+          .tags("jobName", jobName)
+          .register(meterRegistry)
+          .increment();
+
       jobLauncher.run(job, lastExecution.getJobParameters());
 
     } catch (BatchException e) {

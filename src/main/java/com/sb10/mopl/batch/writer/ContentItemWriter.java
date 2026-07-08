@@ -3,6 +3,8 @@ package com.sb10.mopl.batch.writer;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentProvider;
 import com.sb10.mopl.content.repository.ContentRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -14,24 +16,21 @@ import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
 
-/** 모든 콘텐츠 수집(배치) 스텝에서 공통으로 사용되는 영속화 라이터입니다. */
+/* 모든 콘텐츠 수집(배치) 스텝에서 공통으로 사용되는 영속화 라이터입니다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ContentItemWriter implements ItemWriter<Content> {
 
   private final ContentRepository contentRepository;
+  private final MeterRegistry meterRegistry;
 
-  /**
+  /*
    * 청크 단위 저장 시, 청크 내 자체 중복 제거와 N+1 쿼리 문제를 해결하는 메서드입니다.
-   *
-   * <p>chunkContents: 이번 청크 범위로 유입된 콘텐츠 엔티티 리스트
-   *
-   * <p>uniqueKeys를 활용하여 청크 내에 동일하게 들어온 중복 데이터를 먼저 걸러냅니다.
-   *
-   * <p>중복이 제거된 대상들의 ID 목록으로 IN 쿼리를 날려 DB 존재 여부를 한 번에 조회합니다. (N+1 방지)
-   *
-   * <p>DB에 존재하지 않는 최종 신규 아이템들만 saveAll()을 통해 일괄 저장합니다.
+   * chunkContents: 이번 청크 범위로 유입된 콘텐츠 엔티티 리스트
+   * uniqueKeys를 활용하여 청크 내에 동일하게 들어온 중복 데이터를 먼저 걸러냅니다.
+   * 중복이 제거된 대상들의 ID 목록으로 IN 쿼리를 날려 DB 존재 여부를 한 번에 조회합니다. (N+1 방지)
+   * DB에 존재하지 않는 최종 신규 아이템들만 saveAll()을 통해 일괄 저장합니다.
    */
   @Override
   public void write(Chunk<? extends Content> chunk) {
@@ -42,7 +41,7 @@ public class ContentItemWriter implements ItemWriter<Content> {
 
     // 0. 청크 첫 번째 데이터를 통해 제공처(provider) 식별
     ContentProvider provider = chunkContents.get(0).getProvider();
-    int totalReceivedCount = chunkContents.size();
+    final int totalReceivedCount = chunkContents.size();
 
     // 1. [청크 내 자체 중복 제거]
     Set<ProviderKey> uniqueKeys = new HashSet<>();
@@ -54,8 +53,6 @@ public class ContentItemWriter implements ItemWriter<Content> {
         distinctContents.add(item); // 중복이 아닌 키라면 아이템을 추가
       }
     }
-    int chunkDuplicateCount =
-        totalReceivedCount - distinctContents.size(); // 전체 개수 - 중복 제거 된 아이템의 개수
 
     // 2. [DB 존재 여부 일괄 조회]
     List<String> providerIds =
@@ -83,6 +80,32 @@ public class ContentItemWriter implements ItemWriter<Content> {
     if (!contentsToSave.isEmpty()) {
       contentRepository.saveAll(contentsToSave);
     }
+
+    // 5. [비즈니스 데이터 수집 메트릭 카운팅]
+    final int chunkDuplicateCount = totalReceivedCount - distinctContents.size();
+    String contentType = chunkContents.get(0).getType().name().toLowerCase();
+    String providerName = provider.name().toLowerCase();
+
+    // 신규 수집 저장 건수 누적
+    Counter.builder("mopl.batch.collected.items.total")
+        .description("Total number of collected and processed items")
+        .tags(
+            "contentType", contentType,
+            "provider", providerName,
+            "status", "new_saved")
+        .register(meterRegistry)
+        .increment(savedCount);
+
+    // 중복으로 인해 제외된 건수 누적 (청크 내 중복 + DB 기저 중복 합산)
+    int duplicateSkippedCount = chunkDuplicateCount + dbDuplicateCount;
+    Counter.builder("mopl.batch.collected.items.total")
+        .description("Total number of collected and processed items")
+        .tags(
+            "contentType", contentType,
+            "provider", providerName,
+            "status", "duplicate_skipped")
+        .register(meterRegistry)
+        .increment(duplicateSkippedCount);
 
     log.info(
         "[{}] 저장 완료 - 수집: {}, 신규 저장: {}, DB 중복 제외: {}, 청크 내 중복 제외: {}",

@@ -1,5 +1,6 @@
 package com.sb10.mopl.batch.config;
 
+import com.sb10.mopl.batch.interceptor.MetricsClientHttpRequestInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,11 +15,14 @@ public class SportsClientConfig {
 
   @Bean
   public RestClient sportsRestClient(
-      RestClient.Builder builder, ClientHttpRequestFactory requestFactory) {
+      RestClient.Builder builder,
+      ClientHttpRequestFactory requestFactory,
+      MetricsClientHttpRequestInterceptor interceptor) {
     return builder
         .requestFactory(requestFactory)
         .baseUrl(baseUrl)
         .defaultHeader("Accept", "application/json")
+        .requestInterceptor(interceptor)
         .build();
   }
 }
