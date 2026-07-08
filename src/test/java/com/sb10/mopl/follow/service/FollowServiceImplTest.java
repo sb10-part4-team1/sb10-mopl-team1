@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -14,6 +15,10 @@ import com.sb10.mopl.follow.exception.FollowErrorCode;
 import com.sb10.mopl.follow.exception.FollowException;
 import com.sb10.mopl.follow.mapper.FollowMapper;
 import com.sb10.mopl.follow.repository.FollowRepository;
+import com.sb10.mopl.user.entity.User;
+import com.sb10.mopl.user.exception.UserErrorCode;
+import com.sb10.mopl.user.exception.UserException;
+import com.sb10.mopl.user.repository.UserRepository;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +36,8 @@ class FollowServiceImplTest {
   @Mock private FollowRepository followRepository;
 
   @Mock private FollowMapper followMapper;
+
+  @Mock private UserRepository userRepository;
 
   @InjectMocks private FollowServiceImpl followService;
 
@@ -64,6 +71,8 @@ class FollowServiceImplTest {
     given(followMapper.toEntity(followerId, request)).willReturn(follow);
     given(followRepository.save(follow)).willReturn(follow);
     given(followMapper.toDto(follow)).willReturn(followDto);
+    given(userRepository.findByIdAndIsDeletedFalse(followeeId))
+        .willReturn(Optional.of(mock(User.class)));
 
     // when
     FollowDto result = followService.follow(followerId, request);
@@ -79,6 +88,8 @@ class FollowServiceImplTest {
     // given
     given(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId))
         .willReturn(true);
+    given(userRepository.findByIdAndIsDeletedFalse(followeeId))
+        .willReturn(Optional.of(mock(User.class)));
 
     // when & then
     assertThatThrownBy(() -> followService.follow(followerId, request))
@@ -86,6 +97,22 @@ class FollowServiceImplTest {
         .extracting("errorCode")
         .isEqualTo(FollowErrorCode.FOLLOW_ALREADY_EXISTS);
 
+    verify(followRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("팔로우 - 생성 실패 - 팔로우 대상 유저가 존재하지 않음")
+  void follow_fail_followeeNotFound() {
+    // given
+    given(userRepository.findByIdAndIsDeletedFalse(followeeId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> followService.follow(followerId, request))
+        .isInstanceOf(UserException.class)
+        .extracting("errorCode")
+        .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+
+    verify(followRepository, never()).existsByFollowerIdAndFolloweeId(any(), any());
     verify(followRepository, never()).save(any());
   }
 
