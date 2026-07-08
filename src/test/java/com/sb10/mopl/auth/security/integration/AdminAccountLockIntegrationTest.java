@@ -250,7 +250,9 @@ class AdminAccountLockIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"locked\":null}")
                 .with(csrf()))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"))
+        .andExpect(jsonPath("$.details.locked").value("잠금 상태는 필수입니다."));
   }
 
   private User saveUser(UserRole role, String email, boolean locked) {
