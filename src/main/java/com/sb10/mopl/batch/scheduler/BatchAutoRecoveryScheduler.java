@@ -5,6 +5,7 @@ import com.sb10.mopl.batch.service.BatchAdminService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
+import jakarta.annotation.PostConstruct;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -54,6 +55,24 @@ public class BatchAutoRecoveryScheduler {
   // 이미 락이 걸리거나 치명적 에러로 알림을 보낸 JobExecution ID 목록을 기억하여 중복 스팸을 차단합니다.
   private final Set<Long> notifiedExecutionIds = ConcurrentHashMap.newKeySet();
 
+  /*
+   * 애플리케이션 시작 시 모니터링할 배치 작업들의 연속 실패 게이지를 사전 등록합니다.
+   */
+  @PostConstruct
+  public void registerRecoveryFailureGauges() {
+    registerConsecutiveFailureGauge("sportsJob");
+    registerConsecutiveFailureGauge("tmdbJob");
+  }
+
+  private void registerConsecutiveFailureGauge(String jobName) {
+    consecutiveFailures.putIfAbsent(jobName, 0.0);
+    meterRegistry.gauge(
+        "mopl.batch.recovery.failure.consecutive",
+        List.of(Tag.of("jobName", jobName)),
+        consecutiveFailures,
+        map -> map.getOrDefault(jobName, 0.0));
+  }
+
   /** 10분마다 실패한 스포츠 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
   @Scheduled(fixedDelay = 600000)
   public void recoverSportsJob() {
@@ -73,13 +92,6 @@ public class BatchAutoRecoveryScheduler {
     }
 
     log.debug("{} 실패 배치 모니터링 시작", logPrefix);
-
-    /* 연속 실패 횟수 측정을 위한 동적 게이지 등록 */
-    meterRegistry.gauge(
-        "mopl.batch.recovery.failure.consecutive",
-        List.of(Tag.of("jobName", jobName)),
-        consecutiveFailures,
-        map -> map.getOrDefault(jobName, 0.0));
 
     try {
       // 1. 중복 기동 방지 및 최근 실행 인스턴스의 FAILED 상태 조회 (서비스 공통 검증 위임)
