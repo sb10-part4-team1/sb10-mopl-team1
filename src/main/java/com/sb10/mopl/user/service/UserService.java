@@ -95,17 +95,17 @@ public class UserService {
                         UserErrorCode.USER_NOT_FOUND, Map.of("userId", targetUserId)));
 
     UserRole previousRole = user.getRole();
-    UserRole changedRole = userRoleUpdateRequest.role();
+    UserRole newRole = userRoleUpdateRequest.role();
 
-    if (previousRole == changedRole) {
+    if (previousRole == newRole) {
       return;
     }
 
-    user.changeRole(changedRole);
+    user.changeRole(newRole);
     authSessionService.invalidateAllByUserId(targetUserId);
     eventPublisher.publishEvent(
         new UserRoleChangedEvent(
-            targetUserId, previousRole, changedRole, changedByUserId, clock.instant()));
+            targetUserId, previousRole, newRole, changedByUserId, clock.instant()));
   }
 
   @Transactional

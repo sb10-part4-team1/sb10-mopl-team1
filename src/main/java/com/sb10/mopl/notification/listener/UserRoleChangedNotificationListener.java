@@ -35,7 +35,7 @@ public class UserRoleChangedNotificationListener {
             "내 권한이 ["
                 + event.previousRole().name()
                 + "]에서 ["
-                + event.changedRole().name()
+                + event.newRole().name()
                 + "]로 변경되었어요.",
             NotificationLevel.INFO);
 
@@ -44,12 +44,13 @@ public class UserRoleChangedNotificationListener {
     } catch (RuntimeException exception) {
       log.error(
           "권한 변경 알림 발송 실패 - targetUserId: {}, previousRole: {}, "
-              + "changedRole: {}, changedByUserId: {}, exceptionType: {}",
+              + "newRole: {}, changedByUserId: {}, exceptionType: {}",
           event.targetUserId(),
           event.previousRole(),
-          event.changedRole(),
+          event.newRole(),
           event.changedByUserId(),
-          exception.getClass().getSimpleName());
+          exception.getClass().getSimpleName(),
+          exception);
     }
   }
 }
