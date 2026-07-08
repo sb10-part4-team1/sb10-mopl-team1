@@ -10,14 +10,18 @@ import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
+import com.sb10.mopl.user.entity.UserRole;
+import com.sb10.mopl.user.event.UserRoleChangedEvent;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.mapper.UserMapper;
 import com.sb10.mopl.user.repository.UserRepository;
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,6 +36,8 @@ public class UserService {
   private final UserMapper userMapper;
   private final AuthSessionService authSessionService;
   private final TemporaryPasswordService temporaryPasswordService;
+  private final ApplicationEventPublisher eventPublisher;
+  private final Clock clock;
 
   @Transactional
   public UserDto signUp(UserCreateRequest userCreateRequest) {
@@ -78,7 +84,8 @@ public class UserService {
   }
 
   @Transactional
-  public void updateRole(UUID targetUserId, UserRoleUpdateRequest userRoleUpdateRequest) {
+  public void updateRole(
+      UUID targetUserId, UUID changedByUserId, UserRoleUpdateRequest userRoleUpdateRequest) {
     User user =
         userRepository
             .findByIdAndIsDeletedFalse(targetUserId)
@@ -87,12 +94,18 @@ public class UserService {
                     new UserException(
                         UserErrorCode.USER_NOT_FOUND, Map.of("userId", targetUserId)));
 
-    if (user.getRole() == userRoleUpdateRequest.role()) {
+    UserRole previousRole = user.getRole();
+    UserRole newRole = userRoleUpdateRequest.role();
+
+    if (previousRole == newRole) {
       return;
     }
 
-    user.changeRole(userRoleUpdateRequest.role());
+    user.changeRole(newRole);
     authSessionService.invalidateAllByUserId(targetUserId);
+    eventPublisher.publishEvent(
+        new UserRoleChangedEvent(
+            targetUserId, previousRole, newRole, changedByUserId, clock.instant()));
   }
 
   @Transactional
