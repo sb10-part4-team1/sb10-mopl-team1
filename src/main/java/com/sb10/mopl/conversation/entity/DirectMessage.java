@@ -14,10 +14,10 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(
-  name = "direct_messages",
-  indexes = {
-    @Index(name = "IDX_DM_CONVERSATION_TIME", columnList = "conversation_id, created_at")
-  })
+    name = "direct_messages",
+    indexes = {
+      @Index(name = "IDX_DM_CONVERSATION_TIME", columnList = "conversation_id, created_at")
+    })
 public class DirectMessage extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)

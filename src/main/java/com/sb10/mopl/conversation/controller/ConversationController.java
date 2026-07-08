@@ -32,8 +32,8 @@ public class ConversationController {
   // 대화 생성
   @PostMapping
   public ResponseEntity<ConversationDto> createConversation(
-    @CurrentUser AuthenticatedUser currentUser,
-    @Valid @RequestBody ConversationCreateRequest request) {
+      @CurrentUser AuthenticatedUser currentUser,
+      @Valid @RequestBody ConversationCreateRequest request) {
     ConversationDto dto = conversationService.createConversation(currentUser.id(), request);
     return ResponseEntity.ok(dto);
   }
@@ -41,17 +41,17 @@ public class ConversationController {
   // 대화 목록 조회
   @GetMapping
   public ResponseEntity<CursorPageResponse<ConversationDto>> findConversations(
-    @CurrentUser AuthenticatedUser currentUser,
-    @ModelAttribute @Valid ConversationSearchRequest request) {
+      @CurrentUser AuthenticatedUser currentUser,
+      @ModelAttribute @Valid ConversationSearchRequest request) {
     CursorPageResponse<ConversationDto> response =
-      conversationService.findConversations(currentUser.id(), request);
+        conversationService.findConversations(currentUser.id(), request);
     return ResponseEntity.ok(response);
   }
 
   // 특정 사용자와의 대화 조회
   @GetMapping("/with")
   public ResponseEntity<ConversationDto> findConversationWithUser(
-    @CurrentUser AuthenticatedUser currentUser, @RequestParam UUID userId) {
+      @CurrentUser AuthenticatedUser currentUser, @RequestParam UUID userId) {
     ConversationDto dto = conversationService.findConversationWithUser(currentUser.id(), userId);
     return ResponseEntity.ok(dto);
   }
@@ -59,7 +59,7 @@ public class ConversationController {
   // 특정 대화 조회
   @GetMapping("/{conversationId}")
   public ResponseEntity<ConversationDto> findConversation(
-    @CurrentUser AuthenticatedUser currentUser, @PathVariable UUID conversationId) {
+      @CurrentUser AuthenticatedUser currentUser, @PathVariable UUID conversationId) {
     ConversationDto dto = conversationService.findConversation(currentUser.id(), conversationId);
     return ResponseEntity.ok(dto);
   }
@@ -67,20 +67,20 @@ public class ConversationController {
   // DM 목록 조회
   @GetMapping("/{conversationId}/direct-messages")
   public ResponseEntity<CursorPageResponse<DirectMessageDto>> findDirectMessages(
-    @CurrentUser AuthenticatedUser currentUser,
-    @PathVariable UUID conversationId,
-    @ModelAttribute @Valid DirectMessageSearchRequest request) {
+      @CurrentUser AuthenticatedUser currentUser,
+      @PathVariable UUID conversationId,
+      @ModelAttribute @Valid DirectMessageSearchRequest request) {
     CursorPageResponse<DirectMessageDto> response =
-      conversationService.findDirectMessages(currentUser.id(), conversationId, request);
+        conversationService.findDirectMessages(currentUser.id(), conversationId, request);
     return ResponseEntity.ok(response);
   }
 
   // DM 읽음 처리
   @PostMapping("/{conversationId}/direct-messages/{directMessageId}/read")
   public ResponseEntity<Void> readDirectMessage(
-    @CurrentUser AuthenticatedUser currentUser,
-    @PathVariable UUID conversationId,
-    @PathVariable UUID directMessageId) {
+      @CurrentUser AuthenticatedUser currentUser,
+      @PathVariable UUID conversationId,
+      @PathVariable UUID directMessageId) {
     conversationService.readDirectMessage(currentUser.id(), conversationId, directMessageId);
     return ResponseEntity.ok().build();
   }
