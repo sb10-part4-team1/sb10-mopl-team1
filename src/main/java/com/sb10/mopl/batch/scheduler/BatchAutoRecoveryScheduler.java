@@ -73,6 +73,13 @@ public class BatchAutoRecoveryScheduler {
         map -> map.getOrDefault(jobName, 0.0));
   }
 
+  /*
+   * 테스트 목적으로 특정 작업의 연속 실패 횟수를 강제 갱신합니다.
+   */
+  public void setConsecutiveFailureForTest(String jobName, double value) {
+    this.consecutiveFailures.put(jobName, value);
+  }
+
   /** 10분마다 실패한 스포츠 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
   @Scheduled(fixedDelay = 600000)
   public void recoverSportsJob() {
