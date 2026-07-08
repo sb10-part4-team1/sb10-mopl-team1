@@ -75,10 +75,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       AuthenticatedUser authenticatedUser = toAuthenticatedUser(claims);
       verifyAdditionalTokenPolicy(claims, authenticatedUser);
 
-      if (SecurityContextHolder.getContext().getAuthentication() == null) {
-        SecurityContextHolder.getContext()
-            .setAuthentication(createAuthentication(authenticatedUser));
-      }
+      SecurityContextHolder.getContext().setAuthentication(createAuthentication(authenticatedUser));
 
       filterChain.doFilter(request, response);
     } catch (JwtException | IllegalArgumentException exception) {

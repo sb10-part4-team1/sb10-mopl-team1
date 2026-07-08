@@ -33,7 +33,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @SpringBootTest
@@ -82,6 +81,20 @@ class AuthorizationPolicyIntegrationTest {
   }
 
   @Test
+  @DisplayName("비로그인 사용자는 사용자 목록 조회 API 호출 시 401을 받는다")
+  void userList_returnsUnauthorized_whenAnonymousUserRequestsAdminEndpoint() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/users")
+                .param("limit", "20")
+                .param("sortBy", "name")
+                .param("sortDirection", "ASCENDING")
+                .with(anonymous()))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("AUTH01"));
+  }
+
+  @Test
   @DisplayName("PATCH API 요청에 CSRF 토큰이 없으면 403을 반환한다")
   void patchApi_returnsForbidden_whenCsrfTokenIsMissing() throws Exception {
     mockMvc
@@ -123,28 +136,32 @@ class AuthorizationPolicyIntegrationTest {
   }
 
   @Test
-  @DisplayName("관리자는 사용자 목록 조회, 권한 변경, 계정 잠금 API에 접근할 수 있다")
+  @DisplayName("관리자는 사용자 목록 조회와 계정 잠금 API에 접근할 수 있다")
   void adminApi_returnsOk_whenAdminRequestsUserManagementEndpoints() throws Exception {
-    final UUID userId = UUID.randomUUID();
-
     mockMvc
-        .perform(get("/api/users").with(authority(UserRole.ADMIN)))
+        .perform(
+            get("/api/users")
+                .param("limit", "20")
+                .param("sortBy", "name")
+                .param("sortDirection", "ASCENDING")
+                .with(authority(UserRole.ADMIN)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.message").value("admin users"));
+        .andExpect(jsonPath("$.data").isArray())
+        .andExpect(jsonPath("$.hasNext").value(false))
+        .andExpect(jsonPath("$.totalCount").value(0))
+        .andExpect(jsonPath("$.sortBy").value("name"))
+        .andExpect(jsonPath("$.sortDirection").value("ASCENDING"));
+
+    User targetUser = saveUser(UserRole.USER, "lock-target@example.com");
 
     mockMvc
         .perform(
-            patch("/api/users/{userId}/role", userId).with(authority(UserRole.ADMIN)).with(csrf()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.message").value("admin role"));
-
-    mockMvc
-        .perform(
-            patch("/api/users/{userId}/locked", userId)
+            patch("/api/users/{userId}/locked", targetUser.getId())
                 .with(authority(UserRole.ADMIN))
-                .with(csrf()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.message").value("admin locked"));
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"locked\":true}"))
+        .andExpect(status().isNoContent());
   }
 
   @Test
@@ -196,21 +213,6 @@ class AuthorizationPolicyIntegrationTest {
     @GetMapping("/api-docs/test-public")
     MessageResponse publicApiDocs() {
       return new MessageResponse("public api docs");
-    }
-
-    @GetMapping("/api/users")
-    MessageResponse users() {
-      return new MessageResponse("admin users");
-    }
-
-    @PatchMapping("/api/users/{userId}/role")
-    MessageResponse role() {
-      return new MessageResponse("admin role");
-    }
-
-    @PatchMapping("/api/users/{userId}/locked")
-    MessageResponse locked() {
-      return new MessageResponse("admin locked");
     }
   }
 
