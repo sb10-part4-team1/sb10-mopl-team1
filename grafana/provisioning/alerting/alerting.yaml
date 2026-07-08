@@ -1,0 +1,79 @@
+apiVersion: 1
+
+# 1. 알림을 발송할 통로 설정 (Discord)
+contactPoints:
+  - orgId: 1
+    name: 'Discord Alarm'
+    receivers:
+      - uid: 'discord-webhook-receiver'
+        type: 'discord'
+        settings:
+          url: '${DISCORD_WEBHOOK_URL}'
+        disableResolveMessage: false
+
+# 2. 어떤 상황에 알림을 보낼지 기본 정책 설정
+policies:
+  - orgId: 1
+    receiver: 'Discord Alarm'
+    group_by: ['alertname', 'jobName']
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 2h
+
+# 3. 구체적인 경보 규칙 (Alert Rule) 설정
+groups:
+  - orgId: 1
+    name: 'MOPL Batch Alerts'
+    folder: 'MOPL Alerts'
+    interval: 10s
+    rules:
+      - uid: 'mopl-recovery-failure-alert'
+        title: 'MOPL Batch Recovery Consecutive Failures'
+        condition: 'C'
+        for: '10s' # 10초간 조건 지속 시 알림 발송
+        data:
+          # A: 연속 실패 게이지 데이터 가져오기
+          - refId: 'A'
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: 'mopl-prometheus'
+            model:
+              expr: 'mopl_batch_recovery_failure_consecutive'
+              intervalMs: 10000
+              maxDataPoints: 100
+              refId: 'A'
+          # B: 시간 계열 데이터를 라벨별 단일값(Last)으로 축소 (Reduce)
+          - refId: 'B'
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: '__expr__'
+            model:
+              datasource:
+                type: '__expr__'
+                uid: '__expr__'
+              expression: 'A'
+              reducer: 'last'
+              type: 'reduce'
+              refId: 'B'
+          # C: 축소된 단일값이 2.9를 넘었는지 수식으로 평가 (Math)
+          - refId: 'C'
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: '__expr__'
+            model:
+              datasource:
+                type: '__expr__'
+                uid: '__expr__'
+              expression: '$B > 2.9'
+              type: 'math'
+              refId: 'C'
+        noDataState: 'OK'
+        execErrState: 'Error'
+        annotations:
+          summary: 'MOPL 자동 복구 최종 실패 및 락(Lock) 감지'
+          description: '배치 작업 {{ $labels.jobName }}이(가) 3회 연속 실패하여 자동 복구 처리가 영구 차단되었습니다. 즉시 서버 로그를 확인하세요.'
+        labels:
+          severity: 'critical'
