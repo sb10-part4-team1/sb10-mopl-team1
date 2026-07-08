@@ -35,3 +35,10 @@ mopl:
     api-pool-size: 15
     batch-pool-name: HikariPool-Dev-Batch
     batch-pool-size: 5
+
+# Actuator 메트릭 상세 분석 설정 (Prometheus p99 백분위 분포 수집 활성화)
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        mopl.api.call.duration.seconds: true

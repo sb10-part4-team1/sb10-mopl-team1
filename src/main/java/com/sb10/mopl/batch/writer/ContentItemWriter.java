@@ -3,9 +3,12 @@ package com.sb10.mopl.batch.writer;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentProvider;
 import com.sb10.mopl.content.repository.ContentRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -13,25 +16,24 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-/** 모든 콘텐츠 수집(배치) 스텝에서 공통으로 사용되는 영속화 라이터입니다. */
+/* 모든 콘텐츠 수집(배치) 스텝에서 공통으로 사용되는 영속화 라이터입니다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ContentItemWriter implements ItemWriter<Content> {
 
   private final ContentRepository contentRepository;
+  private final MeterRegistry meterRegistry;
 
-  /**
+  /*
    * 청크 단위 저장 시, 청크 내 자체 중복 제거와 N+1 쿼리 문제를 해결하는 메서드입니다.
-   *
-   * <p>chunkContents: 이번 청크 범위로 유입된 콘텐츠 엔티티 리스트
-   *
-   * <p>uniqueKeys를 활용하여 청크 내에 동일하게 들어온 중복 데이터를 먼저 걸러냅니다.
-   *
-   * <p>중복이 제거된 대상들의 ID 목록으로 IN 쿼리를 날려 DB 존재 여부를 한 번에 조회합니다. (N+1 방지)
-   *
-   * <p>DB에 존재하지 않는 최종 신규 아이템들만 saveAll()을 통해 일괄 저장합니다.
+   * chunkContents: 이번 청크 범위로 유입된 콘텐츠 엔티티 리스트
+   * uniqueKeys를 활용하여 청크 내에 동일하게 들어온 중복 데이터를 먼저 걸러냅니다.
+   * 중복이 제거된 대상들의 ID 목록으로 IN 쿼리를 날려 DB 존재 여부를 한 번에 조회합니다. (N+1 방지)
+   * DB에 존재하지 않는 최종 신규 아이템들만 saveAll()을 통해 일괄 저장합니다.
    */
   @Override
   public void write(Chunk<? extends Content> chunk) {
@@ -42,7 +44,7 @@ public class ContentItemWriter implements ItemWriter<Content> {
 
     // 0. 청크 첫 번째 데이터를 통해 제공처(provider) 식별
     ContentProvider provider = chunkContents.get(0).getProvider();
-    int totalReceivedCount = chunkContents.size();
+    final int totalReceivedCount = chunkContents.size();
 
     // 1. [청크 내 자체 중복 제거]
     Set<ProviderKey> uniqueKeys = new HashSet<>();
@@ -54,8 +56,6 @@ public class ContentItemWriter implements ItemWriter<Content> {
         distinctContents.add(item); // 중복이 아닌 키라면 아이템을 추가
       }
     }
-    int chunkDuplicateCount =
-        totalReceivedCount - distinctContents.size(); // 전체 개수 - 중복 제거 된 아이템의 개수
 
     // 2. [DB 존재 여부 일괄 조회]
     List<String> providerIds =
@@ -84,6 +84,14 @@ public class ContentItemWriter implements ItemWriter<Content> {
       contentRepository.saveAll(contentsToSave);
     }
 
+    // 5. [비즈니스 데이터 수집 메트릭 카운팅]
+    final int chunkDuplicateCount = totalReceivedCount - distinctContents.size();
+    String contentType = chunkContents.get(0).getType().name().toLowerCase(Locale.ROOT);
+    String providerName = provider.name().toLowerCase(Locale.ROOT);
+    int duplicateSkippedCount = chunkDuplicateCount + dbDuplicateCount;
+
+    recordMetricsAfterCommit(contentType, providerName, savedCount, duplicateSkippedCount);
+
     log.info(
         "[{}] 저장 완료 - 수집: {}, 신규 저장: {}, DB 중복 제외: {}, 청크 내 중복 제외: {}",
         provider,
@@ -91,6 +99,44 @@ public class ContentItemWriter implements ItemWriter<Content> {
         savedCount,
         dbDuplicateCount,
         chunkDuplicateCount);
+  }
+
+  /*
+   * DB 트랜잭션이 성공적으로 커밋(Commit)된 직후에만 수집량 메트릭을 기록하는 헬퍼 메서드입니다.
+   * 롤백 시 지표가 과대 측정되는 정합성 불일치를 방지합니다.
+   */
+  private void recordMetricsAfterCommit(
+      String contentType, String providerName, int savedCount, int duplicateSkippedCount) {
+    Runnable recordTask =
+        () -> {
+          incrementCollectedItemsCounter(contentType, providerName, "new_saved", savedCount);
+          incrementCollectedItemsCounter(
+              contentType, providerName, "duplicate_skipped", duplicateSkippedCount);
+        };
+
+    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              recordTask.run();
+            }
+          });
+    } else {
+      recordTask.run();
+    }
+  }
+
+  /*
+   * 공통 메트릭 카운터를 증가시키는 내부 헬퍼 메서드입니다.
+   */
+  private void incrementCollectedItemsCounter(
+      String contentType, String providerName, String status, int count) {
+    Counter.builder("mopl.batch.collected.items.total")
+        .description("Total number of collected and processed items")
+        .tags("contentType", contentType, "provider", providerName, "status", status)
+        .register(meterRegistry)
+        .increment(count);
   }
 
   private record ProviderKey(ContentProvider provider, String providerId) {}
