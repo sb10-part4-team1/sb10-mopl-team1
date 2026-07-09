@@ -110,7 +110,8 @@ class JwtAuthenticationFilterTest {
             jwtProviderAt(NOW),
             activeJwtSessionService(),
             new AuthErrorResponseWriter(objectMapper),
-            new RequestMatcher[] {publicMatcher});
+            new RequestMatcher[] {publicMatcher},
+            new RequestMatcher[0]);
     MockHttpServletRequest request = request("/api/public");
     request.addHeader(HttpHeaders.AUTHORIZATION, "NotBearer token");
     MockHttpServletResponse response = new MockHttpServletResponse();
@@ -144,6 +145,30 @@ class JwtAuthenticationFilterTest {
                 "Invalid or expired access token.", body.get("details").get("message").asText()),
         () -> assertNull(SecurityContextHolder.getContext().getAuthentication()),
         () -> assertTrue(!chainInvoked.get()));
+  }
+
+  @Test
+  @DisplayName("인증 실패를 통과시키는 경로에서는 잘못된 토큰이어도 필터 체인을 통과한다")
+  void doFilter_success_whenAuthenticationFailureCanContinue() throws Exception {
+    RequestMatcher signOutMatcher = request -> "/api/auth/sign-out".equals(request.getRequestURI());
+    JwtAuthenticationFilter filter =
+        new JwtAuthenticationFilter(
+            jwtProviderAt(NOW),
+            activeJwtSessionService(),
+            new AuthErrorResponseWriter(objectMapper),
+            new RequestMatcher[0],
+            new RequestMatcher[] {signOutMatcher});
+    MockHttpServletRequest request = request("/api/auth/sign-out");
+    request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer malformed-token");
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    AtomicBoolean chainInvoked = new AtomicBoolean(false);
+
+    filter.doFilter(request, response, chain(chainInvoked));
+
+    assertAll(
+        () -> assertTrue(chainInvoked.get()),
+        () -> assertEquals(200, response.getStatus()),
+        () -> assertNull(SecurityContextHolder.getContext().getAuthentication()));
   }
 
   @Test
@@ -269,6 +294,7 @@ class JwtAuthenticationFilterTest {
         jwtProvider,
         activeJwtSessionService(),
         new AuthErrorResponseWriter(objectMapper),
+        new RequestMatcher[0],
         new RequestMatcher[0]);
   }
 
