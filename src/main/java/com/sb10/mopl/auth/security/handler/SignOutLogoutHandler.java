@@ -1,8 +1,10 @@
 package com.sb10.mopl.auth.security.handler;
 
+import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieResolver;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.service.AuthSessionService;
+import com.sb10.mopl.auth.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,8 @@ import org.springframework.stereotype.Component;
 public class SignOutLogoutHandler implements LogoutHandler {
 
   private final AuthSessionService authSessionService;
+  private final RefreshTokenService refreshTokenService;
+  private final RefreshTokenCookieResolver refreshTokenCookieResolver;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
 
   @Override
@@ -30,9 +34,15 @@ public class SignOutLogoutHandler implements LogoutHandler {
             "Failed to invalidate authentication session on logout. userId={}",
             user.id(),
             exception);
-      } finally {
-        refreshTokenCookieWriter.expireRefreshTokenCookie(response);
       }
+    }
+
+    try {
+      refreshTokenCookieResolver.resolve(request).ifPresent(refreshTokenService::revoke);
+    } catch (RuntimeException exception) {
+      log.error("Failed to revoke refresh token on logout.", exception);
+    } finally {
+      refreshTokenCookieWriter.expireRefreshTokenCookie(response);
     }
   }
 }

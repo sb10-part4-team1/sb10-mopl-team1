@@ -31,16 +31,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private final JwtSessionService jwtSessionService;
   private final AuthErrorResponseWriter responseWriter;
   private final List<RequestMatcher> skipRequestMatchers;
+  private final List<RequestMatcher> continueOnFailureRequestMatchers;
 
   public JwtAuthenticationFilter(
       JwtProvider jwtProvider,
       JwtSessionService jwtSessionService,
       AuthErrorResponseWriter responseWriter,
-      RequestMatcher[] skipRequestMatchers) {
+      RequestMatcher[] skipRequestMatchers,
+      RequestMatcher[] continueOnFailureRequestMatchers) {
     this.jwtProvider = jwtProvider;
     this.jwtSessionService = jwtSessionService;
     this.responseWriter = responseWriter;
     this.skipRequestMatchers = List.of(skipRequestMatchers);
+    this.continueOnFailureRequestMatchers = List.of(continueOnFailureRequestMatchers);
   }
 
   @Override
@@ -60,12 +63,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     if (!authorization.startsWith(BEARER_PREFIX)) {
+      if (shouldContinueOnAuthenticationFailure(request)) {
+        filterChain.doFilter(request, response);
+        return;
+      }
       writeAuthenticationFailure(response, "Authorization header must use Bearer token.");
       return;
     }
 
     String token = authorization.substring(BEARER_PREFIX.length()).trim();
     if (token.isBlank()) {
+      if (shouldContinueOnAuthenticationFailure(request)) {
+        filterChain.doFilter(request, response);
+        return;
+      }
       writeAuthenticationFailure(response, "Bearer token is empty.");
       return;
     }
@@ -80,8 +91,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
     } catch (JwtException | IllegalArgumentException exception) {
       SecurityContextHolder.clearContext();
+      if (shouldContinueOnAuthenticationFailure(request)) {
+        filterChain.doFilter(request, response);
+        return;
+      }
       writeAuthenticationFailure(response, "Invalid or expired access token.");
     }
+  }
+
+  private boolean shouldContinueOnAuthenticationFailure(HttpServletRequest request) {
+    return continueOnFailureRequestMatchers.stream().anyMatch(matcher -> matcher.matches(request));
   }
 
   private AuthenticatedUser toAuthenticatedUser(Claims claims) {
