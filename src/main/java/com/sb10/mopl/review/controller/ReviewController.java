@@ -33,7 +33,7 @@ public class ReviewController {
 
   @PostMapping
   public ResponseEntity<ReviewDto> create(
-    @CurrentUser AuthenticatedUser currentUser, @Valid @RequestBody ReviewCreateRequest request) {
+      @CurrentUser AuthenticatedUser currentUser, @Valid @RequestBody ReviewCreateRequest request) {
 
     ReviewDto response = reviewService.create(request, currentUser.id());
 
@@ -42,27 +42,27 @@ public class ReviewController {
 
   @GetMapping
   public ResponseEntity<CursorPageResponse<ReviewDto>> findAll(
-    @RequestParam(required = false) UUID contentId,
-    @Valid @ModelAttribute CursorPageRequest pageRequest) {
+      @RequestParam(required = false) UUID contentId,
+      @Valid @ModelAttribute CursorPageRequest pageRequest) {
 
     // 리뷰 목록을 커서 페이지네이션 방식으로 조회
     CursorPageResponse<ReviewDto> response =
-      reviewService.findAll(
-        contentId,
-        pageRequest.cursor(),
-        pageRequest.idAfter(),
-        pageRequest.limit(),
-        pageRequest.sortBy(),
-        pageRequest.sortDirection());
+        reviewService.findAll(
+            contentId,
+            pageRequest.cursor(),
+            pageRequest.idAfter(),
+            pageRequest.limit(),
+            pageRequest.sortBy(),
+            pageRequest.sortDirection());
 
     return ResponseEntity.ok(response);
   }
 
   @PatchMapping("/{reviewId}")
   public ResponseEntity<ReviewDto> update(
-    @PathVariable UUID reviewId,
-    @Valid @RequestBody ReviewUpdateRequest request,
-    @CurrentUser AuthenticatedUser currentUser) {
+      @PathVariable UUID reviewId,
+      @Valid @RequestBody ReviewUpdateRequest request,
+      @CurrentUser AuthenticatedUser currentUser) {
 
     ReviewDto response = reviewService.update(reviewId, request, currentUser.id());
 
@@ -71,7 +71,7 @@ public class ReviewController {
 
   @DeleteMapping("/{reviewId}")
   public ResponseEntity<Void> delete(
-    @PathVariable UUID reviewId, @CurrentUser AuthenticatedUser currentUser) {
+      @PathVariable UUID reviewId, @CurrentUser AuthenticatedUser currentUser) {
 
     reviewService.delete(reviewId, currentUser.id());
 
