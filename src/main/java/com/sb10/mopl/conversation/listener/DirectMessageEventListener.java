@@ -24,15 +24,14 @@ public class DirectMessageEventListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void sendDirectMessageNotification(DirectMessageSentEvent event) {
     try {
-      sseService.send(
-        Set.of(event.receiverId()), DIRECT_MESSAGE_EVENT_NAME, event.directMessage());
+      sseService.send(Set.of(event.receiverId()), DIRECT_MESSAGE_EVENT_NAME, event.directMessage());
     } catch (RuntimeException exception) {
       log.error(
-        "DM SSE 알림 발송 실패 - receiverId: {}, conversationId: {}, exceptionType: {}",
-        event.receiverId(),
-        event.directMessage().conversationId(),
-        exception.getClass().getSimpleName(),
-        exception);
+          "DM SSE 알림 발송 실패 - receiverId: {}, conversationId: {}, exceptionType: {}",
+          event.receiverId(),
+          event.directMessage().conversationId(),
+          exception.getClass().getSimpleName(),
+          exception);
     }
   }
 }
