@@ -31,7 +31,7 @@ public class PlaylistSubscriptionServiceImpl implements PlaylistSubscriptionServ
   @Transactional
   public void subscribe(UUID subscriberId, UUID playlistId) {
     User subscriber = getSubscriber(subscriberId);
-    Playlist playlist = getPlaylist(playlistId);
+    Playlist playlist = getPlaylistWithOwner(playlistId);
     validateNotOwnPlaylist(subscriberId, playlist);
     validateSubscriptionNotExists(subscriberId, playlistId);
 
@@ -68,7 +68,7 @@ public class PlaylistSubscriptionServiceImpl implements PlaylistSubscriptionServ
   }
 
   // 구독 대상 플레이리스트 존재 여부 검증 및 조회
-  private Playlist getPlaylist(UUID playlistId) {
+  private Playlist getPlaylistWithOwner(UUID playlistId) {
     return playlistRepository
         .findByIdWithOwner(playlistId)
         .orElseThrow(
