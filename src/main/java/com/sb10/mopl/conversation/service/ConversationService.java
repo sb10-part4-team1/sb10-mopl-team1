@@ -11,13 +11,13 @@ import com.sb10.mopl.conversation.entity.Conversation;
 import com.sb10.mopl.conversation.entity.ConversationParticipant;
 import com.sb10.mopl.conversation.entity.ConversationParticipantId;
 import com.sb10.mopl.conversation.entity.DirectMessage;
+import com.sb10.mopl.conversation.event.DirectMessageSentEvent;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
 import com.sb10.mopl.conversation.exception.ConversationException;
 import com.sb10.mopl.conversation.mapper.ConversationMapper;
 import com.sb10.mopl.conversation.repository.ConversationParticipantRepository;
 import com.sb10.mopl.conversation.repository.ConversationRepository;
 import com.sb10.mopl.conversation.repository.DirectMessageRepository;
-import com.sb10.mopl.sse.service.SseService;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +44,7 @@ public class ConversationService {
   private final ConversationParticipantRepository conversationParticipantRepository;
   private final DirectMessageRepository directMessageRepository;
   private final UserRepository userRepository;
-  private final SseService sseService;
+  private final ApplicationEventPublisher eventPublisher;
 
   private final ConversationMapper conversationMapper;
 
@@ -53,29 +54,29 @@ public class ConversationService {
 
     if (requestUserId.equals(withUserId)) {
       throw new ConversationException(
-          ConversationErrorCode.SELF_CONVERSATION_NOT_ALLOWED, Map.of("id", withUserId));
+        ConversationErrorCode.SELF_CONVERSATION_NOT_ALLOWED, Map.of("id", withUserId));
     }
 
     // 이미 존재하는 대화가 있으면 그대로 반환 (중복 생성 방지)
     Optional<Conversation> existing =
-        conversationRepository.findConversationByUserIds(requestUserId, withUserId);
+      conversationRepository.findConversationByUserIds(requestUserId, withUserId);
     if (existing.isPresent()) {
       return toDto(existing.get(), requestUserId);
     }
 
     User me =
-        userRepository
-            .findById(requestUserId)
-            .orElseThrow(
-                () ->
-                    new UserException(
-                        UserErrorCode.USER_NOT_FOUND, Map.of("userId", requestUserId)));
+      userRepository
+        .findById(requestUserId)
+        .orElseThrow(
+          () ->
+            new UserException(
+              UserErrorCode.USER_NOT_FOUND, Map.of("userId", requestUserId)));
     User withUser =
-        userRepository
-            .findById(withUserId)
-            .orElseThrow(
-                () ->
-                    new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", withUserId)));
+      userRepository
+        .findById(withUserId)
+        .orElseThrow(
+          () ->
+            new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", withUserId)));
 
     Conversation conversation = new Conversation();
     conversationRepository.save(conversation);
@@ -89,7 +90,7 @@ public class ConversationService {
   // 대화 조회
   @Transactional(readOnly = true)
   public CursorPageResponse<ConversationDto> findConversations(
-      UUID myUserId, ConversationSearchRequest request) {
+    UUID myUserId, ConversationSearchRequest request) {
     List<Conversation> result = conversationRepository.search(myUserId, request);
 
     boolean hasNext = result.size() > request.limit();
@@ -108,26 +109,26 @@ public class ConversationService {
     long totalCount = conversationRepository.countConversations(myUserId, request);
 
     return new CursorPageResponse<>(
-        dtos,
-        nextCursor,
-        nextIdAfter,
-        hasNext,
-        totalCount,
-        request.sortBy().name(),
-        request.sortDirection());
+      dtos,
+      nextCursor,
+      nextIdAfter,
+      hasNext,
+      totalCount,
+      request.sortBy().name(),
+      request.sortDirection());
   }
 
   // 특정 대화 조회
   @Transactional(readOnly = true)
   public ConversationDto findConversation(UUID myUserId, UUID conversationId) {
     Conversation conversation =
-        conversationRepository
-            .findById(conversationId)
-            .orElseThrow(
-                () ->
-                    new ConversationException(
-                        ConversationErrorCode.CONVERSATION_NOT_FOUND,
-                        Map.of("conversationId", conversationId)));
+      conversationRepository
+        .findById(conversationId)
+        .orElseThrow(
+          () ->
+            new ConversationException(
+              ConversationErrorCode.CONVERSATION_NOT_FOUND,
+              Map.of("conversationId", conversationId)));
 
     requireParticipant(myUserId, conversationId);
 
@@ -140,17 +141,17 @@ public class ConversationService {
     // myUserId와 withUserId가 같은 경우 방지
     if (myUserId.equals(withUserId)) {
       throw new ConversationException(
-          ConversationErrorCode.SELF_CONVERSATION_NOT_ALLOWED, Map.of("id", withUserId));
+        ConversationErrorCode.SELF_CONVERSATION_NOT_ALLOWED, Map.of("id", withUserId));
     }
 
     Conversation conversation =
-        conversationRepository
-            .findConversationByUserIds(myUserId, withUserId)
-            .orElseThrow(
-                () ->
-                    new ConversationException(
-                        ConversationErrorCode.CONVERSATION_PARTICIPANT_NOT_FOUND,
-                        Map.of("withUserId", withUserId)));
+      conversationRepository
+        .findConversationByUserIds(myUserId, withUserId)
+        .orElseThrow(
+          () ->
+            new ConversationException(
+              ConversationErrorCode.CONVERSATION_PARTICIPANT_NOT_FOUND,
+              Map.of("withUserId", withUserId)));
 
     return toDto(conversation, myUserId);
   }
@@ -158,7 +159,7 @@ public class ConversationService {
   // DM 목록 조회
   @Transactional(readOnly = true)
   public CursorPageResponse<DirectMessageDto> findDirectMessages(
-      UUID myUserId, UUID conversationId, DirectMessageSearchRequest request) {
+    UUID myUserId, UUID conversationId, DirectMessageSearchRequest request) {
     requireParticipant(myUserId, conversationId);
 
     List<DirectMessage> result = directMessageRepository.search(conversationId, request);
@@ -179,60 +180,60 @@ public class ConversationService {
     long totalCount = directMessageRepository.countMessages(conversationId);
 
     return new CursorPageResponse<DirectMessageDto>(
-        dtos,
-        nextCursor,
-        nextIdAfter,
-        hasNext,
-        totalCount,
-        request.sortBy().name(),
-        request.sortDirection());
+      dtos,
+      nextCursor,
+      nextIdAfter,
+      hasNext,
+      totalCount,
+      request.sortBy().name(),
+      request.sortDirection());
   }
 
   // DM 전송 (웹소켓)
   public DirectMessageDto sendDirectMessage(
-      UUID senderId, UUID conversationId, DirectMessageSendRequest request) {
+    UUID senderId, UUID conversationId, DirectMessageSendRequest request) {
     requireParticipant(senderId, conversationId);
 
     Conversation conversation =
-        conversationRepository
-            .findById(conversationId)
-            .orElseThrow(
-                () ->
-                    new ConversationException(
-                        ConversationErrorCode.CONVERSATION_NOT_FOUND,
-                        Map.of("conversationId", conversationId)));
+      conversationRepository
+        .findById(conversationId)
+        .orElseThrow(
+          () ->
+            new ConversationException(
+              ConversationErrorCode.CONVERSATION_NOT_FOUND,
+              Map.of("conversationId", conversationId)));
 
     ConversationParticipant receiverParticipant =
-        conversationParticipantRepository
-            .findOtherParticipant(conversationId, senderId)
-            .orElseThrow(
-                () ->
-                    new ConversationException(
-                        ConversationErrorCode.CONVERSATION_NOT_FOUND,
-                        Map.of("conversationId", conversationId)));
+      conversationParticipantRepository
+        .findOtherParticipant(conversationId, senderId)
+        .orElseThrow(
+          () ->
+            new ConversationException(
+              ConversationErrorCode.CONVERSATION_NOT_FOUND,
+              Map.of("conversationId", conversationId)));
 
     User sender =
-        userRepository
-            .findById(senderId)
-            .orElseThrow(
-                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
+      userRepository
+        .findById(senderId)
+        .orElseThrow(
+          () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
 
     User receiver = receiverParticipant.getUser();
 
     DirectMessage directMessage =
-        DirectMessage.builder()
-            .conversation(conversation)
-            .sender(sender)
-            .receiver(receiver)
-            .content(request.content())
-            .build();
+      DirectMessage.builder()
+        .conversation(conversation)
+        .sender(sender)
+        .receiver(receiver)
+        .content(request.content())
+        .build();
 
     directMessageRepository.save(directMessage);
 
     DirectMessageDto dto = conversationMapper.toDto(directMessage);
 
-    // 비활성 대화(수신자가 지금 이 대화를 보고 있지 않을 때)를 위한 SSE 알림. 활성 대화는 웹소켓 브로드캐스트로 별도 전달됩니다.
-    sseService.send(Set.of(receiver.getId()), "direct-messages", dto);
+    // 이벤트를 이용하여 SSE 발송 처리
+    eventPublisher.publishEvent(new DirectMessageSentEvent(receiver.getId(), dto));
 
     return dto;
   }
@@ -242,19 +243,19 @@ public class ConversationService {
     requireParticipant(myUserId, conversationId);
 
     DirectMessage directMessage =
-        directMessageRepository
-            .findByIdAndConversationId(directMessageId, conversationId)
-            .orElseThrow(
-                () ->
-                    new ConversationException(
-                        ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
-                        Map.of("directMessageId", directMessageId)));
+      directMessageRepository
+        .findByIdAndConversationId(directMessageId, conversationId)
+        .orElseThrow(
+          () ->
+            new ConversationException(
+              ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
+              Map.of("directMessageId", directMessageId)));
 
     if (!directMessage.getReceiver().getId().equals(myUserId)) {
       // 수신자가 아니면 존재 여부 노출 방지를 위해 404로 통일
       throw new ConversationException(
-          ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
-          Map.of("directMessageId", directMessageId));
+        ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
+        Map.of("directMessageId", directMessageId));
     }
 
     directMessage.updateIsRead(true);
@@ -262,12 +263,12 @@ public class ConversationService {
 
   private void requireParticipant(UUID myUserId, UUID conversationId) {
     boolean isParticipant =
-        conversationParticipantRepository.existsById(
-            new ConversationParticipantId(conversationId, myUserId));
+      conversationParticipantRepository.existsById(
+        new ConversationParticipantId(conversationId, myUserId));
     if (!isParticipant) {
       // 참여자가 아니면 존재 여부 노출 방지를 위해 404로 통일
       throw new ConversationException(
-          ConversationErrorCode.CONVERSATION_NOT_FOUND, Map.of("conversationId", conversationId));
+        ConversationErrorCode.CONVERSATION_NOT_FOUND, Map.of("conversationId", conversationId));
     }
   }
 
@@ -288,36 +289,36 @@ public class ConversationService {
     List<UUID> conversationIds = conversations.stream().map(Conversation::getId).toList();
 
     Map<UUID, ConversationParticipant> otherParticipantsByConversationId =
-        conversationParticipantRepository.findOtherParticipants(conversationIds, myUserId).stream()
-            .collect(Collectors.toMap(p -> p.getConversation().getId(), Function.identity()));
+      conversationParticipantRepository.findOtherParticipants(conversationIds, myUserId).stream()
+        .collect(Collectors.toMap(p -> p.getConversation().getId(), Function.identity()));
 
     Map<UUID, DirectMessage> lastMessagesByConversationId =
-        directMessageRepository.findLastMessagesByConversationIds(conversationIds).stream()
-            .collect(
-                Collectors.toMap(
-                    dm -> dm.getConversation().getId(),
-                    Function.identity(),
-                    (first, second) -> first));
+      directMessageRepository.findLastMessagesByConversationIds(conversationIds).stream()
+        .collect(
+          Collectors.toMap(
+            dm -> dm.getConversation().getId(),
+            Function.identity(),
+            (first, second) -> first));
 
     Set<UUID> conversationIdsWithUnread =
-        new HashSet<>(
-            directMessageRepository.findConversationIdsWithUnreadMessages(
-                conversationIds, myUserId));
+      new HashSet<>(
+        directMessageRepository.findConversationIdsWithUnreadMessages(
+          conversationIds, myUserId));
 
     return conversations.stream()
-        .map(
-            conversation -> {
-              ConversationParticipant other =
-                  otherParticipantsByConversationId.get(conversation.getId());
-              if (other == null) {
-                throw new ConversationException(
-                    ConversationErrorCode.CONVERSATION_NOT_FOUND,
-                    Map.of("conversationId", conversation.getId()));
-              }
-              DirectMessage lastMessage = lastMessagesByConversationId.get(conversation.getId());
-              boolean hasUnread = conversationIdsWithUnread.contains(conversation.getId());
-              return conversationMapper.toDto(conversation, other, lastMessage, hasUnread);
-            })
-        .toList();
+      .map(
+        conversation -> {
+          ConversationParticipant other =
+            otherParticipantsByConversationId.get(conversation.getId());
+          if (other == null) {
+            throw new ConversationException(
+              ConversationErrorCode.CONVERSATION_NOT_FOUND,
+              Map.of("conversationId", conversation.getId()));
+          }
+          DirectMessage lastMessage = lastMessagesByConversationId.get(conversation.getId());
+          boolean hasUnread = conversationIdsWithUnread.contains(conversation.getId());
+          return conversationMapper.toDto(conversation, other, lastMessage, hasUnread);
+        })
+      .toList();
   }
 }
