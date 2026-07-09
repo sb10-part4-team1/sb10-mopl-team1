@@ -4,6 +4,8 @@ import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.conversation.dto.ConversationCreateRequest;
 import com.sb10.mopl.conversation.dto.ConversationDto;
 import com.sb10.mopl.conversation.dto.ConversationSearchRequest;
+import com.sb10.mopl.conversation.dto.DirectMessageDto;
+import com.sb10.mopl.conversation.dto.DirectMessageSearchRequest;
 import com.sb10.mopl.conversation.entity.Conversation;
 import com.sb10.mopl.conversation.entity.ConversationParticipant;
 import com.sb10.mopl.conversation.entity.ConversationParticipantId;
@@ -124,14 +126,7 @@ public class ConversationService {
                         ConversationErrorCode.CONVERSATION_NOT_FOUND,
                         Map.of("conversationId", conversationId)));
 
-    boolean isParticipant =
-        conversationParticipantRepository.existsById(
-            new ConversationParticipantId(conversationId, myUserId));
-    if (!isParticipant) {
-      // 참여자가 아니면 존재 여부 노출 방지를 위해 404로 통일
-      throw new ConversationException(
-          ConversationErrorCode.CONVERSATION_NOT_FOUND, Map.of("conversationId", conversationId));
-    }
+    requireParticipant(myUserId, conversationId);
 
     return toDto(conversation, myUserId);
   }
@@ -155,6 +150,73 @@ public class ConversationService {
                         Map.of("withUserId", withUserId)));
 
     return toDto(conversation, myUserId);
+  }
+
+  // DM 목록 조회
+  @Transactional(readOnly = true)
+  public CursorPageResponse<DirectMessageDto> findDirectMessages(
+      UUID myUserId, UUID conversationId, DirectMessageSearchRequest request) {
+    requireParticipant(myUserId, conversationId);
+
+    List<DirectMessage> result = directMessageRepository.search(conversationId, request);
+
+    boolean hasNext = result.size() > request.limit();
+    List<DirectMessage> data = hasNext ? result.subList(0, request.limit()) : result;
+
+    List<DirectMessageDto> dtos = data.stream().map(conversationMapper::toDto).toList();
+
+    String nextCursor = null;
+    UUID nextIdAfter = null;
+    if (hasNext && !data.isEmpty()) {
+      DirectMessage last = data.get(data.size() - 1);
+      nextCursor = last.getCreatedAt().toString();
+      nextIdAfter = last.getId();
+    }
+
+    long totalCount = directMessageRepository.countMessages(conversationId);
+
+    return new CursorPageResponse<DirectMessageDto>(
+        dtos,
+        nextCursor,
+        nextIdAfter,
+        hasNext,
+        totalCount,
+        request.sortBy().name(),
+        request.sortDirection());
+  }
+
+  // DM 읽음 처리
+  public void readDirectMessage(UUID myUserId, UUID conversationId, UUID directMessageId) {
+    requireParticipant(myUserId, conversationId);
+
+    DirectMessage directMessage =
+        directMessageRepository
+            .findByIdAndConversationId(directMessageId, conversationId)
+            .orElseThrow(
+                () ->
+                    new ConversationException(
+                        ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
+                        Map.of("directMessageId", directMessageId)));
+
+    if (!directMessage.getReceiver().getId().equals(myUserId)) {
+      // 수신자가 아니면 존재 여부 노출 방지를 위해 404로 통일
+      throw new ConversationException(
+          ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
+          Map.of("directMessageId", directMessageId));
+    }
+
+    directMessage.updateIsRead(true);
+  }
+
+  private void requireParticipant(UUID myUserId, UUID conversationId) {
+    boolean isParticipant =
+        conversationParticipantRepository.existsById(
+            new ConversationParticipantId(conversationId, myUserId));
+    if (!isParticipant) {
+      // 참여자가 아니면 존재 여부 노출 방지를 위해 404로 통일
+      throw new ConversationException(
+          ConversationErrorCode.CONVERSATION_NOT_FOUND, Map.of("conversationId", conversationId));
+    }
   }
 
   private ConversationDto toDto(Conversation conversation, UUID myUserId) {
