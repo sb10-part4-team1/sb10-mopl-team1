@@ -29,7 +29,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Review extends BaseUpdatableEntity {
 
-  // JPA 연관관계 DB에 저장될때는 id만 저장
   // 리뷰 대상인 콘텐츠
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "content_id", nullable = false)
