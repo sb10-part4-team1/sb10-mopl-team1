@@ -78,7 +78,7 @@ class ContentServiceTest {
 
     // then: 저장 로직이 정상 처리되었고 DTO 응답 스펙이 알맞게 리턴되었는지 확인
     assertThat(result).isNotNull();
-    assertThat(result.type()).isEqualTo("MOVIE");
+    assertThat(result.type()).isEqualTo(ContentType.MOVIE);
     assertThat(result.title()).isEqualTo("인셉션");
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/test.jpg");
     assertThat(result.tags()).containsExactlyInAnyOrder("SF", "스릴러");
@@ -105,7 +105,7 @@ class ContentServiceTest {
 
     // then: 업로드 실패에도 디폴트 이미지 경로인 "/uploads/default-thumbnail.png"로 세팅되는지 확인
     assertThat(result).isNotNull();
-    assertThat(result.type()).isEqualTo("SPORT");
+    assertThat(result.type()).isEqualTo(ContentType.SPORT);
     assertThat(result.title()).isEqualTo("축구 중계");
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
     verify(tagRepository, never()).saveAll(anyCollection());
@@ -131,7 +131,7 @@ class ContentServiceTest {
 
     // then: 업로드 결과가 공백이어도 디폴트 이미지 경로인 "/uploads/default-thumbnail.png"로 세팅되는지 확인
     assertThat(result).isNotNull();
-    assertThat(result.type()).isEqualTo("SPORT");
+    assertThat(result.type()).isEqualTo(ContentType.SPORT);
     assertThat(result.title()).isEqualTo("축구 중계");
     assertThat(result.thumbnailUrl()).isEqualTo("/uploads/default-thumbnail.png");
     verify(tagRepository, never()).saveAll(anyCollection());
@@ -373,7 +373,7 @@ class ContentServiceTest {
     // then: 상세 정보가 정상적으로 리턴되었는지 확인
     assertThat(result).isNotNull();
     assertThat(result.title()).isEqualTo("인셉션");
-    assertThat(result.type()).isEqualTo("MOVIE");
+    assertThat(result.type()).isEqualTo(ContentType.MOVIE);
   }
 
   @Test

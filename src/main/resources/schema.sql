@@ -279,3 +279,25 @@ CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_CREATED_AT"
 
 CREATE INDEX IF NOT EXISTS "IDX_PLAYLIST_CONTENTS_CONTENT"
     ON "playlist_contents" ("content_id");
+
+-- 콘텐츠 정렬 및 커서 페이지네이션 성능 최적화를 위한 복합 인덱스 (전체 조회용 - type 조건 없을 때)
+CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_WATCHER_REVIEW_ID"
+    ON "contents" ("watcher_count" DESC, "review_count" DESC, "id" DESC);
+
+CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_AVERAGE_RATING_ID"
+    ON "contents" ("average_rating" DESC, "id" DESC);
+
+CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_CREATED_AT_ID"
+    ON "contents" ("created_at" DESC, "id" DESC);
+
+-- 콘텐츠 정렬 및 커서 페이지네이션 성능 최적화를 위한 복합 인덱스 (카테고리 필터 조회용 - type 조건 있을 때)
+CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_TYPE_WATCHER_REVIEW_ID"
+    ON "contents" ("type", "watcher_count" DESC, "review_count" DESC, "id" DESC);
+
+CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_TYPE_AVERAGE_RATING_ID"
+    ON "contents" ("type", "average_rating" DESC, "id" DESC);
+
+CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_TYPE_CREATED_AT_ID"
+    ON "contents" ("type", "created_at" DESC, "id" DESC);
+
+

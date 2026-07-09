@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,7 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 @Profile({"local", "default", "test", "dev"})
 public class LocalStorageService implements ImageStorageService {
 
-  private static final String UPLOAD_DIR = "src/main/resources/static/uploads";
+  private final String uploadDir;
+
+  public LocalStorageService(@Value("${mopl.upload-dir}") String uploadDir) {
+    this.uploadDir = uploadDir;
+  }
 
   @Override
   public String upload(MultipartFile file) {
@@ -22,7 +27,7 @@ public class LocalStorageService implements ImageStorageService {
     }
 
     try {
-      Path uploadPath = Paths.get(UPLOAD_DIR);
+      Path uploadPath = Paths.get(uploadDir);
       if (!Files.exists(uploadPath)) {
         Files.createDirectories(uploadPath);
       }

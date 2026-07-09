@@ -46,6 +46,7 @@ spring:
       hibernate:
         format_sql: true
         highlight_sql: true
+        default_batch_fetch_size: 100
         jdbc:
           batch_size: 100
         order_inserts: true
@@ -59,6 +60,7 @@ spring:
 
   ### 프로젝트 환경 변수 설정
 mopl:
+  upload-dir: ${MOPL_UPLOAD_DIR:src/main/resources/static/uploads/}
   jwt:
     secret: ${MOPL_JWT_SECRET}
     access-token-expiration: ${MOPL_JWT_ACCESS_TOKEN_EXPIRATION:PT1H}

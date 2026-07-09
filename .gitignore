@@ -44,6 +44,7 @@ out/
 ### Uploaded static assets ###
 src/main/resources/static/uploads/*
 !src/main/resources/static/uploads/.gitkeep
+/uploads/
 
 ### Agent config ###
 .agents/

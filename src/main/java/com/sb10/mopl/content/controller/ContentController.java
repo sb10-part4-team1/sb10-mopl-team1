@@ -16,16 +16,16 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/content")
+@RequestMapping("/api/contents")
 @RequiredArgsConstructor
 public class ContentController {
 
@@ -37,12 +37,12 @@ public class ContentController {
       @RequestPart("request") @Valid ContentCreateRequest request,
       @RequestPart(value = "thumbnail") MultipartFile thumbnail) {
     ContentDto contentDto = contentService.create(request, thumbnail);
-    URI location = URI.create("/api/content/" + contentDto.id());
+    URI location = URI.create("/api/contents/" + contentDto.id());
     return ResponseEntity.created(location).body(contentDto);
   }
 
   @PreAuthorize("hasRole('ADMIN')")
-  @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PatchMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ContentDto> update(
       @PathVariable UUID id,
       @RequestPart("request") @Valid ContentUpdateRequest request,

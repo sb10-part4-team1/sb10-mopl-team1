@@ -91,9 +91,9 @@ public class SecurityConfig {
     methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/role"),
     methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/locked"),
     pathMatcher("/api/admin/batch/**"), // 관리자 배치 제어 권한 제한
-    methodAndPathMatcher(HttpMethod.POST, "/api/content/**"), // 콘텐츠 등록(POST) 권한 제한
-    methodAndPathMatcher(HttpMethod.PUT, "/api/content/**"), // 콘텐츠 수정(PUT) 권한 제한
-    methodAndPathMatcher(HttpMethod.DELETE, "/api/content/**") // 콘텐츠 삭제(DELETE) 권한 제한
+    methodAndPathMatcher(HttpMethod.POST, "/api/contents/**"), // 콘텐츠 등록(POST) 권한 제한
+    methodAndPathMatcher(HttpMethod.PATCH, "/api/contents/**"), // 콘텐츠 수정(PATCH) 권한 제한
+    methodAndPathMatcher(HttpMethod.DELETE, "/api/contents/**") // 콘텐츠 삭제(DELETE) 권한 제한
   };
 
   private static RequestMatcher pathMatcher(String pattern) {

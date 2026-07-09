@@ -12,9 +12,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * 모든 HTTP 요청에 대해 유니크한 traceId와 clientIp를 추출하여 Slf4j MDC에 바인딩하는 필터입니다. 필터 체인 중에서 가장 최우선 순위로 작동하여 이후
- * 모든 서블릿 로깅 및 보안 로깅에 traceId가 기록되도록 설계되었습니다.
+/*
+ * 모든 HTTP 요청에 대해 유니크한 traceId와 clientIp를 추출하여 Slf4j MDC에 바인딩하는 필터입니다.
+ * 필터 체인 중에서 가장 최우선 순위로 작동하여 이후 모든 서블릿 로깅 및 보안 로깅에 traceId가 기록되도록 설계되었습니다.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
