@@ -18,10 +18,10 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-    name = "direct_messages",
-    indexes = {
-      @Index(name = "IDX_DM_CONVERSATION_TIME", columnList = "conversation_id, created_at")
-    })
+  name = "direct_messages",
+  indexes = {
+    @Index(name = "IDX_DM_CONVERSATION_TIME", columnList = "conversation_id, created_at")
+  })
 public class DirectMessage extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)
@@ -49,11 +49,6 @@ public class DirectMessage extends BaseEntity {
     this.receiver = receiver;
     this.content = content;
     this.isRead = false;
-  }
-
-  public static DirectMessage create(
-      Conversation conversation, User sender, User receiver, String content) {
-    return new DirectMessage(conversation, sender, receiver, content);
   }
 
   public void updateIsRead(boolean isRead) {
