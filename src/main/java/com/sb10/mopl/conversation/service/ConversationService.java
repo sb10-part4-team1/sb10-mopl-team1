@@ -181,7 +181,7 @@ public class ConversationService {
         nextIdAfter,
         hasNext,
         totalCount,
-        request.sortBy(),
+        request.sortBy().name(),
         request.sortDirection());
   }
 

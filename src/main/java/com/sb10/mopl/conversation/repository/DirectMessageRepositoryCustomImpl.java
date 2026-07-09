@@ -59,8 +59,16 @@ public class DirectMessageRepositoryCustomImpl implements DirectMessageRepositor
    */
   private BooleanExpression cursorCondition(
       String cursor, UUID idAfter, SortDirection sortDirection) {
-    if (cursor == null || cursor.isBlank() || idAfter == null) {
+    boolean hasCursor = cursor != null && !cursor.isBlank();
+    boolean hasIdAfter = idAfter != null;
+
+    if (!hasCursor && !hasIdAfter) {
       return null;
+    }
+    if (hasCursor != hasIdAfter) {
+      throw new ConversationException(
+          ConversationErrorCode.INVALID_CURSOR_VALUE,
+          Map.of("cursor", String.valueOf(cursor), "idAfter", String.valueOf(idAfter)));
     }
 
     boolean isAsc = sortDirection == SortDirection.ASCENDING;

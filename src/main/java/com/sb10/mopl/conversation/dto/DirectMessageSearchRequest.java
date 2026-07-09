@@ -13,7 +13,7 @@ public record DirectMessageSearchRequest(
         @Max(value = 50, message = "페이지당 조회 개수는 50개 이하여야 합니다.")
         Integer limit,
     SortDirection sortDirection,
-    @NotNull(message = "정렬 기준은 필수 항목입니다.") String sortBy) {
+    @NotNull(message = "정렬 기준은 필수 항목입니다.") SortBy sortBy) {
 
   public DirectMessageSearchRequest {
     if (limit == null) {
@@ -22,5 +22,9 @@ public record DirectMessageSearchRequest(
     if (sortDirection == null) {
       sortDirection = SortDirection.DESCENDING;
     }
+  }
+
+  public enum SortBy {
+    createdAt
   }
 }
