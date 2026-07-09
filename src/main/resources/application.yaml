@@ -72,6 +72,10 @@ mopl:
       secure: ${MOPL_REFRESH_TOKEN_COOKIE_SECURE:false}
       same-site: ${MOPL_REFRESH_TOKEN_COOKIE_SAME_SITE:Lax}
 
+  oauth2:
+    success-redirect-uri: ${MOPL_OAUTH2_SUCCESS_REDIRECT_URI:/}
+    failure-redirect-uri: "${MOPL_OAUTH2_FAILURE_REDIRECT_URI:/#/sign-in}"
+
   mail:
     temporary-password:
       from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}
