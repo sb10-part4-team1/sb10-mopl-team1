@@ -1,6 +1,7 @@
 package com.sb10.mopl.auth.security.handler;
 
 import com.sb10.mopl.auth.exception.AuthErrorCode;
+import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 public class RestLogoutSuccessHandler implements LogoutSuccessHandler {
 
   private final AuthErrorResponseWriter responseWriter;
+  private final RefreshTokenCookieResolver refreshTokenCookieResolver;
 
   @Override
   public void onLogoutSuccess(
@@ -25,12 +27,21 @@ public class RestLogoutSuccessHandler implements LogoutSuccessHandler {
     response.setHeader(HttpHeaders.PRAGMA, "no-cache");
     response.setDateHeader(HttpHeaders.EXPIRES, 0);
 
-    if (authentication == null) {
+    if (authentication == null && !hasLogoutCredential(request)) {
       responseWriter.write(
           response, AuthErrorCode.AUTHENTICATION_FAILED, Map.of("message", "인증이 필요합니다."));
       return;
     }
 
     response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+  }
+
+  private boolean hasLogoutCredential(HttpServletRequest request) {
+    return hasAuthorizationHeader(request) || refreshTokenCookieResolver.exists(request);
+  }
+
+  private boolean hasAuthorizationHeader(HttpServletRequest request) {
+    String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+    return authorization != null && !authorization.isBlank();
   }
 }

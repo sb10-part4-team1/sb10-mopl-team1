@@ -57,6 +57,10 @@ public class SecurityConfig {
 
   // 공개/관리자 규칙에 걸리지 않은 API 요청을 마지막에 한 번 더 닫기 위한 백엔드 API 범위
   private static final RequestMatcher API_ENDPOINT_MATCHER = pathMatcher("/api/**");
+  // 인증 실패 후에도 클라이언트 로그아웃 정리를 완료해야 하는 경로
+  private static final RequestMatcher[] CONTINUE_ON_AUTHENTICATION_FAILURE_MATCHERS = {
+    methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-out")
+  };
 
   // 로그인하지 않은 사용자가 접근할 수 있어야 하는 경로 목록
   private static final RequestMatcher[] PUBLIC_ENDPOINT_MATCHERS = {
@@ -184,7 +188,11 @@ public class SecurityConfig {
       JwtSessionService jwtSessionService,
       AuthErrorResponseWriter authErrorResponseWriter) {
     return new JwtAuthenticationFilter(
-        jwtProvider, jwtSessionService, authErrorResponseWriter, PUBLIC_ENDPOINT_MATCHERS);
+        jwtProvider,
+        jwtSessionService,
+        authErrorResponseWriter,
+        PUBLIC_ENDPOINT_MATCHERS,
+        CONTINUE_ON_AUTHENTICATION_FAILURE_MATCHERS);
   }
 
   @Bean

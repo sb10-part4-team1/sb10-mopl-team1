@@ -22,6 +22,7 @@ import com.sb10.mopl.auth.repository.JwtSessionRepository;
 import com.sb10.mopl.auth.repository.RefreshTokenRepository;
 import com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.SignInTokens;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
+import com.sb10.mopl.auth.service.AuthSessionService;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +60,8 @@ class SignOutIntegrationTest {
 
   @Autowired private JwtProperties jwtProperties;
 
+  @Autowired private AuthSessionService authSessionService;
+
   @BeforeEach
   void setUp() {
     refreshTokenRepository.deleteAll();
@@ -76,6 +79,41 @@ class SignOutIntegrationTest {
         .perform(authenticatedGet(PROTECTED_API_PATH, tokens.accessToken()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("authenticated"));
+
+    mockMvc
+        .perform(
+            post("/api/auth/sign-out")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken())
+                .cookie(tokens.refreshToken())
+                .with(csrf()))
+        .andExpect(status().isNoContent())
+        .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        .andExpect(header().string(HttpHeaders.PRAGMA, "no-cache"))
+        .andExpect(
+            header()
+                .stringValues(
+                    HttpHeaders.SET_COOKIE,
+                    hasItem(
+                        allOf(
+                            containsString(refreshTokenCookieName(jwtProperties) + "=;"),
+                            containsString("Max-Age=0")))));
+
+    assertAll(
+        () -> assertEquals(0L, jwtSessionRepository.count()),
+        () -> assertEquals(0L, refreshTokenRepository.count()));
+
+    expectAccessTokenUnauthorized(mockMvc, PROTECTED_API_PATH, tokens.accessToken());
+    expectRefreshTokenUnauthorized(mockMvc, tokens.refreshToken());
+  }
+
+  @Test
+  @DisplayName("이미 무효화된 인증 상태로 로그아웃해도 refresh token 쿠키를 정리한다")
+  void signOut_clearsRefreshTokenCookie_whenAuthenticationStateAlreadyInvalidated()
+      throws Exception {
+    User user = saveUser();
+    SignInTokens tokens = signIn(mockMvc, objectMapper, jwtProperties, EMAIL, PASSWORD);
+
+    authSessionService.invalidateAllByUserId(user.getId());
 
     mockMvc
         .perform(
