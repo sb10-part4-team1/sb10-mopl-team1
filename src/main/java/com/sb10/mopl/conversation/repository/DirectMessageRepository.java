@@ -8,11 +8,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface DirectMessageRepository extends JpaRepository<DirectMessage, UUID> {
+public interface DirectMessageRepository
+    extends JpaRepository<DirectMessage, UUID>, DirectMessageRepositoryCustom {
 
   Optional<DirectMessage> findTopByConversationIdOrderByCreatedAtDesc(UUID conversationId);
 
   boolean existsByConversationIdAndReceiverIdAndIsReadFalse(UUID conversationId, UUID receiverId);
+
+  Optional<DirectMessage> findByIdAndConversationId(UUID id, UUID conversationId);
 
   @Query(
       """

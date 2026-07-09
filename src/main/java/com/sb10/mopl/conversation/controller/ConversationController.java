@@ -6,6 +6,8 @@ import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.conversation.dto.ConversationCreateRequest;
 import com.sb10.mopl.conversation.dto.ConversationDto;
 import com.sb10.mopl.conversation.dto.ConversationSearchRequest;
+import com.sb10.mopl.conversation.dto.DirectMessageDto;
+import com.sb10.mopl.conversation.dto.DirectMessageSearchRequest;
 import com.sb10.mopl.conversation.service.ConversationService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -60,5 +62,26 @@ public class ConversationController {
       @CurrentUser AuthenticatedUser currentUser, @PathVariable UUID conversationId) {
     ConversationDto dto = conversationService.findConversation(currentUser.id(), conversationId);
     return ResponseEntity.ok(dto);
+  }
+
+  // DM 목록 조회
+  @GetMapping("/{conversationId}/direct-messages")
+  public ResponseEntity<CursorPageResponse<DirectMessageDto>> findDirectMessages(
+      @CurrentUser AuthenticatedUser currentUser,
+      @PathVariable UUID conversationId,
+      @ModelAttribute @Valid DirectMessageSearchRequest request) {
+    CursorPageResponse<DirectMessageDto> response =
+        conversationService.findDirectMessages(currentUser.id(), conversationId, request);
+    return ResponseEntity.ok(response);
+  }
+
+  // DM 읽음 처리
+  @PostMapping("/{conversationId}/direct-messages/{directMessageId}/read")
+  public ResponseEntity<Void> readDirectMessage(
+      @CurrentUser AuthenticatedUser currentUser,
+      @PathVariable UUID conversationId,
+      @PathVariable UUID directMessageId) {
+    conversationService.readDirectMessage(currentUser.id(), conversationId, directMessageId);
+    return ResponseEntity.ok().build();
   }
 }

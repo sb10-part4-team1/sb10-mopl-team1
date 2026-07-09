@@ -37,4 +37,8 @@ public class DirectMessage extends BaseEntity {
 
   @Column(name = "is_read", nullable = false)
   private boolean isRead;
+
+  public void updateIsRead(boolean isRead) {
+    this.isRead = isRead;
+  }
 }
