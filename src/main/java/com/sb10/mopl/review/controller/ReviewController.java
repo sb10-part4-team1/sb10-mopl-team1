@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,7 +33,7 @@ public class ReviewController {
 
   @PostMapping
   public ResponseEntity<ReviewDto> create(
-      @CurrentUser AuthenticatedUser currentUser, @Valid @RequestBody ReviewCreateRequest request) {
+    @CurrentUser AuthenticatedUser currentUser, @Valid @RequestBody ReviewCreateRequest request) {
 
     ReviewDto response = reviewService.create(request, currentUser.id());
 
@@ -43,36 +42,39 @@ public class ReviewController {
 
   @GetMapping
   public ResponseEntity<CursorPageResponse<ReviewDto>> findAll(
-      @RequestParam(required = false) UUID contentId,
-      @Valid @ModelAttribute CursorPageRequest pageRequest) {
+    @RequestParam(required = false) UUID contentId,
+    @Valid @ModelAttribute CursorPageRequest pageRequest) {
 
     // 리뷰 목록을 커서 페이지네이션 방식으로 조회
     CursorPageResponse<ReviewDto> response =
-        reviewService.findAll(
-            contentId,
-            pageRequest.cursor(),
-            pageRequest.idAfter(),
-            pageRequest.limit(),
-            pageRequest.sortBy(),
-            pageRequest.sortDirection());
+      reviewService.findAll(
+        contentId,
+        pageRequest.cursor(),
+        pageRequest.idAfter(),
+        pageRequest.limit(),
+        pageRequest.sortBy(),
+        pageRequest.sortDirection());
 
     return ResponseEntity.ok(response);
   }
 
   @PatchMapping("/{reviewId}")
   public ResponseEntity<ReviewDto> update(
-      @PathVariable UUID reviewId,
-      @Valid @RequestBody ReviewUpdateRequest request,
-      // TODO: 인증 구현 완료 후 X-USER-ID 헤더 대신 SecurityContext/JWT Principal에서 사용자 ID를 조회하도록 변경
-      @RequestHeader("X-USER-ID") UUID userId) {
-    ReviewDto response = reviewService.update(reviewId, request, userId);
+    @PathVariable UUID reviewId,
+    @Valid @RequestBody ReviewUpdateRequest request,
+    @CurrentUser AuthenticatedUser currentUser) {
+
+    ReviewDto response = reviewService.update(reviewId, request, currentUser.id());
+
     return ResponseEntity.ok(response);
   }
 
   @DeleteMapping("/{reviewId}")
   public ResponseEntity<Void> delete(
-      @PathVariable UUID reviewId, @RequestHeader("X-USER-ID") UUID userId) {
-    reviewService.delete(reviewId, userId);
+    @PathVariable UUID reviewId, @CurrentUser AuthenticatedUser currentUser) {
+
+    reviewService.delete(reviewId, currentUser.id());
+
     return ResponseEntity.noContent().build();
   }
 }

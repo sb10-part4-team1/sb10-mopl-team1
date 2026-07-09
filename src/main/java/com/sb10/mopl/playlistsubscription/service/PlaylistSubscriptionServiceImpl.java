@@ -70,11 +70,11 @@ public class PlaylistSubscriptionServiceImpl implements PlaylistSubscriptionServ
   // 구독 대상 플레이리스트 존재 여부 검증 및 조회
   private Playlist getPlaylist(UUID playlistId) {
     return playlistRepository
-        .findById(playlistId)
-        .orElseThrow(
-            () ->
-                new PlaylistException(
-                    PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
+      .findByIdWithOwner(playlistId)
+      .orElseThrow(
+        () ->
+          new PlaylistException(
+            PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
   }
 
   // 이미 구독한 플레이리스트인지 검증
