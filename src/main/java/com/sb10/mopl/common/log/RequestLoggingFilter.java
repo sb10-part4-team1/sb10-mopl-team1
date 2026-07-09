@@ -28,8 +28,15 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
 
+    // =========================================================================
     // [실시간 알림 SSE 채널 캐싱 우회 (Bypass)]
-    if (request.getRequestURI().contains("/api/sse")) {
+    // SSE(Server-Sent Events) 스트리밍 채널은 연결이 끊어지지 않고 계속 데이터를 밀어 보냅니다.
+    // 여기에 응답 본문 캐싱 래퍼(ContentCachingResponseWrapper)를 씌워버리면
+    // 데이터가 즉시 방출되지 않고 메모리 버퍼에 묶여 톰캣 스레드가 통째로 마비되는 장애가 터집니다.
+    // 이를 원천 방지하기 위해 /api/sse 요청은 캐싱 처리를 생략하고 즉시 통과시킵니다.
+    // =========================================================================
+    String uri = request.getRequestURI();
+    if (uri.equals("/api/sse") || uri.startsWith("/api/sse/")) {
       filterChain.doFilter(request, response);
       return;
     }
