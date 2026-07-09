@@ -9,10 +9,13 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
     name = "direct_messages",
     indexes = {
@@ -37,6 +40,19 @@ public class DirectMessage extends BaseEntity {
 
   @Column(name = "is_read", nullable = false)
   private boolean isRead;
+
+  private DirectMessage(Conversation conversation, User sender, User receiver, String content) {
+    this.conversation = conversation;
+    this.sender = sender;
+    this.receiver = receiver;
+    this.content = content;
+    this.isRead = false;
+  }
+
+  public static DirectMessage create(
+      Conversation conversation, User sender, User receiver, String content) {
+    return new DirectMessage(conversation, sender, receiver, content);
+  }
 
   public void updateIsRead(boolean isRead) {
     this.isRead = isRead;
