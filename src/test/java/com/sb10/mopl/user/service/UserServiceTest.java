@@ -23,10 +23,12 @@ import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
+import com.sb10.mopl.user.event.UserRoleChangedEvent;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.mapper.UserMapper;
 import com.sb10.mopl.user.repository.UserRepository;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +40,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -54,6 +57,10 @@ class UserServiceTest {
   @Mock private AuthSessionService authSessionService;
 
   @Mock private TemporaryPasswordService temporaryPasswordService;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
+
+  @Mock private Clock clock;
 
   @InjectMocks private UserService userService;
 
@@ -232,43 +239,62 @@ class UserServiceTest {
   }
 
   @Test
-  @DisplayName("권한 변경 시 대상 사용자의 권한을 변경하고 기존 세션을 모두 무효화한다")
+  @DisplayName("권한 변경 시 대상 사용자의 권한을 변경하고 기존 세션 무효화 후 이벤트를 발행한다")
   void updateRole_success_whenRoleChanges() {
     // given
     UUID targetUserId = UUID.randomUUID();
+    UUID changedByUserId = UUID.randomUUID();
+    Instant occurredAt = Instant.parse("2026-07-08T00:00:00Z");
     User user = User.createUser("test-user", "user@example.com", "encoded-password", null);
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
     when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.of(user));
+    when(clock.instant()).thenReturn(occurredAt);
 
     // when
-    userService.updateRole(targetUserId, request);
+    userService.updateRole(targetUserId, changedByUserId, request);
 
     // then
     assertEquals(UserRole.ADMIN, user.getRole());
 
+    ArgumentCaptor<UserRoleChangedEvent> eventCaptor =
+        ArgumentCaptor.forClass(UserRoleChangedEvent.class);
+
     verify(userRepository).findByIdAndIsDeletedFalse(targetUserId);
     verify(authSessionService).invalidateAllByUserId(targetUserId);
+    verify(clock).instant();
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    UserRoleChangedEvent event = eventCaptor.getValue();
+    assertAll(
+        () -> assertEquals(targetUserId, event.targetUserId()),
+        () -> assertEquals(UserRole.USER, event.previousRole()),
+        () -> assertEquals(UserRole.ADMIN, event.newRole()),
+        () -> assertEquals(changedByUserId, event.changedByUserId()),
+        () -> assertEquals(occurredAt, event.occurredAt()));
   }
 
   @Test
-  @DisplayName("이미 같은 권한이면 세션을 무효화하지 않는다")
+  @DisplayName("이미 같은 권한이면 세션을 무효화하거나 이벤트를 발행하지 않는다")
   void updateRole_success_whenRoleIsSame() {
     // given
     UUID targetUserId = UUID.randomUUID();
+    UUID changedByUserId = UUID.randomUUID();
     User user = User.createAdmin("test-admin", "admin@example.com", "encoded-password", null);
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
     when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.of(user));
 
     // when
-    userService.updateRole(targetUserId, request);
+    userService.updateRole(targetUserId, changedByUserId, request);
 
     // then
     assertEquals(UserRole.ADMIN, user.getRole());
 
     verify(userRepository).findByIdAndIsDeletedFalse(targetUserId);
     verify(authSessionService, never()).invalidateAllByUserId(any());
+    verify(clock, never()).instant();
+    verify(eventPublisher, never()).publishEvent(any(UserRoleChangedEvent.class));
   }
 
   @Test
@@ -276,13 +302,16 @@ class UserServiceTest {
   void updateRole_fail_whenUserDoesNotExist() {
     // given
     UUID targetUserId = UUID.randomUUID();
+    UUID changedByUserId = UUID.randomUUID();
     UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
 
     when(userRepository.findByIdAndIsDeletedFalse(targetUserId)).thenReturn(Optional.empty());
 
     // when
     UserException exception =
-        assertThrows(UserException.class, () -> userService.updateRole(targetUserId, request));
+        assertThrows(
+            UserException.class,
+            () -> userService.updateRole(targetUserId, changedByUserId, request));
 
     // then
     assertAll(
@@ -291,6 +320,8 @@ class UserServiceTest {
 
     verify(userRepository).findByIdAndIsDeletedFalse(targetUserId);
     verify(authSessionService, never()).invalidateAllByUserId(any());
+    verify(clock, never()).instant();
+    verify(eventPublisher, never()).publishEvent(any(UserRoleChangedEvent.class));
   }
 
   @Test

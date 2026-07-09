@@ -27,6 +27,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     container_name: mopl-server
     environment:
       - SERVER_PORT=8080
@@ -55,7 +57,8 @@ services:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health" ]
       interval: 15s
       timeout: 5s
-      retries: 5
+      retries: 8
+      start_period: 120s
     volumes:
       - ./.logs:/app/.logs
     networks:
@@ -75,6 +78,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     volumes:
       - mopl-postgres-data:/var/lib/postgresql/data
       - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
@@ -91,6 +95,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
     volumes:
       - mopl-redis-data:/data
     networks:
@@ -121,6 +126,7 @@ services:
       interval: 20s
       timeout: 10s
       retries: 5
+      start_period: 60s
     volumes:
       - mopl-kafka-data:/var/lib/kafka/data
     networks:
@@ -141,6 +147,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
+      start_period: 30s
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - mopl-prometheus-data:/prometheus
@@ -156,15 +163,19 @@ services:
     container_name: mopl-grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost/grafana/}
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/grafana/api/health" ]
       interval: 15s
       timeout: 5s
       retries: 3
+      start_period: 60s
     volumes:
       - mopl-grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - mopl-network
     depends_on:

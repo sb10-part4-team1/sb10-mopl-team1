@@ -1,0 +1,728 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Row 1: 배치 잡 실행 상태 (Batch Job Status)",
+      "type": "row"
+    },
+    {
+      "title": "TMDB Job Status",
+      "type": "stat",
+      "id": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_job_status{jobName=\"tmdbJob\"}",
+          "refId": "A",
+          "legendFormat": "{{jobName}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "성공 (COMPLETED)",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "실패 (FAILED)",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Sports Job Status",
+      "type": "stat",
+      "id": 2,
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_job_status{jobName=\"sportsJob\"}",
+          "refId": "A",
+          "legendFormat": "{{jobName}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "성공 (COMPLETED)",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "실패 (FAILED)",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 101,
+      "title": "Row 2: API 호출 성공률 (API Success Rate)",
+      "type": "row"
+    },
+    {
+      "title": "TMDB API Success Rate",
+      "type": "gauge",
+      "id": 3,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(mopl_api_calls_total{client=\"tmdb\",status=\"200\"}[24h])) / sum(increase(mopl_api_calls_total{client=\"tmdb\"}[24h])) * 100",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 98
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Sports API Success Rate",
+      "type": "gauge",
+      "id": 4,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(mopl_api_calls_total{client=\"sports\",status=\"200\"}[24h])) / sum(increase(mopl_api_calls_total{client=\"sports\"}[24h])) * 100",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 98
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 102,
+      "title": "Row 3: 데이터 수집 성과 (Collected vs Skipped)",
+      "type": "row"
+    },
+    {
+      "title": "TMDB Movie Collection",
+      "type": "piechart",
+      "id": 5,
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_collected_items_total{contentType=\"movie\",provider=\"tmdb\"}",
+          "refId": "A",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "title": "TMDB TV Series Collection",
+      "type": "piechart",
+      "id": 6,
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_collected_items_total{contentType=\"tv_series\",provider=\"tmdb\"}",
+          "refId": "A",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "title": "Sports Collection",
+      "type": "piechart",
+      "id": 7,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_collected_items_total{contentType=\"sport\",provider=\"sports_db\"}",
+          "refId": "A",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 103,
+      "title": "Row 4: 스텝 데이터 처리 상세 (Step Metrics Detail)",
+      "type": "row"
+    },
+    {
+      "title": "Movie Step Items",
+      "type": "bargauge",
+      "id": 8,
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_step_items_total{stepName=\"tmdbMovieStep\"}",
+          "refId": "A",
+          "legendFormat": "{{type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      }
+    },
+    {
+      "title": "TV Step Items",
+      "type": "bargauge",
+      "id": 9,
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_step_items_total{stepName=\"tmdbTvStep\"}",
+          "refId": "A",
+          "legendFormat": "{{type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      }
+    },
+    {
+      "title": "Sports Step Items",
+      "type": "bargauge",
+      "id": 10,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_step_items_total{stepName=\"sportsStep\"}",
+          "refId": "A",
+          "legendFormat": "{{type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 104,
+      "title": "Row 5: 자동 장애 복구 스케줄러 현황 (Recovery Scheduler)",
+      "type": "row"
+    },
+    {
+      "title": "TMDB Consecutive Failures",
+      "type": "gauge",
+      "id": 11,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_recovery_failure_consecutive{jobName=\"tmdbJob\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Sports Consecutive Failures",
+      "type": "gauge",
+      "id": 12,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_recovery_failure_consecutive{jobName=\"sportsJob\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 105,
+      "title": "Row 6: API 지연 성능 (API Latency Performance)",
+      "type": "row"
+    },
+    {
+      "title": "TMDB API Latency Trends",
+      "type": "timeseries",
+      "id": 13,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(increase(mopl_api_call_duration_seconds_bucket{client=\"tmdb\"}[24h])) by (le))",
+          "refId": "A",
+          "legendFormat": "p99 지연 시간"
+        },
+        {
+          "expr": "sum(increase(mopl_api_call_duration_seconds_sum{client=\"tmdb\"}[24h])) / sum(increase(mopl_api_call_duration_seconds_count{client=\"tmdb\"}[24h]))",
+          "refId": "B",
+          "legendFormat": "평균 응답 속도"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "title": "Sports API Latency Trends",
+      "type": "timeseries",
+      "id": 14,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(increase(mopl_api_call_duration_seconds_bucket{client=\"sports\"}[24h])) by (le))",
+          "refId": "A",
+          "legendFormat": "p99 지연 시간"
+        },
+        {
+          "expr": "sum(increase(mopl_api_call_duration_seconds_sum{client=\"sports\"}[24h])) / sum(increase(mopl_api_call_duration_seconds_count{client=\"sports\"}[24h]))",
+          "refId": "B",
+          "legendFormat": "평균 응답 속도"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 106,
+      "title": "Row 7: 실행 소요 시간 (Job Duration)",
+      "type": "row"
+    },
+    {
+      "title": "TMDB Job Duration",
+      "type": "timeseries",
+      "id": 15,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_job_duration_seconds_sum{jobName=\"tmdbJob\"} / mopl_batch_job_duration_seconds_count{jobName=\"tmdbJob\"}",
+          "refId": "A",
+          "legendFormat": "평균 실행 소요 시간"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "title": "Sports Job Duration",
+      "type": "timeseries",
+      "id": 16,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mopl_batch_job_duration_seconds_sum{jobName=\"sportsJob\"} / mopl_batch_job_duration_seconds_count{jobName=\"sportsJob\"}",
+          "refId": "A",
+          "legendFormat": "평균 실행 소요 시간"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 107,
+      "title": "Row 8: 예외 복구 및 재시도 횟수 (Exception Retries)",
+      "type": "row"
+    },
+    {
+      "title": "TMDB API Retry Count",
+      "type": "timeseries",
+      "id": 17,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(mopl_batch_retry_total{label=~\".*Tmdb.*\"}) or on() vector(0)",
+          "refId": "A",
+          "legendFormat": "Spring Retry 발생 수"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "title": "Sports API Retry Count",
+      "type": "timeseries",
+      "id": 18,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(mopl_batch_retry_total{label=~\".*Sports.*\"}) or on() vector(0)",
+          "refId": "A",
+          "legendFormat": "Spring Retry 발생 수"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    }
+  ],
+  "refresh": "60s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "mopl",
+    "batch"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "title": "MOPL Batch & API Monitoring Dashboard (Full)",
+  "uid": "mopl-batch-dashboard-full-json",
+  "version": 2
+}

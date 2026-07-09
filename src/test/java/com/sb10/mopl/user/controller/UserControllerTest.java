@@ -301,7 +301,7 @@ class UserControllerTest {
 
     ArgumentCaptor<UserRoleUpdateRequest> captor =
         ArgumentCaptor.forClass(UserRoleUpdateRequest.class);
-    verify(userService).updateRole(eq(targetUserId), captor.capture());
+    verify(userService).updateRole(eq(targetUserId), eq(requesterUserId), captor.capture());
 
     assertEquals(UserRole.ADMIN, captor.getValue().role());
   }
@@ -317,7 +317,7 @@ class UserControllerTest {
 
     doThrow(new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", targetUserId)))
         .when(userService)
-        .updateRole(eq(targetUserId), any(UserRoleUpdateRequest.class));
+        .updateRole(eq(targetUserId), eq(requesterUserId), any(UserRoleUpdateRequest.class));
 
     // when & then
     mockMvc
@@ -327,7 +327,8 @@ class UserControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isNotFound());
 
-    verify(userService).updateRole(eq(targetUserId), any(UserRoleUpdateRequest.class));
+    verify(userService)
+        .updateRole(eq(targetUserId), eq(requesterUserId), any(UserRoleUpdateRequest.class));
   }
 
   @Test
