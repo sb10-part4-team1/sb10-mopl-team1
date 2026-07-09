@@ -1,14 +1,12 @@
 package com.sb10.mopl.auth.security.handler;
 
+import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieResolver;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
-import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.service.AuthSessionService;
 import com.sb10.mopl.auth.service.RefreshTokenService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -22,8 +20,8 @@ public class SignOutLogoutHandler implements LogoutHandler {
 
   private final AuthSessionService authSessionService;
   private final RefreshTokenService refreshTokenService;
+  private final RefreshTokenCookieResolver refreshTokenCookieResolver;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
-  private final JwtProperties jwtProperties;
 
   @Override
   public void logout(
@@ -39,21 +37,7 @@ public class SignOutLogoutHandler implements LogoutHandler {
       }
     }
 
-    refreshTokenService.revoke(resolveRefreshToken(request));
+    refreshTokenService.revoke(refreshTokenCookieResolver.resolve(request).orElse(null));
     refreshTokenCookieWriter.expireRefreshTokenCookie(response);
-  }
-
-  private String resolveRefreshToken(HttpServletRequest request) {
-    Cookie[] cookies = request.getCookies();
-    if (cookies == null) {
-      return null;
-    }
-
-    String refreshTokenCookieName = jwtProperties.refreshTokenCookie().name();
-    return Arrays.stream(cookies)
-        .filter(cookie -> refreshTokenCookieName.equals(cookie.getName()))
-        .map(Cookie::getValue)
-        .findFirst()
-        .orElse(null);
   }
 }
