@@ -109,9 +109,23 @@ public class ContentRepositoryCustomImpl implements ContentRepositoryCustom {
    * <p>이전에 받아온 마지막 데이터의 고유 ID(idAfter)와 정렬 기준값(cursor) 스냅샷이 존재할때만 작동합니다.
    */
   private BooleanExpression cursorCondition(ContentSearchRequest request) {
-    // 1. 이전 페이지의 마지막 아이템 ID 또는 커서 스냅샷이 없는 첫 페이지 조회인 경우 커서 조건 적용 안 함
-    if (request.idAfter() == null || request.cursor() == null || request.cursor().isBlank()) {
+    boolean isCursorEmpty = request.cursor() == null || request.cursor().isBlank();
+    boolean isIdAfterEmpty = request.idAfter() == null;
+
+    // 1. 둘 다 비어있다면 첫 페이지 조회를 의미하므로 즉시 null 반환 (정상 통과)
+    if (isCursorEmpty && isIdAfterEmpty) {
       return null;
+    }
+
+    // 2. 첫 페이지가 아닌데 둘 중 하나라도 비어있다면: 짝꿍이 안 맞는 비정상 요청이므로 예외 발생 (장애 차단)
+    if (isCursorEmpty || isIdAfterEmpty) {
+      throw new ContentException(
+          ContentErrorCode.INVALID_CURSOR_VALUE,
+          Map.of(
+              "cursor",
+              String.valueOf(request.cursor()),
+              "idAfter",
+              String.valueOf(request.idAfter())));
     }
 
     boolean isAsc = request.sortDirection() == SortDirection.ASCENDING;
