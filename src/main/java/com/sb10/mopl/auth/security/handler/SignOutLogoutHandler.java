@@ -37,7 +37,12 @@ public class SignOutLogoutHandler implements LogoutHandler {
       }
     }
 
-    refreshTokenCookieResolver.resolve(request).ifPresent(refreshTokenService::revoke);
-    refreshTokenCookieWriter.expireRefreshTokenCookie(response);
+    try {
+      refreshTokenCookieResolver.resolve(request).ifPresent(refreshTokenService::revoke);
+    } catch (RuntimeException exception) {
+      log.error("Failed to revoke refresh token on logout.", exception);
+    } finally {
+      refreshTokenCookieWriter.expireRefreshTokenCookie(response);
+    }
   }
 }
