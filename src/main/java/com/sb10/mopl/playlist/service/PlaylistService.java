@@ -16,6 +16,7 @@ public interface PlaylistService {
       String keywordLike,
       UUID ownerId,
       UUID subscriberId,
+      UUID currentUserId,
       String cursor,
       UUID idAfter,
       Integer limit,
@@ -23,7 +24,7 @@ public interface PlaylistService {
       SortDirection sortDirection);
 
   // 단건 조회
-  PlaylistDto findById(UUID playlistId);
+  PlaylistDto findById(UUID playlistId, UUID currentUserId);
 
   // 플레이리스트 내용 수정(콘텐츠는 추후 playlist_content에서 구현)
   PlaylistDto update(UUID playlistId, PlaylistUpdateRequest request, UUID userId);

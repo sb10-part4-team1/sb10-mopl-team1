@@ -161,6 +161,7 @@ class PlaylistControllerTest {
             eq(null),
             eq(ownerId),
             eq(null),
+            eq(CURRENT_USER_ID),
             eq(null),
             eq(null),
             eq(10),
@@ -183,6 +184,18 @@ class PlaylistControllerTest {
         .andExpect(jsonPath("$.data[0].id").value(playlistId.toString()))
         .andExpect(jsonPath("$.hasNext").value(false))
         .andExpect(jsonPath("$.totalCount").value(1));
+
+    verify(playlistService)
+        .findAll(
+            eq(null),
+            eq(ownerId),
+            eq(null),
+            eq(CURRENT_USER_ID),
+            eq(null),
+            eq(null),
+            eq(10),
+            eq("updatedAt"),
+            eq(SortDirection.DESCENDING));
   }
 
   @Test
@@ -232,7 +245,7 @@ class PlaylistControllerTest {
   @DisplayName("존재하는 플레이리스트 단건 조회 요청 시 200 OK와 PlaylistDto를 반환한다")
   void findById_returnOk_whenPlaylistExists() throws Exception {
     // given
-    when(playlistService.findById(playlistId)).thenReturn(playlistDto);
+    when(playlistService.findById(playlistId, CURRENT_USER_ID)).thenReturn(playlistDto);
 
     // when
     ResultActions resultActions = mockMvc.perform(get(DETAIL_URL, playlistId));
@@ -242,13 +255,16 @@ class PlaylistControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(playlistId.toString()))
         .andExpect(jsonPath("$.title").value("플레이리스트 제목"));
+
+    verify(playlistService).findById(playlistId, CURRENT_USER_ID);
   }
 
   @Test
   @DisplayName("존재하지 않는 플레이리스트 단건 조회 요청 시 404 Not Found를 반환한다")
   void findById_returnNotFound_whenPlaylistDoesNotExist() throws Exception {
     // given
-    when(playlistService.findById(playlistId)).thenThrow(playlistNotFoundException());
+    when(playlistService.findById(playlistId, CURRENT_USER_ID))
+        .thenThrow(playlistNotFoundException());
 
     // when
     ResultActions resultActions = mockMvc.perform(get(DETAIL_URL, playlistId));
@@ -257,6 +273,8 @@ class PlaylistControllerTest {
     resultActions
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value(PlaylistErrorCode.PLAYLIST_NOT_FOUND.getCode()));
+
+    verify(playlistService).findById(playlistId, CURRENT_USER_ID);
   }
 
   @Test
