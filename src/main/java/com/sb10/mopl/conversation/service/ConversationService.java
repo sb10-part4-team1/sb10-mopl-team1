@@ -190,37 +190,43 @@ public class ConversationService {
 
   // DM 전송 (웹소켓)
   public DirectMessageDto sendDirectMessage(
-    UUID senderId, UUID conversationId, DirectMessageSendRequest request) {
+      UUID senderId, UUID conversationId, DirectMessageSendRequest request) {
     requireParticipant(senderId, conversationId);
 
     Conversation conversation =
-      conversationRepository
-        .findById(conversationId)
-        .orElseThrow(
-          () ->
-            new ConversationException(
-              ConversationErrorCode.CONVERSATION_NOT_FOUND,
-              Map.of("conversationId", conversationId)));
+        conversationRepository
+            .findById(conversationId)
+            .orElseThrow(
+                () ->
+                    new ConversationException(
+                        ConversationErrorCode.CONVERSATION_NOT_FOUND,
+                        Map.of("conversationId", conversationId)));
 
     ConversationParticipant receiverParticipant =
-      conversationParticipantRepository
-        .findOtherParticipant(conversationId, senderId)
-        .orElseThrow(
-          () ->
-            new ConversationException(
-              ConversationErrorCode.CONVERSATION_NOT_FOUND,
-              Map.of("conversationId", conversationId)));
+        conversationParticipantRepository
+            .findOtherParticipant(conversationId, senderId)
+            .orElseThrow(
+                () ->
+                    new ConversationException(
+                        ConversationErrorCode.CONVERSATION_NOT_FOUND,
+                        Map.of("conversationId", conversationId)));
 
     User sender =
-      userRepository
-        .findById(senderId)
-        .orElseThrow(
-          () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
+        userRepository
+            .findById(senderId)
+            .orElseThrow(
+                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
 
     User receiver = receiverParticipant.getUser();
 
     DirectMessage directMessage =
-      DirectMessage.create(conversation, sender, receiver, request.content());
+        DirectMessage.builder()
+            .conversation(conversation)
+            .sender(sender)
+            .receiver(receiver)
+            .content(request.content())
+            .build();
+
     directMessageRepository.save(directMessage);
 
     DirectMessageDto dto = conversationMapper.toDto(directMessage);

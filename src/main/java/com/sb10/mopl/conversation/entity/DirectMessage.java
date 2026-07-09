@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -41,6 +42,7 @@ public class DirectMessage extends BaseEntity {
   @Column(name = "is_read", nullable = false)
   private boolean isRead;
 
+  @Builder
   private DirectMessage(Conversation conversation, User sender, User receiver, String content) {
     this.conversation = conversation;
     this.sender = sender;
