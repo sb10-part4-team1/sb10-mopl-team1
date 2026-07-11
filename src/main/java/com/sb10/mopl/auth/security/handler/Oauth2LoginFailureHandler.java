@@ -22,15 +22,11 @@ public class Oauth2LoginFailureHandler implements AuthenticationFailureHandler {
   public void onAuthenticationFailure(
       HttpServletRequest request, HttpServletResponse response, AuthenticationException exception)
       throws IOException {
-    String errorMessage =
-        exception.getMessage() == null || exception.getMessage().isBlank()
-            ? DEFAULT_ERROR_MESSAGE
-            : exception.getMessage();
     response.sendRedirect(
         appendQuery(
             failureRedirectUri,
             "error=oauth_failed&error_message="
-                + URLEncoder.encode(errorMessage, StandardCharsets.UTF_8)));
+                + URLEncoder.encode(DEFAULT_ERROR_MESSAGE, StandardCharsets.UTF_8)));
   }
 
   private String appendQuery(String uri, String query) {
