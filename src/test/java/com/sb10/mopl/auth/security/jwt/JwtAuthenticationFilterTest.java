@@ -109,6 +109,7 @@ class JwtAuthenticationFilterTest {
         new JwtAuthenticationFilter(
             jwtProviderAt(NOW),
             activeJwtSessionService(),
+            new AuthenticatedUserFactory(),
             new AuthErrorResponseWriter(objectMapper),
             new RequestMatcher[] {publicMatcher});
     MockHttpServletRequest request = request("/api/public");
@@ -268,6 +269,7 @@ class JwtAuthenticationFilterTest {
     return new JwtAuthenticationFilter(
         jwtProvider,
         activeJwtSessionService(),
+        new AuthenticatedUserFactory(),
         new AuthErrorResponseWriter(objectMapper),
         new RequestMatcher[0]);
   }
