@@ -27,6 +27,7 @@ import com.sb10.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -241,11 +242,12 @@ class PlaylistServiceImplTest {
             playlistRepository.findAllByUpdatedAtCursorDesc(
                 isNull(), eq(ownerId), isNull(), isNull(), any(Pageable.class)))
         .willReturn(List.of(playlist));
-    given(playlistSubscriptionRepository.countByPlaylistId(playlistId)).willReturn(0L);
+    given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
+        .willReturn(List.of(countProjection(playlistId, 0L)));
     given(
-            playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
-                currentUserId, playlistId))
-        .willReturn(false);
+            playlistSubscriptionRepository.findSubscribedPlaylistIds(
+                currentUserId, List.of(playlistId)))
+        .willReturn(Set.of());
     given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
     given(playlistRepository.countBySearchCondition(null, ownerId)).willReturn(1L);
 
@@ -278,11 +280,12 @@ class PlaylistServiceImplTest {
             playlistRepository.findAllByUpdatedAtCursorDesc(
                 isNull(), eq(ownerId), isNull(), isNull(), any(Pageable.class)))
         .willReturn(List.of(playlist, nextPlaylist));
-    given(playlistSubscriptionRepository.countByPlaylistId(playlistId)).willReturn(0L);
+    given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
+        .willReturn(List.of(countProjection(playlistId, 0L)));
     given(
-            playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
-                currentUserId, playlistId))
-        .willReturn(false);
+            playlistSubscriptionRepository.findSubscribedPlaylistIds(
+                currentUserId, List.of(playlistId)))
+        .willReturn(Set.of());
     given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
     given(playlistRepository.countBySearchCondition(null, ownerId)).willReturn(2L);
 
@@ -315,11 +318,12 @@ class PlaylistServiceImplTest {
             playlistRepository.findSubscribedByUpdatedAtCursorDesc(
                 isNull(), eq(ownerId), eq(subscriberId), isNull(), isNull(), any(Pageable.class)))
         .willReturn(List.of(playlist));
-    given(playlistSubscriptionRepository.countByPlaylistId(playlistId)).willReturn(1L);
+    given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
+        .willReturn(List.of(countProjection(playlistId, 1L)));
     given(
-            playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
-                currentUserId, playlistId))
-        .willReturn(true);
+            playlistSubscriptionRepository.findSubscribedPlaylistIds(
+                currentUserId, List.of(playlistId)))
+        .willReturn(Set.of(playlistId));
     given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
     given(playlistRepository.countSubscribedBySearchCondition(null, ownerId, subscriberId))
         .willReturn(1L);
@@ -351,11 +355,12 @@ class PlaylistServiceImplTest {
             playlistRepository.findAllBySubscriberCountCursorDesc(
                 isNull(), eq(ownerId), isNull(), isNull(), any(Pageable.class)))
         .willReturn(List.of(playlist));
-    given(playlistSubscriptionRepository.countByPlaylistId(playlistId)).willReturn(1L);
+    given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
+        .willReturn(List.of(countProjection(playlistId, 1L)));
     given(
-            playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
-                currentUserId, playlistId))
-        .willReturn(true);
+            playlistSubscriptionRepository.findSubscribedPlaylistIds(
+                currentUserId, List.of(playlistId)))
+        .willReturn(Set.of(playlistId));
     given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
     given(playlistRepository.countBySearchCondition(null, ownerId)).willReturn(1L);
 
@@ -563,5 +568,44 @@ class PlaylistServiceImplTest {
         subscriberCount,
         subscribedByMe,
         List.of());
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 실패 - 구독자 수 커서가 음수")
+  void findAll_fail_negativeSubscriberCountCursor() {
+    // given
+    UUID idAfter = UUID.randomUUID();
+
+    // when & then
+    assertThatThrownBy(
+            () ->
+                playlistService.findAll(
+                    null,
+                    ownerId,
+                    null,
+                    currentUserId,
+                    "-1",
+                    idAfter,
+                    10,
+                    "subscriberCount",
+                    SortDirection.DESCENDING))
+        .isInstanceOf(PlaylistException.class)
+        .extracting("errorCode")
+        .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
+  }
+
+  private PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection countProjection(
+      UUID playlistId, Long subscriberCount) {
+    return new PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection() {
+      @Override
+      public UUID getPlaylistId() {
+        return playlistId;
+      }
+
+      @Override
+      public Long getSubscriberCount() {
+        return subscriberCount;
+      }
+    };
   }
 }

@@ -19,7 +19,9 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,13 +33,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PlaylistServiceImpl implements PlaylistService {
 
+  private static final int MAX_PLAYLIST_PAGE_LIMIT = 100;
+
   private final PlaylistRepository playlistRepository;
   private final UserRepository userRepository;
   private final PlaylistMapper playlistMapper;
   private final PlaylistSubscriptionRepository playlistSubscriptionRepository;
-
-  // 플레이리스트 목록 조회 최대 limit
-  private static final int MAX_PLAYLIST_PAGE_LIMIT = 100;
 
   @Override
   @Transactional
@@ -334,9 +335,20 @@ public class PlaylistServiceImpl implements PlaylistService {
     // 응답 데이터는 요청 limit만큼만 사용
     List<Playlist> pagePlaylists = hasNext ? playlists.subList(0, limit) : playlists;
 
+    // 목록 응답에 필요한 구독 메타데이터를 페이지 단위로 bulk 조회
+    Map<UUID, Long> subscriberCountByPlaylistId = getSubscriberCountByPlaylistId(pagePlaylists);
+    Set<UUID> subscribedPlaylistIds = getSubscribedPlaylistIds(pagePlaylists, currentUserId);
+
     // Playlist 엔티티 목록을 응답 DTO 목록으로 변환
     List<PlaylistDto> data =
-        pagePlaylists.stream().map(playlist -> toPlaylistDto(playlist, currentUserId)).toList();
+        pagePlaylists.stream()
+            .map(
+                playlist ->
+                    playlistMapper.toDto(
+                        playlist,
+                        subscriberCountByPlaylistId.getOrDefault(playlist.getId(), 0L),
+                        subscribedPlaylistIds.contains(playlist.getId())))
+            .toList();
 
     // 다음 커서 생성을 위한 마지막 플레이리스트 추출
     Playlist lastPlaylist =
@@ -347,7 +359,7 @@ public class PlaylistServiceImpl implements PlaylistService {
 
     return new CursorPageResponse<>(
         data,
-        getNextCursor(lastPlaylist, sortBy),
+        getNextCursor(lastPlaylist, sortBy, subscriberCountByPlaylistId),
         getNextIdAfter(lastPlaylist),
         hasNext,
         totalCount,
@@ -367,6 +379,38 @@ public class PlaylistServiceImpl implements PlaylistService {
     return playlistMapper.toDto(playlist, subscriberCount, subscribedByMe);
   }
 
+  // 목록 응답용 구독자 수를 playlistId 기준으로 bulk 조회
+  private Map<UUID, Long> getSubscriberCountByPlaylistId(List<Playlist> playlists) {
+    List<UUID> playlistIds = getPlaylistIds(playlists);
+
+    if (playlistIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return playlistSubscriptionRepository.countByPlaylistIds(playlistIds).stream()
+        .collect(
+            Collectors.toMap(
+                PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection::getPlaylistId,
+                PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection
+                    ::getSubscriberCount));
+  }
+
+  // 현재 사용자가 구독한 playlistId 목록을 bulk 조회
+  private Set<UUID> getSubscribedPlaylistIds(List<Playlist> playlists, UUID currentUserId) {
+    List<UUID> playlistIds = getPlaylistIds(playlists);
+
+    if (currentUserId == null || playlistIds.isEmpty()) {
+      return Set.of();
+    }
+
+    return playlistSubscriptionRepository.findSubscribedPlaylistIds(currentUserId, playlistIds);
+  }
+
+  // Playlist 목록에서 id만 추출
+  private List<UUID> getPlaylistIds(List<Playlist> playlists) {
+    return playlists.stream().map(Playlist::getId).toList();
+  }
+
   // subscriberId가 있으면 구독한 플레이리스트 개수, 없으면 기존 검색 조건 개수 조회
   private long countPlaylists(String normalizedKeyword, UUID ownerId, UUID subscriberId) {
     if (subscriberId == null) {
@@ -383,14 +427,15 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   // 다음 페이지 요청에 사용할 커서 생성
-  private String getNextCursor(Playlist lastPlaylist, String sortBy) {
+  private String getNextCursor(
+      Playlist lastPlaylist, String sortBy, Map<UUID, Long> subscriberCountByPlaylistId) {
     // 마지막 플레이리스트가 없으면 다음 커서를 생성하지 않음
     if (lastPlaylist == null) {
       return null;
     }
 
     if ("subscriberCount".equals(sortBy)) {
-      return String.valueOf(playlistSubscriptionRepository.countByPlaylistId(lastPlaylist.getId()));
+      return String.valueOf(subscriberCountByPlaylistId.getOrDefault(lastPlaylist.getId(), 0L));
     }
 
     return lastPlaylist.getUpdatedAt().toString();
