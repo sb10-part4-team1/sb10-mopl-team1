@@ -4,7 +4,6 @@ import com.sb10.mopl.auth.exception.AuthErrorCode;
 import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.service.JwtSessionService;
-import com.sb10.mopl.user.entity.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -29,6 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtProvider jwtProvider;
   private final JwtSessionService jwtSessionService;
+  private final AuthenticatedUserFactory authenticatedUserFactory;
   private final AuthErrorResponseWriter responseWriter;
   private final List<RequestMatcher> skipRequestMatchers;
   private final List<RequestMatcher> continueOnFailureRequestMatchers;
@@ -36,11 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   public JwtAuthenticationFilter(
       JwtProvider jwtProvider,
       JwtSessionService jwtSessionService,
+      AuthenticatedUserFactory authenticatedUserFactory,
       AuthErrorResponseWriter responseWriter,
       RequestMatcher[] skipRequestMatchers,
       RequestMatcher[] continueOnFailureRequestMatchers) {
     this.jwtProvider = jwtProvider;
     this.jwtSessionService = jwtSessionService;
+    this.authenticatedUserFactory = authenticatedUserFactory;
     this.responseWriter = responseWriter;
     this.skipRequestMatchers = List.of(skipRequestMatchers);
     this.continueOnFailureRequestMatchers = List.of(continueOnFailureRequestMatchers);
@@ -83,7 +85,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     try {
       Claims claims = jwtProvider.parseClaims(token);
-      AuthenticatedUser authenticatedUser = toAuthenticatedUser(claims);
+      AuthenticatedUser authenticatedUser = authenticatedUserFactory.from(claims);
       verifyAdditionalTokenPolicy(claims, authenticatedUser);
 
       SecurityContextHolder.getContext().setAuthentication(createAuthentication(authenticatedUser));
@@ -103,37 +105,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     return continueOnFailureRequestMatchers.stream().anyMatch(matcher -> matcher.matches(request));
   }
 
-  private AuthenticatedUser toAuthenticatedUser(Claims claims) {
-    String subject = claims.getSubject();
-    String id = requiredClaim(claims, "id");
-    String email = requiredClaim(claims, "email");
-    String role = requiredClaim(claims, "role");
-    String tokenType = requiredClaim(claims, JwtProvider.TOKEN_TYPE_CLAIM);
-
-    if (subject == null || subject.isBlank() || !subject.equals(id)) {
-      throw new IllegalArgumentException("JWT subject does not match id claim.");
-    }
-
-    if (!JwtProvider.ACCESS_TOKEN_TYPE.equals(tokenType)) {
-      throw new IllegalArgumentException("JWT token type is not ACCESS.");
-    }
-
-    return new AuthenticatedUser(UUID.fromString(id), email, UserRole.valueOf(role));
-  }
-
   protected void verifyAdditionalTokenPolicy(Claims claims, AuthenticatedUser authenticatedUser) {
-    UUID sessionId = UUID.fromString(requiredClaim(claims, JwtProvider.SESSION_ID_CLAIM));
+    UUID sessionId =
+        UUID.fromString(
+            authenticatedUserFactory.requiredClaim(claims, JwtProvider.SESSION_ID_CLAIM));
     if (!jwtSessionService.isActive(authenticatedUser.id(), sessionId)) {
       throw new IllegalArgumentException("JWT session is not active.");
     }
-  }
-
-  private String requiredClaim(Claims claims, String name) {
-    Object value = claims.get(name);
-    if (!(value instanceof String stringValue) || stringValue.isBlank()) {
-      throw new IllegalArgumentException("Missing JWT claim: " + name);
-    }
-    return stringValue;
   }
 
   private Authentication createAuthentication(AuthenticatedUser authenticatedUser) {

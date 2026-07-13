@@ -5,6 +5,7 @@ import com.sb10.mopl.auth.security.filter.EmailPasswordAuthenticationFilter;
 import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.handler.Oauth2LoginFailureHandler;
 import com.sb10.mopl.auth.security.handler.Oauth2LoginSuccessHandler;
+import com.sb10.mopl.auth.security.jwt.AuthenticatedUserFactory;
 import com.sb10.mopl.auth.security.jwt.JwtAuthenticationFilter;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
@@ -207,10 +208,12 @@ public class SecurityConfig {
   public JwtAuthenticationFilter jwtAuthenticationFilter(
       JwtProvider jwtProvider,
       JwtSessionService jwtSessionService,
+      AuthenticatedUserFactory authenticatedUserFactory,
       AuthErrorResponseWriter authErrorResponseWriter) {
     return new JwtAuthenticationFilter(
         jwtProvider,
         jwtSessionService,
+        authenticatedUserFactory,
         authErrorResponseWriter,
         PUBLIC_ENDPOINT_MATCHERS,
         CONTINUE_ON_AUTHENTICATION_FAILURE_MATCHERS);
