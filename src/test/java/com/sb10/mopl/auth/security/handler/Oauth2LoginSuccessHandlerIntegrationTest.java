@@ -20,6 +20,8 @@ import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -149,6 +151,7 @@ class Oauth2LoginSuccessHandlerIntegrationTest {
 
     assertAll(
         () -> assertTrue(response.getRedirectedUrl().startsWith("/#/sign-in?error=oauth_failed")),
+        () -> assertEquals("잠긴 계정은 로그인할 수 없습니다.", errorMessage(response)),
         () -> assertEquals(refreshTokenCount, refreshTokenRepository.count()),
         () -> assertNull(response.getCookie(refreshTokenCookieName())));
   }
@@ -160,6 +163,7 @@ class Oauth2LoginSuccessHandlerIntegrationTest {
 
     assertAll(
         () -> assertTrue(response.getRedirectedUrl().startsWith("/#/sign-in?error=oauth_failed")),
+        () -> assertEquals("Google 계정의 이메일 인증이 필요합니다.", errorMessage(response)),
         () -> assertEquals(0L, userRepository.count()),
         () -> assertEquals(0L, socialAccountRepository.count()),
         () -> assertEquals(0L, refreshTokenRepository.count()),
@@ -252,6 +256,13 @@ class Oauth2LoginSuccessHandlerIntegrationTest {
 
   private String refreshTokenCookieName() {
     return jwtProperties.refreshTokenCookie().name();
+  }
+
+  private String errorMessage(MockHttpServletResponse response) {
+    String redirectUrl = response.getRedirectedUrl();
+    assertNotNull(redirectUrl);
+    String encodedMessage = redirectUrl.substring(redirectUrl.indexOf("error_message=") + 14);
+    return URLDecoder.decode(encodedMessage, StandardCharsets.UTF_8);
   }
 
   private void assertRefreshTokenCookie(
