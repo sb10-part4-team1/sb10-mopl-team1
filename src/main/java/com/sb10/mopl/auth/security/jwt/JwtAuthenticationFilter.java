@@ -85,7 +85,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     try {
       Claims claims = jwtProvider.parseClaims(token);
-      AuthenticatedUser authenticatedUser = toAuthenticatedUser(claims);
+      AuthenticatedUser authenticatedUser = authenticatedUserFactory.from(claims);
       verifyAdditionalTokenPolicy(claims, authenticatedUser);
 
       SecurityContextHolder.getContext().setAuthentication(createAuthentication(authenticatedUser));
@@ -105,24 +105,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     return continueOnFailureRequestMatchers.stream().anyMatch(matcher -> matcher.matches(request));
   }
 
-  private AuthenticatedUser toAuthenticatedUser(Claims claims) {
-    String subject = claims.getSubject();
-    String id = requiredClaim(claims, "id");
-    String email = requiredClaim(claims, "email");
-    String role = requiredClaim(claims, "role");
-    String tokenType = requiredClaim(claims, JwtProvider.TOKEN_TYPE_CLAIM);
-
-    if (subject == null || subject.isBlank() || !subject.equals(id)) {
-      throw new IllegalArgumentException("JWT subject does not match id claim.");
-    }
-
-    if (!JwtProvider.ACCESS_TOKEN_TYPE.equals(tokenType)) {
-      throw new IllegalArgumentException("JWT token type is not ACCESS.");
-    }
-
-    return new AuthenticatedUser(UUID.fromString(id), email, UserRole.valueOf(role));
-  }
-
   protected void verifyAdditionalTokenPolicy(Claims claims, AuthenticatedUser authenticatedUser) {
     UUID sessionId =
         UUID.fromString(
@@ -130,14 +112,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     if (!jwtSessionService.isActive(authenticatedUser.id(), sessionId)) {
       throw new IllegalArgumentException("JWT session is not active.");
     }
-  }
-
-  private String requiredClaim(Claims claims, String name) {
-    Object value = claims.get(name);
-    if (!(value instanceof String stringValue) || stringValue.isBlank()) {
-      throw new IllegalArgumentException("Missing JWT claim: " + name);
-    }
-    return stringValue;
   }
 
   private Authentication createAuthentication(AuthenticatedUser authenticatedUser) {
