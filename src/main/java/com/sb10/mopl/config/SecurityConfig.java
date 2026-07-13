@@ -4,6 +4,8 @@ import com.sb10.mopl.auth.security.csrf.SpaCsrfTokenRequestHandler;
 import com.sb10.mopl.auth.security.filter.EmailPasswordAuthenticationFilter;
 import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
 import com.sb10.mopl.auth.security.jwt.AuthenticatedUserFactory;
+import com.sb10.mopl.auth.security.handler.Oauth2LoginFailureHandler;
+import com.sb10.mopl.auth.security.handler.Oauth2LoginSuccessHandler;
 import com.sb10.mopl.auth.security.jwt.JwtAuthenticationFilter;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
@@ -14,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Validator;
 import java.time.Clock;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -33,6 +36,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -58,6 +62,10 @@ public class SecurityConfig {
 
   // 공개/관리자 규칙에 걸리지 않은 API 요청을 마지막에 한 번 더 닫기 위한 백엔드 API 범위
   private static final RequestMatcher API_ENDPOINT_MATCHER = pathMatcher("/api/**");
+  // 인증 실패 후에도 클라이언트 로그아웃 정리를 완료해야 하는 경로
+  private static final RequestMatcher[] CONTINUE_ON_AUTHENTICATION_FAILURE_MATCHERS = {
+    methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-out")
+  };
 
   // 로그인하지 않은 사용자가 접근할 수 있어야 하는 경로 목록
   private static final RequestMatcher[] PUBLIC_ENDPOINT_MATCHERS = {
@@ -88,9 +96,9 @@ public class SecurityConfig {
     methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/role"),
     methodAndPathMatcher(HttpMethod.PATCH, "/api/users/*/locked"),
     pathMatcher("/api/admin/batch/**"), // 관리자 배치 제어 권한 제한
-    methodAndPathMatcher(HttpMethod.POST, "/api/content/**"), // 콘텐츠 등록(POST) 권한 제한
-    methodAndPathMatcher(HttpMethod.PUT, "/api/content/**"), // 콘텐츠 수정(PUT) 권한 제한
-    methodAndPathMatcher(HttpMethod.DELETE, "/api/content/**") // 콘텐츠 삭제(DELETE) 권한 제한
+    methodAndPathMatcher(HttpMethod.POST, "/api/contents/**"), // 콘텐츠 등록(POST) 권한 제한
+    methodAndPathMatcher(HttpMethod.PATCH, "/api/contents/**"), // 콘텐츠 수정(PATCH) 권한 제한
+    methodAndPathMatcher(HttpMethod.DELETE, "/api/contents/**") // 콘텐츠 삭제(DELETE) 권한 제한
   };
 
   private static RequestMatcher pathMatcher(String pattern) {
@@ -119,8 +127,13 @@ public class SecurityConfig {
       AuthenticationEntryPoint authenticationEntryPoint,
       AccessDeniedHandler accessDeniedHandler,
       LogoutHandler signOutLogoutHandler,
-      LogoutSuccessHandler logoutSuccessHandler)
+      LogoutSuccessHandler logoutSuccessHandler,
+      ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository,
+      Oauth2LoginSuccessHandler oauth2LoginSuccessHandler,
+      Oauth2LoginFailureHandler oauth2LoginFailureHandler)
       throws Exception {
+    boolean oauth2LoginEnabled = clientRegistrationRepository.getIfAvailable() != null;
+
     http.csrf(
             csrf ->
                 csrf.ignoringRequestMatchers(
@@ -129,7 +142,11 @@ public class SecurityConfig {
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
         .sessionManagement(
-            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            session ->
+                session.sessionCreationPolicy(
+                    oauth2LoginEnabled
+                        ? SessionCreationPolicy.IF_REQUIRED
+                        : SessionCreationPolicy.STATELESS))
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
         .logout(
@@ -166,6 +183,14 @@ public class SecurityConfig {
         .addFilterBefore(jwtAuthenticationFilter, LogoutFilter.class)
         .addFilterAt(emailPasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
+    if (oauth2LoginEnabled) {
+      http.oauth2Login(
+          oauth2 ->
+              oauth2
+                  .successHandler(oauth2LoginSuccessHandler)
+                  .failureHandler(oauth2LoginFailureHandler));
+    }
+
     return http.build();
   }
 
@@ -190,14 +215,17 @@ public class SecurityConfig {
         jwtSessionService,
         authenticatedUserFactory,
         authErrorResponseWriter,
-        PUBLIC_ENDPOINT_MATCHERS);
+        PUBLIC_ENDPOINT_MATCHERS,
+        CONTINUE_ON_AUTHENTICATION_FAILURE_MATCHERS);
   }
 
   @Bean
   public EmailPasswordAuthenticationFilter emailPasswordAuthenticationFilter(
       AuthenticationManager authenticationManager,
-      AuthenticationSuccessHandler authenticationSuccessHandler,
-      AuthenticationFailureHandler authenticationFailureHandler,
+      @Qualifier("jwtAuthenticationSuccessHandler")
+          AuthenticationSuccessHandler authenticationSuccessHandler,
+      @Qualifier("jsonAuthenticationFailureHandler")
+          AuthenticationFailureHandler authenticationFailureHandler,
       Validator validator) {
     return new EmailPasswordAuthenticationFilter(
         authenticationManager,

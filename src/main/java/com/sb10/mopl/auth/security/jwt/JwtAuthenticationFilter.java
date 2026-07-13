@@ -31,18 +31,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private final AuthenticatedUserFactory authenticatedUserFactory;
   private final AuthErrorResponseWriter responseWriter;
   private final List<RequestMatcher> skipRequestMatchers;
+  private final List<RequestMatcher> continueOnFailureRequestMatchers;
 
   public JwtAuthenticationFilter(
       JwtProvider jwtProvider,
       JwtSessionService jwtSessionService,
       AuthenticatedUserFactory authenticatedUserFactory,
       AuthErrorResponseWriter responseWriter,
-      RequestMatcher[] skipRequestMatchers) {
+      RequestMatcher[] skipRequestMatchers,
+      RequestMatcher[] continueOnFailureRequestMatchers) {
     this.jwtProvider = jwtProvider;
     this.jwtSessionService = jwtSessionService;
     this.authenticatedUserFactory = authenticatedUserFactory;
     this.responseWriter = responseWriter;
     this.skipRequestMatchers = List.of(skipRequestMatchers);
+    this.continueOnFailureRequestMatchers = List.of(continueOnFailureRequestMatchers);
   }
 
   @Override
@@ -62,19 +65,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     if (!authorization.startsWith(BEARER_PREFIX)) {
+      if (shouldContinueOnAuthenticationFailure(request)) {
+        filterChain.doFilter(request, response);
+        return;
+      }
       writeAuthenticationFailure(response, "Authorization header must use Bearer token.");
       return;
     }
 
     String token = authorization.substring(BEARER_PREFIX.length()).trim();
     if (token.isBlank()) {
+      if (shouldContinueOnAuthenticationFailure(request)) {
+        filterChain.doFilter(request, response);
+        return;
+      }
       writeAuthenticationFailure(response, "Bearer token is empty.");
       return;
     }
 
     try {
       Claims claims = jwtProvider.parseClaims(token);
-      AuthenticatedUser authenticatedUser = authenticatedUserFactory.from(claims);
+      AuthenticatedUser authenticatedUser = toAuthenticatedUser(claims);
       verifyAdditionalTokenPolicy(claims, authenticatedUser);
 
       SecurityContextHolder.getContext().setAuthentication(createAuthentication(authenticatedUser));
@@ -82,8 +93,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
     } catch (JwtException | IllegalArgumentException exception) {
       SecurityContextHolder.clearContext();
+      if (shouldContinueOnAuthenticationFailure(request)) {
+        filterChain.doFilter(request, response);
+        return;
+      }
       writeAuthenticationFailure(response, "Invalid or expired access token.");
     }
+  }
+
+  private boolean shouldContinueOnAuthenticationFailure(HttpServletRequest request) {
+    return continueOnFailureRequestMatchers.stream().anyMatch(matcher -> matcher.matches(request));
+  }
+
+  private AuthenticatedUser toAuthenticatedUser(Claims claims) {
+    String subject = claims.getSubject();
+    String id = requiredClaim(claims, "id");
+    String email = requiredClaim(claims, "email");
+    String role = requiredClaim(claims, "role");
+    String tokenType = requiredClaim(claims, JwtProvider.TOKEN_TYPE_CLAIM);
+
+    if (subject == null || subject.isBlank() || !subject.equals(id)) {
+      throw new IllegalArgumentException("JWT subject does not match id claim.");
+    }
+
+    if (!JwtProvider.ACCESS_TOKEN_TYPE.equals(tokenType)) {
+      throw new IllegalArgumentException("JWT token type is not ACCESS.");
+    }
+
+    return new AuthenticatedUser(UUID.fromString(id), email, UserRole.valueOf(role));
   }
 
   protected void verifyAdditionalTokenPolicy(Claims claims, AuthenticatedUser authenticatedUser) {
@@ -93,6 +130,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     if (!jwtSessionService.isActive(authenticatedUser.id(), sessionId)) {
       throw new IllegalArgumentException("JWT session is not active.");
     }
+  }
+
+  private String requiredClaim(Claims claims, String name) {
+    Object value = claims.get(name);
+    if (!(value instanceof String stringValue) || stringValue.isBlank()) {
+      throw new IllegalArgumentException("Missing JWT claim: " + name);
+    }
+    return stringValue;
   }
 
   private Authentication createAuthentication(AuthenticatedUser authenticatedUser) {
