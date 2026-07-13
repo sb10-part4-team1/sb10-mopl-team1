@@ -3,6 +3,7 @@ package com.sb10.mopl.auth.service;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -13,6 +14,8 @@ import com.sb10.mopl.auth.event.TemporaryPasswordIssuedEvent;
 import com.sb10.mopl.auth.repository.TemporaryPasswordRepository;
 import com.sb10.mopl.auth.util.TemporaryPasswordGenerator;
 import com.sb10.mopl.user.entity.User;
+import com.sb10.mopl.user.exception.UserErrorCode;
+import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -113,20 +116,22 @@ class TemporaryPasswordServiceTest {
   }
 
   @Test
-  @DisplayName("존재하지 않는 이메일이면 임시 비밀번호를 발급하지 않고 조용히 종료한다")
-  void resetPassword_endsSilently_whenUserDoesNotExist() {
+  @DisplayName("존재하지 않는 이메일이면 사용자 없음 예외를 발생시키고 임시 비밀번호를 발급하지 않는다")
+  void resetPassword_throwsUserNotFoundException_whenUserDoesNotExist() {
     // given
     String email = "unknown@example.com";
 
     when(userRepository.findByEmailAndIsDeletedFalse(email)).thenReturn(Optional.empty());
 
     // when
-    temporaryPasswordService.resetPassword(email);
+    UserException exception =
+        assertThrows(UserException.class, () -> temporaryPasswordService.resetPassword(email));
 
     // then
     verify(userRepository).findByEmailAndIsDeletedFalse(email);
     verifyNoInteractions(
         temporaryPasswordRepository, passwordEncoder, temporaryPasswordGenerator, eventPublisher);
+    assertEquals(UserErrorCode.USER_NOT_FOUND, exception.getErrorCode());
   }
 
   @Test
