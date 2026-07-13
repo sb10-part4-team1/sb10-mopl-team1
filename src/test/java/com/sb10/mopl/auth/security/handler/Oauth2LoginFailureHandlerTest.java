@@ -3,6 +3,9 @@ package com.sb10.mopl.auth.security.handler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -27,8 +30,9 @@ class Oauth2LoginFailureHandlerTest {
     String redirectUrl = response.getRedirectedUrl();
 
     assertEquals(302, response.getStatus());
+    Assertions.assertNotNull(redirectUrl);
     assertTrue(redirectUrl.startsWith("/#/sign-in?error=oauth_failed&error_message="));
-    assertTrue(redirectUrl.contains("%EC%86%8C%EC%85%9C+%EB%A1%9C%EA%B7%B8%EC%9D%B8"));
+    assertTrue(redirectUrl.contains(URLEncoder.encode("소셜 로그인", StandardCharsets.UTF_8)));
   }
 
   @Test
