@@ -31,9 +31,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
-/**
- * connect 프레임의 jwt 검증해 세션에 인증 정보를 부여하고 sub 프레임에서는 dm 토픽 구독자가 실제 대화 참여자인지 검사합니다.
- */
+/** connect 프레임의 jwt 검증해 세션에 인증 정보를 부여하고 sub 프레임에서는 dm 토픽 구독자가 실제 대화 참여자인지 검사합니다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -45,10 +43,10 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
   // UUID 형식만 들어올 수 있음
   private static final Pattern DIRECT_MESSAGE_TOPIC_PATTERN =
-    Pattern.compile(
-      "^/sub/conversations"
-        + "/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
-        + "/direct-messages$");
+      Pattern.compile(
+          "^/sub/conversations"
+              + "/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
+              + "/direct-messages$");
 
   private final JwtProvider jwtProvider;
   private final JwtSessionService jwtSessionService;
@@ -59,7 +57,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
   @Override
   public Message<?> preSend(Message<?> message, MessageChannel channel) {
     StompHeaderAccessor accessor =
-      MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
     if (accessor == null) {
       return message;
@@ -104,7 +102,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
     // /sub는 DM 토픽 전용 브로커 prefix이므로, 형식이 맞지 않는 destination은 구독을 거부합니다.
     Matcher matcher =
-      destination == null ? null : DIRECT_MESSAGE_TOPIC_PATTERN.matcher(destination);
+        destination == null ? null : DIRECT_MESSAGE_TOPIC_PATTERN.matcher(destination);
     if (matcher == null || !matcher.matches()) {
       log.warn("[DM] 허용되지 않은 SUBSCRIBE 엔드포인트입니다. destination={}", destination);
       throw new MoplException(AuthErrorCode.AUTHENTICATION_FAILED, Map.of());
@@ -114,19 +112,19 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     UUID userId = resolveUserId(accessor.getUser());
 
     boolean isParticipant =
-      conversationParticipantRepository.existsById(
-        new ConversationParticipantId(conversationId, userId));
+        conversationParticipantRepository.existsById(
+            new ConversationParticipantId(conversationId, userId));
     if (!isParticipant) {
       throw new ConversationException(
-        ConversationErrorCode.DIRECT_MESSAGE_TOPIC_ACCESS_DENIED,
-        Map.of("conversationId", conversationId, "userId", userId));
+          ConversationErrorCode.DIRECT_MESSAGE_TOPIC_ACCESS_DENIED,
+          Map.of("conversationId", conversationId, "userId", userId));
     }
   }
 
   // sub 프레임에 저장된 principal에서 인증된 사용자의 id를 구한다
   private UUID resolveUserId(Principal principal) {
     if (principal instanceof Authentication authentication
-      && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
+        && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
       return authenticatedUser.id();
     }
 
@@ -156,18 +154,18 @@ public class StompChannelInterceptor implements ChannelInterceptor {
       AuthenticatedUser authenticatedUser = authenticatedUserFactory.from(claims);
 
       UUID sessionId =
-        UUID.fromString(
-          authenticatedUserFactory.requiredClaim(claims, JwtProvider.SESSION_ID_CLAIM));
+          UUID.fromString(
+              authenticatedUserFactory.requiredClaim(claims, JwtProvider.SESSION_ID_CLAIM));
       if (!jwtSessionService.isActive(authenticatedUser.id(), sessionId)) {
         log.warn(
-          "[DM] JWT 세션이 유효하지 않습니다. userId={}, sessionId={}", authenticatedUser.id(), sessionId);
+            "[DM] JWT 세션이 유효하지 않습니다. userId={}, sessionId={}", authenticatedUser.id(), sessionId);
         throw new MoplException(AuthErrorCode.AUTHENTICATION_FAILED, Map.of());
       }
 
       return UsernamePasswordAuthenticationToken.authenticated(
-        authenticatedUser,
-        null,
-        List.of(new SimpleGrantedAuthority(authenticatedUser.authorityName())));
+          authenticatedUser,
+          null,
+          List.of(new SimpleGrantedAuthority(authenticatedUser.authorityName())));
     } catch (JwtException | IllegalArgumentException e) {
 
       log.warn("[DM] 유효하지 않은 WebSocket 인증 토큰입니다.", e);
