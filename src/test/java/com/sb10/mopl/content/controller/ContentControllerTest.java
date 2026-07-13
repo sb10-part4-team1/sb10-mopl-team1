@@ -30,6 +30,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -42,6 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(
     controllers = ContentController.class,
     excludeAutoConfiguration = {
+      OAuth2ClientWebSecurityAutoConfiguration.class,
       SecurityAutoConfiguration.class,
       SecurityFilterAutoConfiguration.class
     })
