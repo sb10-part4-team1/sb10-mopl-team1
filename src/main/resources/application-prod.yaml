@@ -15,7 +15,7 @@ spring:
 
   sql:
     init:
-      mode: never # 운영은 절대로 schema.sql 자동 실행 금지
+      mode: always # 운영은 절대로 schema.sql 자동 실행 금지
 
   jpa:
     hibernate:
