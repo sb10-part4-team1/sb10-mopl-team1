@@ -29,6 +29,17 @@ spring:
           timeout: ${MAIL_READ_TIMEOUT_MS:5000}
           writetimeout: ${MAIL_WRITE_TIMEOUT_MS:5000}
 
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_S3_ACCESS_KEY:mock-access-key}
+        secret-key: ${AWS_S3_SECRET_KEY:mock-secret-key}
+      region:
+        static: ${AWS_S3_REGION:ap-northeast-2}
+      s3:
+        bucket: ${AWS_S3_BUCKET:}
+        endpoint: ${AWS_S3_ENDPOINT:}
+
   batch:
     jdbc:
       initialize-schema: always   # 배치 메타 테이블 자동 생성
@@ -85,10 +96,6 @@ mopl:
       name: ${MOPL_ADMIN_NAME:}
       password: ${MOPL_ADMIN_PASSWORD:}
 
-  aws:
-    access-key: ${AWS_ACCESS_KEY}
-    secret-key: ${AWS_SECRET_KEY}
-    region: ${AWS_REGION:ap-northeast-2}
 
   external-api:
     connect-timeout-ms: 3000

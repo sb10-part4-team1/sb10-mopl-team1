@@ -120,6 +120,16 @@ dependencies {
   testImplementation 'org.springframework.security:spring-security-test'
 
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+  // AWS S3
+  implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.1.1'
+
+  // ShedLock (Redis Lock for Scheduled Tasks)
+  implementation 'net.javacrumbs.shedlock:shedlock-spring:5.13.0'
+  implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.13.0'
+
+  // Kafka
+  implementation 'org.springframework.kafka:spring-kafka'
 }
 
 tasks.named('test') {

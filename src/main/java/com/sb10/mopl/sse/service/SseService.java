@@ -1,6 +1,7 @@
 package com.sb10.mopl.sse.service;
 
 import com.sb10.mopl.sse.SseMessage;
+import com.sb10.mopl.sse.kafka.SseKafkaProducer;
 import com.sb10.mopl.sse.repository.SseEmitterRepository;
 import com.sb10.mopl.sse.repository.SseMessageRepository;
 import java.io.IOException;
@@ -22,7 +23,8 @@ public class SseService {
 
   private final SseEmitterRepository sseEmitterRepository;
   private final SseMessageRepository sseMessageRepository;
-  //  @Value("${sse.timeout}")
+  private final Optional<SseKafkaProducer> sseKafkaProducer;
+
   private final long timeout = 60L * 60L * 1000L;
 
   public SseEmitter connect(UUID receiverId, UUID lastEventId) {
@@ -71,7 +73,25 @@ public class SseService {
   }
 
   public void send(Collection<UUID> receiverIds, String eventName, Object data) {
-    SseMessage message = sseMessageRepository.save(SseMessage.create(receiverIds, eventName, data));
+    sseMessageRepository.save(SseMessage.create(receiverIds, eventName, data));
+    if (sseKafkaProducer.isPresent()) {
+      sseKafkaProducer.get().sendNotification(receiverIds, eventName, data);
+    } else {
+      sendLocally(receiverIds, eventName, data);
+    }
+  }
+
+  public void broadcast(String eventName, Object data) {
+    sseMessageRepository.save(SseMessage.createBroadcast(eventName, data));
+    if (sseKafkaProducer.isPresent()) {
+      sseKafkaProducer.get().broadcastNotification(eventName, data);
+    } else {
+      broadcastLocally(eventName, data);
+    }
+  }
+
+  private void sendLocally(Collection<UUID> receiverIds, String eventName, Object data) {
+    SseMessage message = SseMessage.create(receiverIds, eventName, data);
     Set<DataWithMediaType> event = message.toEvent();
     sseEmitterRepository
         .findAllByReceiverIdsIn(receiverIds)
@@ -85,8 +105,8 @@ public class SseService {
             });
   }
 
-  public void broadcast(String eventName, Object data) {
-    SseMessage message = sseMessageRepository.save(SseMessage.createBroadcast(eventName, data));
+  private void broadcastLocally(String eventName, Object data) {
+    SseMessage message = SseMessage.createBroadcast(eventName, data);
     Set<DataWithMediaType> event = message.toEvent();
     sseEmitterRepository
         .findAll()
