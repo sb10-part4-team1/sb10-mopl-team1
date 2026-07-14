@@ -6,10 +6,12 @@ import com.sb10.mopl.conversation.dto.ConversationDto;
 import com.sb10.mopl.conversation.dto.ConversationSearchRequest;
 import com.sb10.mopl.conversation.dto.DirectMessageDto;
 import com.sb10.mopl.conversation.dto.DirectMessageSearchRequest;
+import com.sb10.mopl.conversation.dto.DirectMessageSendRequest;
 import com.sb10.mopl.conversation.entity.Conversation;
 import com.sb10.mopl.conversation.entity.ConversationParticipant;
 import com.sb10.mopl.conversation.entity.ConversationParticipantId;
 import com.sb10.mopl.conversation.entity.DirectMessage;
+import com.sb10.mopl.conversation.event.DirectMessageSentEvent;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
 import com.sb10.mopl.conversation.exception.ConversationException;
 import com.sb10.mopl.conversation.mapper.ConversationMapper;
@@ -29,6 +31,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +44,7 @@ public class ConversationService {
   private final ConversationParticipantRepository conversationParticipantRepository;
   private final DirectMessageRepository directMessageRepository;
   private final UserRepository userRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   private final ConversationMapper conversationMapper;
 
@@ -183,6 +187,55 @@ public class ConversationService {
         totalCount,
         request.sortBy().name(),
         request.sortDirection());
+  }
+
+  // DM 전송 (웹소켓)
+  public DirectMessageDto sendDirectMessage(
+      UUID senderId, UUID conversationId, DirectMessageSendRequest request) {
+    requireParticipant(senderId, conversationId);
+
+    Conversation conversation =
+        conversationRepository
+            .findById(conversationId)
+            .orElseThrow(
+                () ->
+                    new ConversationException(
+                        ConversationErrorCode.CONVERSATION_NOT_FOUND,
+                        Map.of("conversationId", conversationId)));
+
+    ConversationParticipant receiverParticipant =
+        conversationParticipantRepository
+            .findOtherParticipant(conversationId, senderId)
+            .orElseThrow(
+                () ->
+                    new ConversationException(
+                        ConversationErrorCode.CONVERSATION_NOT_FOUND,
+                        Map.of("conversationId", conversationId)));
+
+    User sender =
+        userRepository
+            .findById(senderId)
+            .orElseThrow(
+                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
+
+    User receiver = receiverParticipant.getUser();
+
+    DirectMessage directMessage =
+        DirectMessage.builder()
+            .conversation(conversation)
+            .sender(sender)
+            .receiver(receiver)
+            .content(request.content())
+            .build();
+
+    directMessageRepository.save(directMessage);
+
+    DirectMessageDto dto = conversationMapper.toDto(directMessage);
+
+    // 이벤트를 이용하여 SSE 발송 처리
+    eventPublisher.publishEvent(new DirectMessageSentEvent(receiver.getId(), dto));
+
+    return dto;
   }
 
   // DM 읽음 처리

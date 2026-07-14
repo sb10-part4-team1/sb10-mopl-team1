@@ -3,6 +3,9 @@ package com.sb10.mopl.config;
 import com.sb10.mopl.auth.security.csrf.SpaCsrfTokenRequestHandler;
 import com.sb10.mopl.auth.security.filter.EmailPasswordAuthenticationFilter;
 import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
+import com.sb10.mopl.auth.security.handler.Oauth2LoginFailureHandler;
+import com.sb10.mopl.auth.security.handler.Oauth2LoginSuccessHandler;
+import com.sb10.mopl.auth.security.jwt.AuthenticatedUserFactory;
 import com.sb10.mopl.auth.security.jwt.JwtAuthenticationFilter;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
@@ -13,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Validator;
 import java.time.Clock;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -32,6 +36,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -122,8 +127,13 @@ public class SecurityConfig {
       AuthenticationEntryPoint authenticationEntryPoint,
       AccessDeniedHandler accessDeniedHandler,
       LogoutHandler signOutLogoutHandler,
-      LogoutSuccessHandler logoutSuccessHandler)
+      LogoutSuccessHandler logoutSuccessHandler,
+      ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository,
+      Oauth2LoginSuccessHandler oauth2LoginSuccessHandler,
+      Oauth2LoginFailureHandler oauth2LoginFailureHandler)
       throws Exception {
+    boolean oauth2LoginEnabled = clientRegistrationRepository.getIfAvailable() != null;
+
     http.csrf(
             csrf ->
                 csrf.ignoringRequestMatchers(
@@ -132,7 +142,11 @@ public class SecurityConfig {
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
         .sessionManagement(
-            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            session ->
+                session.sessionCreationPolicy(
+                    oauth2LoginEnabled
+                        ? SessionCreationPolicy.IF_REQUIRED
+                        : SessionCreationPolicy.STATELESS))
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
         .logout(
@@ -169,6 +183,14 @@ public class SecurityConfig {
         .addFilterBefore(jwtAuthenticationFilter, LogoutFilter.class)
         .addFilterAt(emailPasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
+    if (oauth2LoginEnabled) {
+      http.oauth2Login(
+          oauth2 ->
+              oauth2
+                  .successHandler(oauth2LoginSuccessHandler)
+                  .failureHandler(oauth2LoginFailureHandler));
+    }
+
     return http.build();
   }
 
@@ -186,10 +208,12 @@ public class SecurityConfig {
   public JwtAuthenticationFilter jwtAuthenticationFilter(
       JwtProvider jwtProvider,
       JwtSessionService jwtSessionService,
+      AuthenticatedUserFactory authenticatedUserFactory,
       AuthErrorResponseWriter authErrorResponseWriter) {
     return new JwtAuthenticationFilter(
         jwtProvider,
         jwtSessionService,
+        authenticatedUserFactory,
         authErrorResponseWriter,
         PUBLIC_ENDPOINT_MATCHERS,
         CONTINUE_ON_AUTHENTICATION_FAILURE_MATCHERS);
@@ -198,8 +222,10 @@ public class SecurityConfig {
   @Bean
   public EmailPasswordAuthenticationFilter emailPasswordAuthenticationFilter(
       AuthenticationManager authenticationManager,
-      AuthenticationSuccessHandler authenticationSuccessHandler,
-      AuthenticationFailureHandler authenticationFailureHandler,
+      @Qualifier("jwtAuthenticationSuccessHandler")
+          AuthenticationSuccessHandler authenticationSuccessHandler,
+      @Qualifier("jsonAuthenticationFailureHandler")
+          AuthenticationFailureHandler authenticationFailureHandler,
       Validator validator) {
     return new EmailPasswordAuthenticationFilter(
         authenticationManager,

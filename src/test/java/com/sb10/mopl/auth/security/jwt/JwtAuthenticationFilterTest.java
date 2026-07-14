@@ -109,6 +109,7 @@ class JwtAuthenticationFilterTest {
         new JwtAuthenticationFilter(
             jwtProviderAt(NOW),
             activeJwtSessionService(),
+            new AuthenticatedUserFactory(),
             new AuthErrorResponseWriter(objectMapper),
             new RequestMatcher[] {publicMatcher},
             new RequestMatcher[0]);
@@ -155,6 +156,7 @@ class JwtAuthenticationFilterTest {
         new JwtAuthenticationFilter(
             jwtProviderAt(NOW),
             activeJwtSessionService(),
+            new AuthenticatedUserFactory(),
             new AuthErrorResponseWriter(objectMapper),
             new RequestMatcher[0],
             new RequestMatcher[] {signOutMatcher});
@@ -293,6 +295,7 @@ class JwtAuthenticationFilterTest {
     return new JwtAuthenticationFilter(
         jwtProvider,
         activeJwtSessionService(),
+        new AuthenticatedUserFactory(),
         new AuthErrorResponseWriter(objectMapper),
         new RequestMatcher[0],
         new RequestMatcher[0]);

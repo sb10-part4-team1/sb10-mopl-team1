@@ -508,6 +508,50 @@ class UserServiceTest {
     verify(userMapper, never()).toDto(any());
   }
 
+  @Test
+  @DisplayName("활성 사용자를 조회하면 UserDto를 반환한다")
+  void findUser_success_whenActiveUserExists() {
+    // given
+    UUID userId = UUID.randomUUID();
+    User user =
+        userWithIdentity(
+            userId,
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "test-user",
+            "user@example.com",
+            UserRole.USER,
+            false);
+    UserDto expectedDto = toDto(user);
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.of(user));
+    when(userMapper.toDto(user)).thenReturn(expectedDto);
+
+    // when
+    UserDto actual = userService.findUser(userId);
+
+    // then
+    assertEquals(expectedDto, actual);
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
+    verify(userMapper).toDto(user);
+  }
+
+  @Test
+  @DisplayName("존재하지 않거나 삭제된 사용자를 조회하면 USER_NOT_FOUND 예외를 반환한다")
+  void findUser_fail_whenUserIsUnavailable() {
+    // given
+    UUID userId = UUID.randomUUID();
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.empty());
+
+    // when
+    UserException exception = assertThrows(UserException.class, () -> userService.findUser(userId));
+
+    // then
+    assertAll(
+        () -> assertEquals(UserErrorCode.USER_NOT_FOUND, exception.getErrorCode()),
+        () -> assertEquals(userId, exception.getDetails().get("userId")));
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
+    verify(userMapper, never()).toDto(any());
+  }
+
   private User userWithIdentity(
       UUID id, Instant createdAt, String name, String email, UserRole role, boolean locked) {
     User user =

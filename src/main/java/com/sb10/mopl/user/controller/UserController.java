@@ -37,6 +37,12 @@ public class UserController {
     return ResponseEntity.created(URI.create("/api/users/" + userDto.id())).body(userDto);
   }
 
+  @GetMapping("/{userId}")
+  public ResponseEntity<UserDto> findUser(@PathVariable UUID userId) {
+    UserDto userDto = userService.findUser(userId);
+    return ResponseEntity.ok(userDto);
+  }
+
   @PatchMapping("/{userId}/password")
   public ResponseEntity<Void> changePassword(
       @PathVariable UUID userId,

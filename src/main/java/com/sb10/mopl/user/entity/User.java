@@ -30,7 +30,7 @@ public class User extends BaseUpdatableEntity {
   @Column(name = "password", nullable = false, length = 255)
   private String password;
 
-  @Column(name = "profile_image_url")
+  @Column(name = "profile_image_url", columnDefinition = "TEXT")
   private String profileImageUrl;
 
   @Enumerated(EnumType.STRING)

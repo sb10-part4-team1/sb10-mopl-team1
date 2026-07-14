@@ -20,6 +20,7 @@ import com.sb10.mopl.auth.repository.TemporaryPasswordRepository;
 import com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.SignInTokens;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.user.entity.User;
+import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.repository.UserRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -89,15 +90,16 @@ class TemporaryPasswordResetIntegrationTest {
   }
 
   @Test
-  @DisplayName("존재하지 않는 이메일로 초기화를 요청해도 204를 반환하고 임시 비밀번호를 만들지 않는다")
-  void resetPassword_returnsNoContent_whenUserDoesNotExist() throws Exception {
+  @DisplayName("존재하지 않는 이메일로 초기화를 요청하면 404를 반환하고 임시 비밀번호를 만들지 않는다")
+  void resetPassword_returnsNotFound_whenUserDoesNotExist() throws Exception {
     mockMvc
         .perform(
             post("/api/auth/reset-password")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of("email", "unknown@example.com")))
                 .with(csrf()))
-        .andExpect(status().isNoContent());
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value(UserErrorCode.USER_NOT_FOUND.getCode()));
 
     assertEquals(0L, temporaryPasswordRepository.count());
   }

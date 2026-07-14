@@ -60,6 +60,16 @@ public class UserService {
     }
   }
 
+  @Transactional(readOnly = true)
+  public UserDto findUser(UUID userId) {
+    User user =
+        userRepository
+            .findByIdAndIsDeletedFalse(userId)
+            .orElseThrow(
+                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", userId)));
+    return userMapper.toDto(user);
+  }
+
   @Transactional
   public void changePassword(
       UUID targetUserId, UUID requesterUserId, ChangePasswordRequest changePasswordRequest) {
