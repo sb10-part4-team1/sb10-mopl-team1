@@ -23,8 +23,7 @@ public class GoogleOauth2UserProfileResolver implements Oauth2UserProfileResolve
 
     if (!Boolean.TRUE.equals(attributes.get("email_verified"))) {
       throw new MoplException(
-          AuthErrorCode.AUTHENTICATION_FAILED,
-          Map.of("message", "Google account email is not verified."));
+          AuthErrorCode.AUTHENTICATION_FAILED, Map.of("message", "Google 계정의 이메일 인증이 필요합니다."));
     }
 
     return new Oauth2UserProfile(
