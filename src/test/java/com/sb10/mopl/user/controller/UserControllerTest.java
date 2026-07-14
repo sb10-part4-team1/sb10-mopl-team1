@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -26,11 +28,13 @@ import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
+import com.sb10.mopl.user.dto.request.UserUpdateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.service.UserService;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +48,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -244,6 +249,194 @@ class UserControllerTest {
     // when & then
     mockMvc
         .perform(get("/api/users/{userId}", "invalid-user-id"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"));
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
+  @DisplayName("프로필 수정 요청이 유효하면 200 OK와 수정된 UserDto를 반환한다")
+  void updateProfile_success_whenRequestIsValid() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    authenticate(userId);
+    UserUpdateRequest request = new UserUpdateRequest("updated-user");
+    UserDto userDto =
+        new UserDto(
+            userId,
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "user@example.com",
+            "updated-user",
+            "/uploads/profile.png",
+            UserRole.USER,
+            false);
+    MockMultipartFile image =
+        new MockMultipartFile("image", "profile.png", "image/png", "image-bytes".getBytes());
+    when(userService.updateProfile(eq(userId), eq(userId), any(UserUpdateRequest.class), any()))
+        .thenReturn(userDto);
+
+    // when & then
+    mockMvc
+        .perform(
+            multipart("/api/users/{userId}", userId)
+                .file(requestPart(request))
+                .file(image)
+                .with(
+                    servletRequest -> {
+                      servletRequest.setMethod("PATCH");
+                      return servletRequest;
+                    })
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(userId.toString()))
+        .andExpect(jsonPath("$.name").value("updated-user"))
+        .andExpect(jsonPath("$.profileImageUrl").value("/uploads/profile.png"));
+
+    ArgumentCaptor<UserUpdateRequest> requestCaptor =
+        ArgumentCaptor.forClass(UserUpdateRequest.class);
+    verify(userService).updateProfile(eq(userId), eq(userId), requestCaptor.capture(), eq(image));
+    assertEquals("updated-user", requestCaptor.getValue().name());
+  }
+
+  @Test
+  @DisplayName("이미지 없이 프로필을 수정하면 200 OK를 반환한다")
+  void updateProfile_success_whenImageIsNotProvided() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    authenticate(userId);
+    UserUpdateRequest request = new UserUpdateRequest("updated-user");
+    UserDto userDto =
+        new UserDto(
+            userId,
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "user@example.com",
+            "updated-user",
+            "/uploads/old-profile.png",
+            UserRole.USER,
+            false);
+    when(userService.updateProfile(eq(userId), eq(userId), any(UserUpdateRequest.class), isNull()))
+        .thenReturn(userDto);
+
+    // when & then
+    mockMvc
+        .perform(
+            multipart("/api/users/{userId}", userId)
+                .file(requestPart(request))
+                .with(
+                    servletRequest -> {
+                      servletRequest.setMethod("PATCH");
+                      return servletRequest;
+                    })
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("updated-user"))
+        .andExpect(jsonPath("$.profileImageUrl").value("/uploads/old-profile.png"));
+
+    verify(userService)
+        .updateProfile(eq(userId), eq(userId), any(UserUpdateRequest.class), isNull());
+  }
+
+  @Test
+  @DisplayName("다른 사용자의 프로필 수정 요청은 403 Forbidden을 반환한다")
+  void updateProfile_fail_whenRequesterIsNotTargetUser() throws Exception {
+    // given
+    UUID targetUserId = UUID.randomUUID();
+    UUID requesterUserId = UUID.randomUUID();
+    authenticate(requesterUserId);
+    UserUpdateRequest request = new UserUpdateRequest("updated-user");
+    doThrow(
+            new UserException(
+                UserErrorCode.USER_ACCESS_DENIED,
+                Map.of("userId", targetUserId, "requesterId", requesterUserId)))
+        .when(userService)
+        .updateProfile(
+            eq(targetUserId), eq(requesterUserId), any(UserUpdateRequest.class), isNull());
+
+    // when & then
+    mockMvc
+        .perform(
+            multipart("/api/users/{userId}", targetUserId)
+                .file(requestPart(request))
+                .with(
+                    servletRequest -> {
+                      servletRequest.setMethod("PATCH");
+                      return servletRequest;
+                    })
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("U03"));
+
+    verify(userService)
+        .updateProfile(
+            eq(targetUserId), eq(requesterUserId), any(UserUpdateRequest.class), isNull());
+  }
+
+  @Test
+  @DisplayName("프로필 수정 요청의 이름이 유효하지 않으면 400 Bad Request를 반환한다")
+  void updateProfile_fail_whenNameIsInvalid() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    authenticate(userId);
+
+    // when & then
+    mockMvc
+        .perform(
+            multipart("/api/users/{userId}", userId)
+                .file(requestPart(new UserUpdateRequest("")))
+                .with(
+                    servletRequest -> {
+                      servletRequest.setMethod("PATCH");
+                      return servletRequest;
+                    })
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"));
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
+  @DisplayName("프로필 수정 요청에 request part가 없으면 400 Bad Request를 반환한다")
+  void updateProfile_fail_whenRequestPartIsMissing() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    authenticate(userId);
+
+    // when & then
+    mockMvc
+        .perform(
+            multipart("/api/users/{userId}", userId)
+                .with(
+                    servletRequest -> {
+                      servletRequest.setMethod("PATCH");
+                      return servletRequest;
+                    })
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"));
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
+  @DisplayName("프로필 수정 요청의 userId가 UUID 형식이 아니면 400 Bad Request를 반환한다")
+  void updateProfile_fail_whenUserIdIsInvalid() throws Exception {
+    // given
+    UUID requesterUserId = UUID.randomUUID();
+    authenticate(requesterUserId);
+
+    // when & then
+    mockMvc
+        .perform(
+            multipart("/api/users/{userId}", "invalid-user-id")
+                .file(requestPart(new UserUpdateRequest("updated-user")))
+                .with(
+                    servletRequest -> {
+                      servletRequest.setMethod("PATCH");
+                      return servletRequest;
+                    })
+                .contentType(MediaType.MULTIPART_FORM_DATA))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("SYS01"));
 
@@ -569,5 +762,13 @@ class UserControllerTest {
         .setAuthentication(
             UsernamePasswordAuthenticationToken.authenticated(
                 currentUser, null, List.of(new SimpleGrantedAuthority(role.authorityName()))));
+  }
+
+  private MockMultipartFile requestPart(UserUpdateRequest request) throws Exception {
+    return new MockMultipartFile(
+        "request",
+        "",
+        MediaType.APPLICATION_JSON_VALUE,
+        objectMapper.writeValueAsString(request).getBytes(StandardCharsets.UTF_8));
   }
 }
