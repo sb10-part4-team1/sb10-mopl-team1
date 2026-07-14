@@ -13,6 +13,14 @@ spring:
     username: ${DB_USERNAME:mopl_user}
     password: ${DB_PASSWORD:mopl_secure_password}
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+
   sql:
     init:
       mode: always # 운영은 절대로 schema.sql 자동 실행 금지
