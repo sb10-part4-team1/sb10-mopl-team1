@@ -102,6 +102,29 @@ class UserProfileUpdateIntegrationTest {
     assertEquals("updated-name", updatedUser.getName());
   }
 
+  @Test
+  @DisplayName("로그인한 사용자가 CSRF 토큰 없이 프로필을 수정하면 403을 반환한다")
+  void updateProfile_returnsForbidden_whenCsrfTokenIsMissing() throws Exception {
+    User user = saveUser("original-name");
+    SignInTokens tokens = signIn(mockMvc, objectMapper, jwtProperties, EMAIL, PASSWORD);
+
+    mockMvc
+        .perform(
+            multipart("/api/users/{userId}", user.getId())
+                .file(requestPart(new UserUpdateRequest("updated-name")))
+                .with(
+                    servletRequest -> {
+                      servletRequest.setMethod("PATCH");
+                      return servletRequest;
+                    })
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("SYS04"));
+
+    User unchangedUser = userRepository.findById(user.getId()).orElseThrow();
+    assertEquals("original-name", unchangedUser.getName());
+  }
+
   private User saveUser(String name) {
     User user =
         User.createUser(name, EMAIL, passwordEncoder.encode(PASSWORD), "/uploads/profile.png");
