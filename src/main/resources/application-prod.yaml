@@ -21,6 +21,10 @@ spring:
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
 
+  batch:
+    jdbc:
+      initialize-schema: never # 운영 환경에서는 배치 메타 테이블 자동 초기화 방지
+
   sql:
     init:
       mode: never # 운영은 절대로 schema.sql 자동 실행 금지
@@ -47,7 +51,7 @@ mopl:
 
   datasource:
     api-pool-name: HikariPool-Prod-API
-    api-pool-size: 30
+    api-pool-size: 15
     batch-pool-name: HikariPool-Prod-Batch
     batch-pool-size: 5
 

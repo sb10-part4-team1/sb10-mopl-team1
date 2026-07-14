@@ -12,6 +12,10 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:your_dev_password}
 
+  batch:
+    jdbc:
+      initialize-schema: never # 개발 도커 DB이므로 배치 메타 테이블 자동 초기화 방지
+
   sql:
     init:
       mode: never # 도커 DB이므로 schema.sql로 매번 밀지 않음, 초기 실행 때는 always로 테이블 생성 필요
