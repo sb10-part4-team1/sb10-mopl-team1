@@ -190,6 +190,67 @@ class UserControllerTest {
   }
 
   @Test
+  @DisplayName("사용자 프로필 조회 요청이 유효하면 200 OK와 UserDto를 반환한다")
+  void findUser_success_whenUserExists() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    UserDto userDto =
+        new UserDto(
+            userId,
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "user@example.com",
+            "test-user",
+            "/uploads/profile.png",
+            UserRole.USER,
+            false);
+    when(userService.findUser(userId)).thenReturn(userDto);
+
+    // when & then
+    mockMvc
+        .perform(get("/api/users/{userId}", userId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(userId.toString()))
+        .andExpect(jsonPath("$.createdAt").value("2026-06-24T00:00:00Z"))
+        .andExpect(jsonPath("$.email").value("user@example.com"))
+        .andExpect(jsonPath("$.name").value("test-user"))
+        .andExpect(jsonPath("$.profileImageUrl").value("/uploads/profile.png"))
+        .andExpect(jsonPath("$.role").value("USER"))
+        .andExpect(jsonPath("$.locked").value(false))
+        .andExpect(jsonPath("$.password").doesNotExist());
+
+    verify(userService).findUser(userId);
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 사용자 프로필 조회 요청은 404 Not Found를 반환한다")
+  void findUser_fail_whenUserDoesNotExist() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    when(userService.findUser(userId))
+        .thenThrow(new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", userId)));
+
+    // when & then
+    mockMvc
+        .perform(get("/api/users/{userId}", userId))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("U01"));
+
+    verify(userService).findUser(userId);
+  }
+
+  @Test
+  @DisplayName("사용자 프로필 조회 요청의 userId가 UUID 형식이 아니면 400 Bad Request를 반환한다")
+  void findUser_fail_whenUserIdIsInvalid() throws Exception {
+    // when & then
+    mockMvc
+        .perform(get("/api/users/{userId}", "invalid-user-id"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SYS01"));
+
+    verifyNoInteractions(userService);
+  }
+
+  @Test
   @DisplayName("비밀번호 변경 요청이 유효하면 204 No Content를 반환한다")
   void changePassword_success_whenRequestIsValid() throws Exception {
     // given
