@@ -95,6 +95,15 @@ class AuthorizationPolicyIntegrationTest {
   }
 
   @Test
+  @DisplayName("비로그인 사용자는 사용자 프로필 조회 API 호출 시 401을 받는다")
+  void userProfile_returnsUnauthorized_whenAnonymousUserRequestsProfile() throws Exception {
+    mockMvc
+        .perform(get("/api/users/{userId}", UUID.randomUUID()).with(anonymous()))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("AUTH01"));
+  }
+
+  @Test
   @DisplayName("PATCH API 요청에 CSRF 토큰이 없으면 403을 반환한다")
   void patchApi_returnsForbidden_whenCsrfTokenIsMissing() throws Exception {
     mockMvc
@@ -162,6 +171,21 @@ class AuthorizationPolicyIntegrationTest {
                 .contentType("application/json")
                 .content("{\"locked\":true}"))
         .andExpect(status().isNoContent());
+  }
+
+  @Test
+  @DisplayName("일반 사용자는 다른 사용자의 프로필을 조회할 수 있다")
+  void userProfile_returnsOk_whenAuthenticatedUserRequestsAnotherUsersProfile() throws Exception {
+    User targetUser = saveUser(UserRole.USER, "profile-target@example.com");
+
+    mockMvc
+        .perform(get("/api/users/{userId}", targetUser.getId()).with(authority(UserRole.USER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(targetUser.getId().toString()))
+        .andExpect(jsonPath("$.email").value("profile-target@example.com"))
+        .andExpect(jsonPath("$.name").value("test-user"))
+        .andExpect(jsonPath("$.role").value("USER"))
+        .andExpect(jsonPath("$.locked").value(false));
   }
 
   @Test
