@@ -30,7 +30,7 @@ public class JwtSession extends BaseEntity {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @Column(name = "session_id", nullable = false, unique = true, updatable = false)
+  @Column(name = "session_id", nullable = false, updatable = false)
   private UUID sessionId;
 
   @Column(name = "expires_at", nullable = false)
