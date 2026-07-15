@@ -24,7 +24,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlaylistServiceImpl implements PlaylistService {
 
   private static final int MAX_PLAYLIST_PAGE_LIMIT = 100;
+  private static final String SORT_BY_UPDATED_AT = "updatedAt";
+  private static final String SORT_BY_SUBSCRIBER_COUNT = "subscriberCount";
 
   private final PlaylistRepository playlistRepository;
   private final UserRepository userRepository;
@@ -60,7 +61,6 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   @Override
-  @Transactional(readOnly = true)
   public CursorPageResponse<PlaylistDto> findAll(
       String keywordLike,
       UUID ownerId,
@@ -84,7 +84,7 @@ public class PlaylistServiceImpl implements PlaylistService {
 
     // 다음 페이지 여부 확인을 위해 limit보다 1개 더 조회
     List<Playlist> playlists =
-        getPlaylists(
+        playlistRepository.findAllByCondition(
             normalizedKeyword,
             ownerId,
             subscriberId,
@@ -92,6 +92,7 @@ public class PlaylistServiceImpl implements PlaylistService {
             subscriberCountCursor,
             idAfter,
             sortBy,
+            sortDirection,
             PageRequest.of(0, limit + 1));
 
     // 조회 결과를 커서 페이지 응답으로 변환
@@ -107,7 +108,6 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   @Override
-  @Transactional(readOnly = true)
   public PlaylistDto findById(UUID playlistId, UUID currentUserId) {
     // 플레이리스트 존재 검증
     Playlist playlist =
@@ -124,6 +124,7 @@ public class PlaylistServiceImpl implements PlaylistService {
   @Override
   @Transactional
   public PlaylistDto update(UUID playlistId, PlaylistUpdateRequest request, UUID userId) {
+
     // 플레이리스트 존재 여부와 소유자 권한 검증
     Playlist playlist = getPlaylistOwnedBy(playlistId, userId);
 
@@ -141,66 +142,6 @@ public class PlaylistServiceImpl implements PlaylistService {
 
     // 플레이리스트 삭제
     playlistRepository.delete(playlist);
-  }
-
-  // 정렬 기준과 구독자 필터 여부에 따라 플레이리스트 목록 조회
-  private List<Playlist> getPlaylists(
-      String normalizedKeyword,
-      UUID ownerId,
-      UUID subscriberId,
-      Instant updatedAtCursor,
-      Long subscriberCountCursor,
-      UUID idAfter,
-      String sortBy,
-      Pageable pageable) {
-
-    if ("subscriberCount".equals(sortBy)) {
-      return getPlaylistsSortedBySubscriberCount(
-          normalizedKeyword, ownerId, subscriberId, subscriberCountCursor, idAfter, pageable);
-    }
-
-    return getPlaylistsSortedByUpdatedAt(
-        normalizedKeyword, ownerId, subscriberId, updatedAtCursor, idAfter, pageable);
-  }
-
-  // updatedAt 기준 플레이리스트 조회
-  private List<Playlist> getPlaylistsSortedByUpdatedAt(
-      String normalizedKeyword,
-      UUID ownerId,
-      UUID subscriberId,
-      Instant updatedAtCursor,
-      UUID idAfter,
-      Pageable pageable) {
-
-    // subscriberId가 없으면 기존 전체/소유자/검색 조건 조회
-    if (subscriberId == null) {
-      return playlistRepository.findAllByUpdatedAtCursorDesc(
-          normalizedKeyword, ownerId, updatedAtCursor, idAfter, pageable);
-    }
-
-    // subscriberId가 있으면 해당 사용자가 구독한 플레이리스트 조회
-    return playlistRepository.findSubscribedByUpdatedAtCursorDesc(
-        normalizedKeyword, ownerId, subscriberId, updatedAtCursor, idAfter, pageable);
-  }
-
-  // subscriberCount 기준 플레이리스트 조회
-  private List<Playlist> getPlaylistsSortedBySubscriberCount(
-      String normalizedKeyword,
-      UUID ownerId,
-      UUID subscriberId,
-      Long subscriberCountCursor,
-      UUID idAfter,
-      Pageable pageable) {
-
-    // subscriberId가 없으면 전체/소유자/검색 조건에서 구독자 수 기준 조회
-    if (subscriberId == null) {
-      return playlistRepository.findAllBySubscriberCountCursorDesc(
-          normalizedKeyword, ownerId, subscriberCountCursor, idAfter, pageable);
-    }
-
-    // subscriberId가 있으면 해당 사용자가 구독한 플레이리스트를 구독자 수 기준으로 조회
-    return playlistRepository.findSubscribedBySubscriberCountCursorDesc(
-        normalizedKeyword, ownerId, subscriberId, subscriberCountCursor, idAfter, pageable);
   }
 
   // 플레이리스트 존재 여부와 소유자 권한을 함께 검증
@@ -239,16 +180,15 @@ public class PlaylistServiceImpl implements PlaylistService {
     }
 
     // 정렬 기준 값 검증
-    if (!"updatedAt".equals(sortBy) && !"subscriberCount".equals(sortBy)) {
+    if (!SORT_BY_UPDATED_AT.equals(sortBy) && !SORT_BY_SUBSCRIBER_COUNT.equals(sortBy)) {
       throw new PlaylistException(
           PlaylistErrorCode.INVALID_PLAYLIST_VALUE, Map.of("sortBy", "지원하지 않는 정렬 기준입니다."));
     }
 
-    // 정렬 방향 값 검증
-    if (sortDirection != SortDirection.DESCENDING) {
+    // 정렬 방향 필수값 검증
+    if (sortDirection == null) {
       throw new PlaylistException(
-          PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
-          Map.of("sortDirection", "현재는 DESCENDING 정렬만 지원합니다."));
+          PlaylistErrorCode.INVALID_PLAYLIST_VALUE, Map.of("sortDirection", "정렬 방향은 필수입니다."));
     }
 
     // 요청 limit 유효성 검증
@@ -270,7 +210,7 @@ public class PlaylistServiceImpl implements PlaylistService {
 
   // updatedAt 정렬일 때 커서 문자열을 Instant로 변환
   private Instant parseUpdatedAtCursor(String cursor, String sortBy) {
-    if (!"updatedAt".equals(sortBy)) {
+    if (!SORT_BY_UPDATED_AT.equals(sortBy)) {
       return null;
     }
 
@@ -292,7 +232,8 @@ public class PlaylistServiceImpl implements PlaylistService {
 
   // subscriberCount 정렬일 때 커서 문자열을 Long으로 변환
   private Long parseSubscriberCountCursor(String cursor, String sortBy) {
-    if (!"subscriberCount".equals(sortBy)) {
+
+    if (!SORT_BY_SUBSCRIBER_COUNT.equals(sortBy)) {
       return null;
     }
 
@@ -337,6 +278,7 @@ public class PlaylistServiceImpl implements PlaylistService {
 
     // 목록 응답에 필요한 구독 메타데이터를 페이지 단위로 bulk 조회
     Map<UUID, Long> subscriberCountByPlaylistId = getSubscriberCountByPlaylistId(pagePlaylists);
+
     Set<UUID> subscribedPlaylistIds = getSubscribedPlaylistIds(pagePlaylists, currentUserId);
 
     // Playlist 엔티티 목록을 응답 DTO 목록으로 변환
@@ -354,8 +296,8 @@ public class PlaylistServiceImpl implements PlaylistService {
     Playlist lastPlaylist =
         hasNext && !pagePlaylists.isEmpty() ? pagePlaylists.get(pagePlaylists.size() - 1) : null;
 
-    // 전체 개수 조회
-    long totalCount = countPlaylists(normalizedKeyword, ownerId, subscriberId);
+    // 조회 조건에 맞는 전체 플레이리스트 개수 조회
+    long totalCount = playlistRepository.countByCondition(normalizedKeyword, ownerId, subscriberId);
 
     return new CursorPageResponse<>(
         data,
@@ -369,6 +311,7 @@ public class PlaylistServiceImpl implements PlaylistService {
 
   // PlaylistDto에 실제 구독자 수와 구독 여부를 반영
   private PlaylistDto toPlaylistDto(Playlist playlist, UUID currentUserId) {
+
     long subscriberCount = playlistSubscriptionRepository.countByPlaylistId(playlist.getId());
 
     boolean subscribedByMe =
@@ -381,6 +324,7 @@ public class PlaylistServiceImpl implements PlaylistService {
 
   // 목록 응답용 구독자 수를 playlistId 기준으로 bulk 조회
   private Map<UUID, Long> getSubscriberCountByPlaylistId(List<Playlist> playlists) {
+
     List<UUID> playlistIds = getPlaylistIds(playlists);
 
     if (playlistIds.isEmpty()) {
@@ -397,6 +341,7 @@ public class PlaylistServiceImpl implements PlaylistService {
 
   // 현재 사용자가 구독한 playlistId 목록을 bulk 조회
   private Set<UUID> getSubscribedPlaylistIds(List<Playlist> playlists, UUID currentUserId) {
+
     List<UUID> playlistIds = getPlaylistIds(playlists);
 
     if (currentUserId == null || playlistIds.isEmpty()) {
@@ -411,16 +356,6 @@ public class PlaylistServiceImpl implements PlaylistService {
     return playlists.stream().map(Playlist::getId).toList();
   }
 
-  // subscriberId가 있으면 구독한 플레이리스트 개수, 없으면 기존 검색 조건 개수 조회
-  private long countPlaylists(String normalizedKeyword, UUID ownerId, UUID subscriberId) {
-    if (subscriberId == null) {
-      return playlistRepository.countBySearchCondition(normalizedKeyword, ownerId);
-    }
-
-    return playlistRepository.countSubscribedBySearchCondition(
-        normalizedKeyword, ownerId, subscriberId);
-  }
-
   // 검색어 공백 제거 및 빈 문자열 null 처리
   private String normalizeKeyword(String keywordLike) {
     return keywordLike == null || keywordLike.isBlank() ? null : keywordLike.trim();
@@ -429,12 +364,13 @@ public class PlaylistServiceImpl implements PlaylistService {
   // 다음 페이지 요청에 사용할 커서 생성
   private String getNextCursor(
       Playlist lastPlaylist, String sortBy, Map<UUID, Long> subscriberCountByPlaylistId) {
+
     // 마지막 플레이리스트가 없으면 다음 커서를 생성하지 않음
     if (lastPlaylist == null) {
       return null;
     }
 
-    if ("subscriberCount".equals(sortBy)) {
+    if (SORT_BY_SUBSCRIBER_COUNT.equals(sortBy)) {
       return String.valueOf(subscriberCountByPlaylistId.getOrDefault(lastPlaylist.getId(), 0L));
     }
 

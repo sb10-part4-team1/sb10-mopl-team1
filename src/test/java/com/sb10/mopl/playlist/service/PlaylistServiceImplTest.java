@@ -239,17 +239,28 @@ class PlaylistServiceImplTest {
   void findAll_success() {
     // given
     given(
-            playlistRepository.findAllByUpdatedAtCursorDesc(
-                isNull(), eq(ownerId), isNull(), isNull(), any(Pageable.class)))
+            playlistRepository.findAllByCondition(
+                isNull(),
+                eq(ownerId),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                eq("updatedAt"),
+                eq(SortDirection.DESCENDING),
+                any(Pageable.class)))
         .willReturn(List.of(playlist));
+
     given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
         .willReturn(List.of(countProjection(playlistId, 0L)));
+
     given(
             playlistSubscriptionRepository.findSubscribedPlaylistIds(
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of());
+
     given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
-    given(playlistRepository.countBySearchCondition(null, ownerId)).willReturn(1L);
+    given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(1L);
 
     // when
     CursorPageResponse<PlaylistDto> result =
@@ -277,17 +288,28 @@ class PlaylistServiceImplTest {
     Playlist nextPlaylist = createPlaylist(UUID.randomUUID(), owner, "다음 플레이리스트", "다음 설명");
 
     given(
-            playlistRepository.findAllByUpdatedAtCursorDesc(
-                isNull(), eq(ownerId), isNull(), isNull(), any(Pageable.class)))
+            playlistRepository.findAllByCondition(
+                isNull(),
+                eq(ownerId),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                eq("updatedAt"),
+                eq(SortDirection.DESCENDING),
+                any(Pageable.class)))
         .willReturn(List.of(playlist, nextPlaylist));
+
     given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
         .willReturn(List.of(countProjection(playlistId, 0L)));
+
     given(
             playlistSubscriptionRepository.findSubscribedPlaylistIds(
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of());
+
     given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
-    given(playlistRepository.countBySearchCondition(null, ownerId)).willReturn(2L);
+    given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(2L);
 
     // when
     CursorPageResponse<PlaylistDto> result =
@@ -315,18 +337,28 @@ class PlaylistServiceImplTest {
   void findAll_success_subscriberIdEqual() {
     // given
     given(
-            playlistRepository.findSubscribedByUpdatedAtCursorDesc(
-                isNull(), eq(ownerId), eq(subscriberId), isNull(), isNull(), any(Pageable.class)))
+            playlistRepository.findAllByCondition(
+                isNull(),
+                eq(ownerId),
+                eq(subscriberId),
+                isNull(),
+                isNull(),
+                isNull(),
+                eq("updatedAt"),
+                eq(SortDirection.DESCENDING),
+                any(Pageable.class)))
         .willReturn(List.of(playlist));
+
     given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
         .willReturn(List.of(countProjection(playlistId, 1L)));
+
     given(
             playlistSubscriptionRepository.findSubscribedPlaylistIds(
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of(playlistId));
+
     given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
-    given(playlistRepository.countSubscribedBySearchCondition(null, ownerId, subscriberId))
-        .willReturn(1L);
+    given(playlistRepository.countByCondition(null, ownerId, subscriberId)).willReturn(1L);
 
     // when
     CursorPageResponse<PlaylistDto> result =
@@ -352,17 +384,28 @@ class PlaylistServiceImplTest {
   void findAll_success_sortBySubscriberCount() {
     // given
     given(
-            playlistRepository.findAllBySubscriberCountCursorDesc(
-                isNull(), eq(ownerId), isNull(), isNull(), any(Pageable.class)))
+            playlistRepository.findAllByCondition(
+                isNull(),
+                eq(ownerId),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                eq("subscriberCount"),
+                eq(SortDirection.DESCENDING),
+                any(Pageable.class)))
         .willReturn(List.of(playlist));
+
     given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
         .willReturn(List.of(countProjection(playlistId, 1L)));
+
     given(
             playlistSubscriptionRepository.findSubscribedPlaylistIds(
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of(playlistId));
+
     given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
-    given(playlistRepository.countBySearchCondition(null, ownerId)).willReturn(1L);
+    given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(1L);
 
     // when
     CursorPageResponse<PlaylistDto> result =
@@ -376,6 +419,100 @@ class PlaylistServiceImplTest {
             10,
             "subscriberCount",
             SortDirection.DESCENDING);
+
+    // then
+    assertThat(result.data()).containsExactly(subscribedPlaylistDto);
+    assertThat(result.hasNext()).isFalse();
+    assertThat(result.totalCount()).isEqualTo(1L);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 성공 - updatedAt 오름차순")
+  void findAll_success_updatedAtAscending() {
+    // given
+    given(
+            playlistRepository.findAllByCondition(
+                isNull(),
+                eq(ownerId),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                eq("updatedAt"),
+                eq(SortDirection.ASCENDING),
+                any(Pageable.class)))
+        .willReturn(List.of(playlist));
+
+    given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
+        .willReturn(List.of(countProjection(playlistId, 0L)));
+
+    given(
+            playlistSubscriptionRepository.findSubscribedPlaylistIds(
+                currentUserId, List.of(playlistId)))
+        .willReturn(Set.of());
+
+    given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
+    given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(1L);
+
+    // when
+    CursorPageResponse<PlaylistDto> result =
+        playlistService.findAll(
+            null,
+            ownerId,
+            null,
+            currentUserId,
+            null,
+            null,
+            10,
+            "updatedAt",
+            SortDirection.ASCENDING);
+
+    // then
+    assertThat(result.data()).containsExactly(playlistDto);
+    assertThat(result.hasNext()).isFalse();
+    assertThat(result.totalCount()).isEqualTo(1L);
+  }
+
+  @Test
+  @DisplayName("플레이리스트 - 목록 조회 성공 - 구독자 수 오름차순")
+  void findAll_success_subscriberCountAscending() {
+    // given
+    given(
+            playlistRepository.findAllByCondition(
+                isNull(),
+                eq(ownerId),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                eq("subscriberCount"),
+                eq(SortDirection.ASCENDING),
+                any(Pageable.class)))
+        .willReturn(List.of(playlist));
+
+    given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
+        .willReturn(List.of(countProjection(playlistId, 1L)));
+
+    given(
+            playlistSubscriptionRepository.findSubscribedPlaylistIds(
+                currentUserId, List.of(playlistId)))
+        .willReturn(Set.of(playlistId));
+
+    given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
+    given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(1L);
+
+    // when
+    CursorPageResponse<PlaylistDto> result =
+        playlistService.findAll(
+            null,
+            ownerId,
+            null,
+            currentUserId,
+            null,
+            null,
+            10,
+            "subscriberCount",
+            SortDirection.ASCENDING);
 
     // then
     assertThat(result.data()).containsExactly(subscribedPlaylistDto);
@@ -429,21 +566,13 @@ class PlaylistServiceImplTest {
   }
 
   @Test
-  @DisplayName("플레이리스트 - 목록 조회 실패 - 지원하지 않는 정렬 방향")
-  void findAll_fail_invalidSortDirection() {
+  @DisplayName("플레이리스트 - 목록 조회 실패 - 정렬 방향이 null")
+  void findAll_fail_sortDirectionNull() {
     // when & then
     assertThatThrownBy(
             () ->
                 playlistService.findAll(
-                    null,
-                    ownerId,
-                    null,
-                    currentUserId,
-                    null,
-                    null,
-                    10,
-                    "updatedAt",
-                    SortDirection.ASCENDING))
+                    null, ownerId, null, currentUserId, null, null, 10, "updatedAt", null))
         .isInstanceOf(PlaylistException.class)
         .extracting("errorCode")
         .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
@@ -539,37 +668,6 @@ class PlaylistServiceImplTest {
         .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
   }
 
-  // 테스트용 User 생성 후 id 주입
-  private User createUser(UUID userId) {
-    User user = User.createUser("테스트유저", "test@example.com", "password", null);
-    ReflectionTestUtils.setField(user, "id", userId);
-    return user;
-  }
-
-  // 테스트용 Playlist 생성 후 id, updatedAt 주입
-  private Playlist createPlaylist(UUID playlistId, User owner, String title, String description) {
-    Playlist playlist = new Playlist(owner, title, description);
-    ReflectionTestUtils.setField(playlist, "id", playlistId);
-    ReflectionTestUtils.setField(playlist, "updatedAt", Instant.now());
-    return playlist;
-  }
-
-  // 테스트 검증에 사용할 PlaylistDto 생성
-  private PlaylistDto createPlaylistDto(
-      Playlist playlist, long subscriberCount, boolean subscribedByMe) {
-    PlaylistOwnerDto ownerDto = new PlaylistOwnerDto(playlist.getOwner().getId(), "테스트유저", null);
-
-    return new PlaylistDto(
-        playlist.getId(),
-        ownerDto,
-        playlist.getTitle(),
-        playlist.getDescription(),
-        playlist.getUpdatedAt(),
-        subscriberCount,
-        subscribedByMe,
-        List.of());
-  }
-
   @Test
   @DisplayName("플레이리스트 - 목록 조회 실패 - 구독자 수 커서가 음수")
   void findAll_fail_negativeSubscriberCountCursor() {
@@ -594,9 +692,45 @@ class PlaylistServiceImplTest {
         .isEqualTo(PlaylistErrorCode.INVALID_PLAYLIST_VALUE);
   }
 
+  // 테스트용 User 생성 후 id 주입
+  private User createUser(UUID userId) {
+    User user = User.createUser("테스트유저", "test@example.com", "password", null);
+    ReflectionTestUtils.setField(user, "id", userId);
+    return user;
+  }
+
+  // 테스트용 Playlist 생성 후 id, updatedAt 주입
+  private Playlist createPlaylist(UUID playlistId, User owner, String title, String description) {
+
+    Playlist playlist = new Playlist(owner, title, description);
+    ReflectionTestUtils.setField(playlist, "id", playlistId);
+    ReflectionTestUtils.setField(playlist, "updatedAt", Instant.now());
+
+    return playlist;
+  }
+
+  // 테스트 검증에 사용할 PlaylistDto 생성
+  private PlaylistDto createPlaylistDto(
+      Playlist playlist, long subscriberCount, boolean subscribedByMe) {
+
+    PlaylistOwnerDto ownerDto = new PlaylistOwnerDto(playlist.getOwner().getId(), "테스트유저", null);
+
+    return new PlaylistDto(
+        playlist.getId(),
+        ownerDto,
+        playlist.getTitle(),
+        playlist.getDescription(),
+        playlist.getUpdatedAt(),
+        subscriberCount,
+        subscribedByMe,
+        List.of());
+  }
+
   private PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection countProjection(
       UUID playlistId, Long subscriberCount) {
+
     return new PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection() {
+
       @Override
       public UUID getPlaylistId() {
         return playlistId;
