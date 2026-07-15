@@ -1,101 +1,11 @@
 services:
-  # Nginx Reverse Proxy
-  # 외부 포트 80을 통해 웹 트래픽을 입력받아 내부 애플리케이션 및 모니터링 시스템으로 포워딩하는 서비스입니다.
-  nginx:
-    image: nginx:alpine
-    container_name: mopl-nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./src/main/resources/static:/usr/share/nginx/html:ro
-      - ./uploads:/usr/share/nginx/html/uploads:ro
-    depends_on:
-      app:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --spider http://localhost/ || exit 1" ]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-    networks:
-      - mopl-network
-
-  # Spring Boot Application Server
-  # mopl 프로젝트의 핵심 API 서버로, 컨테이너 외부로 포트를 직접 노출하지 않고 내부 가상 네트워크로만 통신합니다.
-  app:
-    image: mopl:local
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    container_name: mopl-server
-    environment:
-      - SERVER_PORT=8080
-      - SPRING_PROFILES_ACTIVE=dev
-      # postgres
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      # aws
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
-      - AWS_REGION=${AWS_REGION}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - AWS_S3_PRESIGNED_URL_EXPIRATION=${AWS_S3_PRESIGNED_URL_EXPIRATION}
-      # redis
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      # kafka
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      # file uploads configuration
-      - MOPL_UPLOAD_DIR=/app/uploads/
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health" ]
-      interval: 15s
-      timeout: 5s
-      retries: 8
-      start_period: 120s
-    volumes:
-      - ./.logs:/app/.logs
-      - ./uploads:/app/uploads
-    networks:
-      - mopl-network
-
-  # PostgreSQL Database
-  # mopl 애플리케이션의 메인 RDBMS 컨테이너로, 호스트에서 직접 접속할 수 없도록 격리된 가상 네트워크 내에 위치합니다.
-  db:
-    image: postgres:16-alpine
-    container_name: mopl-db
-    environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USERNAME}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    volumes:
-      - mopl-postgres-data:/var/lib/postgresql/data
-      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
-    networks:
-      - mopl-network
-
   # Redis Cache & Token Store
-  # 세션 정보 및 캐시 저장을 위한 인메모리 데이터 저장소입니다.
+  # 세션 정보, 캐시 및 ShedLock 분산 락 저장을 위한 인메모리 데이터 저장소입니다.
   redis:
     image: redis:alpine
     container_name: mopl-redis
+    ports:
+      - "6379:6379"
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -109,13 +19,16 @@ services:
 
   # Apache Kafka (KRaft Mode)
   # 비동기 이벤트 스트리밍 처리를 위한 카프카 브로커 및 컨트롤러 일체형 컨테이너입니다.
+  # MIDDLEWARE_IP 환경변수에는 EC2 인스턴스의 Private IP(AWS 내부 통신용)를 기입해야 합니다.
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: mopl-kafka
+    ports:
+      - "9092:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://${MIDDLEWARE_IP:-localhost}:9092'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -143,6 +56,8 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: mopl-prometheus
+    ports:
+      - "9090:9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -157,8 +72,6 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - mopl-prometheus-data:/prometheus
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
       - mopl-network
 
@@ -167,9 +80,11 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: mopl-grafana
+    ports:
+      - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost/grafana/}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000/grafana/}
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     healthcheck:
@@ -188,12 +103,34 @@ services:
       prometheus:
         condition: service_healthy
 
+  # PostgreSQL Database (RDB)
+  # 로컬 개발 및 디버깅 시 데이터를 영구 저장하기 위한 관계형 데이터베이스입니다.
+  db:
+    image: postgres:16-alpine
+    container_name: mopl-db
+    ports:
+      - "5432:5432" # 로컬 호스트 포트 5432 개방
+    environment:
+      - POSTGRES_DB=${DB_NAME:-dev_db}
+      - POSTGRES_USER=${DB_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-your_dev_password}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mopl-postgres-data:/var/lib/postgresql/data
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
+    networks:
+      - mopl-network
+
 volumes:
-  mopl-postgres-data:
   mopl-grafana-data:
   mopl-prometheus-data:
   mopl-kafka-data:
   mopl-redis-data:
+  mopl-postgres-data:
 
 networks:
   mopl-network:
