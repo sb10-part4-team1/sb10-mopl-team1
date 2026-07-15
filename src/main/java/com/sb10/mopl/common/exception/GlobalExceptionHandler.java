@@ -18,6 +18,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -181,6 +182,24 @@ public class GlobalExceptionHandler {
 
     log.warn(
         "[MissingServletRequestParameterException] Code: {}, Message: {}, Details: {}",
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        details);
+
+    ErrorResponse errorResponse =
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), details);
+
+    return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+  }
+
+  @ExceptionHandler(MissingServletRequestPartException.class)
+  public ResponseEntity<ErrorResponse> handleMissingServletRequestPartException(
+      MissingServletRequestPartException ex) {
+    SystemErrorCode errorCode = SystemErrorCode.INVALID_INPUT_VALUE;
+    Map<String, Object> details = Map.of(ex.getRequestPartName(), "필수 요청 항목입니다.");
+
+    log.warn(
+        "[MissingServletRequestPartException] Code: {}, Message: {}, Details: {}",
         errorCode.getCode(),
         errorCode.getMessage(),
         details);

@@ -82,6 +82,11 @@ public class User extends BaseUpdatableEntity {
     this.isLocked = locked;
   }
 
+  public void updateProfile(String name, String profileImageUrl) {
+    this.name = name;
+    this.profileImageUrl = profileImageUrl;
+  }
+
   public void softDelete() {
     if (this.deletedAt == null) {
       this.deletedAt = Instant.now();
