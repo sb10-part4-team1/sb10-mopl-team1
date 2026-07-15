@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Profile;
  */
 @Configuration
 @EnableCaching
-@Profile({"local", "dev", "test", "default"})
+@Profile({"local", "test", "default"})
 public class CacheConfig {
 
   // 배치 가공 전용 트랜잭션 인지형 캐시 매니저

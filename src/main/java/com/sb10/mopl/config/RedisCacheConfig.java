@@ -20,7 +20,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  */
 @Configuration
 @EnableCaching
-@Profile({"prod", "aws"})
+@Profile({"prod", "dev"})
 public class RedisCacheConfig {
 
   // 배치 가공 전용 트랜잭션 인지형 Redis 캐시 매니저

@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - release
+  pull_request:
+    branches:
+      - develop
+    types:
+      - closed
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
@@ -13,6 +18,7 @@ env:
 
 jobs:
   build-and-push:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.set-tag.outputs.IMAGE_TAG }}

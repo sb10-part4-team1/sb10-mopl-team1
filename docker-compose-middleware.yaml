@@ -103,11 +103,34 @@ services:
       prometheus:
         condition: service_healthy
 
+  # PostgreSQL Database (RDB)
+  # 로컬 개발 및 디버깅 시 데이터를 영구 저장하기 위한 관계형 데이터베이스입니다.
+  db:
+    image: postgres:16-alpine
+    container_name: mopl-db
+    ports:
+      - "5432:5432" # 로컬 호스트 포트 5432 개방
+    environment:
+      - POSTGRES_DB=${DB_NAME:-dev_db}
+      - POSTGRES_USER=${DB_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-your_dev_password}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mopl-postgres-data:/var/lib/postgresql/data
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
+    networks:
+      - mopl-network
+
 volumes:
   mopl-grafana-data:
   mopl-prometheus-data:
   mopl-kafka-data:
   mopl-redis-data:
+  mopl-postgres-data:
 
 networks:
   mopl-network:
