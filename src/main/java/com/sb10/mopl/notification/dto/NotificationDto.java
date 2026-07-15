@@ -1,5 +1,6 @@
 package com.sb10.mopl.notification.dto;
 
+import com.sb10.mopl.notification.entity.NotificationLevel;
 import java.time.Instant;
 import java.util.UUID;
 
