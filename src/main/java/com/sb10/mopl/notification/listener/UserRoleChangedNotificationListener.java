@@ -1,7 +1,7 @@
 package com.sb10.mopl.notification.listener;
 
 import com.sb10.mopl.notification.dto.NotificationDto;
-import com.sb10.mopl.notification.dto.NotificationLevel;
+import com.sb10.mopl.notification.entity.NotificationLevel;
 import com.sb10.mopl.sse.service.SseService;
 import com.sb10.mopl.user.event.UserRoleChangedEvent;
 import java.util.List;
