@@ -48,13 +48,15 @@ public class PlaylistController {
       @RequestParam(required = false) UUID idAfter,
       @RequestParam Integer limit,
       @RequestParam String sortBy,
-      @RequestParam SortDirection sortDirection) {
+      @RequestParam SortDirection sortDirection,
+      @CurrentUser AuthenticatedUser currentUser) {
 
     CursorPageResponse<PlaylistDto> response =
         playlistService.findAll(
             keywordLike,
             ownerIdEqual,
             subscriberIdEqual,
+            currentUser.id(),
             cursor,
             idAfter,
             limit,
@@ -65,8 +67,10 @@ public class PlaylistController {
   }
 
   @GetMapping("/{playlistId}")
-  public ResponseEntity<PlaylistDto> findById(@PathVariable UUID playlistId) {
-    PlaylistDto response = playlistService.findById(playlistId);
+  public ResponseEntity<PlaylistDto> findById(
+      @PathVariable UUID playlistId, @CurrentUser AuthenticatedUser currentUser) {
+
+    PlaylistDto response = playlistService.findById(playlistId, currentUser.id());
     return ResponseEntity.ok(response);
   }
 

@@ -10,6 +10,7 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.mapper.PlaylistMapper;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
+import com.sb10.mopl.playlistsubscription.repository.PlaylistSubscriptionRepository;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
@@ -18,7 +19,9 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -29,12 +32,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PlaylistServiceImpl implements PlaylistService {
 
+  private static final int MAX_PLAYLIST_PAGE_LIMIT = 100;
+  private static final String SORT_BY_UPDATED_AT = "updatedAt";
+  private static final String SORT_BY_SUBSCRIBER_COUNT = "subscriberCount";
+
   private final PlaylistRepository playlistRepository;
   private final UserRepository userRepository;
   private final PlaylistMapper playlistMapper;
-
-  // 플레이리스트 목록 조회 최대 limit
-  private static final int MAX_PLAYLIST_PAGE_LIMIT = 100;
+  private final PlaylistSubscriptionRepository playlistSubscriptionRepository;
 
   @Override
   @Transactional
@@ -52,15 +57,15 @@ public class PlaylistServiceImpl implements PlaylistService {
     // 저장 후 응답 DTO로 변환
     Playlist savedPlaylist = playlistRepository.save(playlist);
 
-    return playlistMapper.toDto(savedPlaylist);
+    return toPlaylistDto(savedPlaylist, null);
   }
 
   @Override
-  @Transactional(readOnly = true)
   public CursorPageResponse<PlaylistDto> findAll(
       String keywordLike,
       UUID ownerId,
       UUID subscriberId,
+      UUID currentUserId,
       String cursor,
       UUID idAfter,
       Integer limit,
@@ -70,40 +75,41 @@ public class PlaylistServiceImpl implements PlaylistService {
     // 목록 조회 요청 파라미터 검증
     validateFindAllRequest(cursor, idAfter, limit, sortBy, sortDirection);
 
-    // TODO(#50, #53): 플레이리스트 구독 도메인 구현 후 subscriberIdEqual 필터 지원
-    if (subscriberId != null) {
-      throw new PlaylistException(
-          PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
-          Map.of("subscriberId", "구독자 기준 플레이리스트 조회는 아직 지원하지 않습니다."));
-    }
+    // 검색어 공백 제거 및 빈 문자열 null 처리
+    String normalizedKeyword = normalizeKeyword(keywordLike);
 
-    // TODO(#50): 플레이리스트 구독 도메인 구현 후 subscriberCount 정렬 지원
-    if ("subscriberCount".equals(sortBy)) {
-      throw new PlaylistException(
-          PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
-          Map.of("sortBy", "subscriberCount 정렬은 아직 지원하지 않습니다."));
-    }
-
-    // updatedAt 커서 파싱
-    Instant parsedCursor = parseCursor(cursor);
+    // 정렬 기준에 따라 커서 파싱
+    Instant updatedAtCursor = parseUpdatedAtCursor(cursor, sortBy);
+    Long subscriberCountCursor = parseSubscriberCountCursor(cursor, sortBy);
 
     // 다음 페이지 여부 확인을 위해 limit보다 1개 더 조회
     List<Playlist> playlists =
-        playlistRepository.findAllByUpdatedAtCursorDesc(
-            normalizeKeyword(keywordLike),
+        playlistRepository.findAllByCondition(
+            normalizedKeyword,
             ownerId,
-            parsedCursor,
+            subscriberId,
+            updatedAtCursor,
+            subscriberCountCursor,
             idAfter,
+            sortBy,
+            sortDirection,
             PageRequest.of(0, limit + 1));
 
     // 조회 결과를 커서 페이지 응답으로 변환
-    return toCursorPageResponse(playlists, keywordLike, ownerId, limit, sortBy, sortDirection);
+    return toCursorPageResponse(
+        playlists,
+        normalizedKeyword,
+        ownerId,
+        subscriberId,
+        currentUserId,
+        limit,
+        sortBy,
+        sortDirection);
   }
 
   @Override
-  @Transactional(readOnly = true)
-  public PlaylistDto findById(UUID playlistId) {
-    // 플레이 리스트 존재 검증
+  public PlaylistDto findById(UUID playlistId, UUID currentUserId) {
+    // 플레이리스트 존재 검증
     Playlist playlist =
         playlistRepository
             .findByIdWithOwner(playlistId)
@@ -112,25 +118,29 @@ public class PlaylistServiceImpl implements PlaylistService {
                     new PlaylistException(
                         PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
 
-    return playlistMapper.toDto(playlist);
+    return toPlaylistDto(playlist, currentUserId);
   }
 
   @Override
   @Transactional
   public PlaylistDto update(UUID playlistId, PlaylistUpdateRequest request, UUID userId) {
+
+    // 플레이리스트 존재 여부와 소유자 권한 검증
     Playlist playlist = getPlaylistOwnedBy(playlistId, userId);
 
     // 플레이리스트 업데이트
     playlist.update(request.title(), request.description());
 
-    return playlistMapper.toDto(playlist);
+    return toPlaylistDto(playlist, null);
   }
 
   @Override
   @Transactional
   public void delete(UUID playlistId, UUID userId) {
+    // 플레이리스트 존재 여부와 소유자 권한 검증
     Playlist playlist = getPlaylistOwnedBy(playlistId, userId);
 
+    // 플레이리스트 삭제
     playlistRepository.delete(playlist);
   }
 
@@ -143,10 +153,13 @@ public class PlaylistServiceImpl implements PlaylistService {
                 () ->
                     new PlaylistException(
                         PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId)));
+
     validatePlaylistOwner(playlist, userId);
+
     return playlist;
   }
 
+  // 목록 조회 요청 파라미터 검증
   private void validateFindAllRequest(
       String cursor, UUID idAfter, Integer limit, String sortBy, SortDirection sortDirection) {
 
@@ -160,26 +173,25 @@ public class PlaylistServiceImpl implements PlaylistService {
           Map.of("cursor", "cursor와 idAfter는 함께 전달되어야 합니다."));
     }
 
-    // 정렬 기준 검증
+    // 정렬 기준 필수값 검증
     if (sortBy == null || sortBy.isBlank()) {
       throw new PlaylistException(
           PlaylistErrorCode.INVALID_PLAYLIST_VALUE, Map.of("sortBy", "정렬 기준은 필수입니다."));
     }
 
     // 정렬 기준 값 검증
-    if (!"updatedAt".equals(sortBy) && !"subscriberCount".equals(sortBy)) {
+    if (!SORT_BY_UPDATED_AT.equals(sortBy) && !SORT_BY_SUBSCRIBER_COUNT.equals(sortBy)) {
       throw new PlaylistException(
           PlaylistErrorCode.INVALID_PLAYLIST_VALUE, Map.of("sortBy", "지원하지 않는 정렬 기준입니다."));
     }
 
-    // 정렬 방향 값 검증
-    if (sortDirection != SortDirection.DESCENDING) {
+    // 정렬 방향 필수값 검증
+    if (sortDirection == null) {
       throw new PlaylistException(
-          PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
-          Map.of("sortDirection", "현재는 DESCENDING 정렬만 지원합니다."));
+          PlaylistErrorCode.INVALID_PLAYLIST_VALUE, Map.of("sortDirection", "정렬 방향은 필수입니다."));
     }
 
-    // 요청 limit이 유효한지 검증
+    // 요청 limit 유효성 검증
     if (limit == null || limit <= 0 || limit > MAX_PLAYLIST_PAGE_LIMIT) {
       throw new PlaylistException(
           PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
@@ -187,7 +199,7 @@ public class PlaylistServiceImpl implements PlaylistService {
     }
   }
 
-  // 플레이리스트 생성자 권한 검증 메서드
+  // 플레이리스트 생성자 권한 검증
   private void validatePlaylistOwner(Playlist playlist, UUID userId) {
     if (!playlist.getOwner().getId().equals(userId)) {
       throw new PlaylistException(
@@ -196,7 +208,12 @@ public class PlaylistServiceImpl implements PlaylistService {
     }
   }
 
-  private Instant parseCursor(String cursor) {
+  // updatedAt 정렬일 때 커서 문자열을 Instant로 변환
+  private Instant parseUpdatedAtCursor(String cursor, String sortBy) {
+    if (!SORT_BY_UPDATED_AT.equals(sortBy)) {
+      return null;
+    }
+
     // 커서가 비어 있으면 첫 페이지 조회로 처리
     if (cursor == null || cursor.isBlank()) {
       return null;
@@ -207,33 +224,84 @@ public class PlaylistServiceImpl implements PlaylistService {
       return Instant.parse(cursor);
     } catch (DateTimeParseException e) {
       throw new PlaylistException(
-          PlaylistErrorCode.INVALID_PLAYLIST_VALUE, Map.of("cursor", "올바르지 않은 커서 형식입니다."), e);
+          PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
+          Map.of("cursor", "올바르지 않은 updatedAt 커서 형식입니다."),
+          e);
     }
   }
 
+  // subscriberCount 정렬일 때 커서 문자열을 Long으로 변환
+  private Long parseSubscriberCountCursor(String cursor, String sortBy) {
+
+    if (!SORT_BY_SUBSCRIBER_COUNT.equals(sortBy)) {
+      return null;
+    }
+
+    // 커서가 비어 있으면 첫 페이지 조회로 처리
+    if (cursor == null || cursor.isBlank()) {
+      return null;
+    }
+
+    try {
+      long subscriberCountCursor = Long.parseLong(cursor);
+
+      if (subscriberCountCursor < 0) {
+        throw new NumberFormatException(
+            "subscriberCount cursor must be greater than or equal to 0");
+      }
+
+      return subscriberCountCursor;
+    } catch (NumberFormatException e) {
+      throw new PlaylistException(
+          PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
+          Map.of("cursor", "올바르지 않은 subscriberCount 커서 형식입니다."),
+          e);
+    }
+  }
+
+  // 조회 결과를 커서 페이지 응답으로 변환
   private CursorPageResponse<PlaylistDto> toCursorPageResponse(
       List<Playlist> playlists,
-      String keywordLike,
+      String normalizedKeyword,
       UUID ownerId,
+      UUID subscriberId,
+      UUID currentUserId,
       Integer limit,
       String sortBy,
       SortDirection sortDirection) {
 
+    // limit보다 많이 조회되었으면 다음 페이지 존재
     boolean hasNext = playlists.size() > limit;
 
+    // 응답 데이터는 요청 limit만큼만 사용
     List<Playlist> pagePlaylists = hasNext ? playlists.subList(0, limit) : playlists;
 
-    List<PlaylistDto> data = pagePlaylists.stream().map(playlistMapper::toDto).toList();
+    // 목록 응답에 필요한 구독 메타데이터를 페이지 단위로 bulk 조회
+    Map<UUID, Long> subscriberCountByPlaylistId = getSubscriberCountByPlaylistId(pagePlaylists);
 
+    Set<UUID> subscribedPlaylistIds = getSubscribedPlaylistIds(pagePlaylists, currentUserId);
+
+    // Playlist 엔티티 목록을 응답 DTO 목록으로 변환
+    List<PlaylistDto> data =
+        pagePlaylists.stream()
+            .map(
+                playlist ->
+                    playlistMapper.toDto(
+                        playlist,
+                        subscriberCountByPlaylistId.getOrDefault(playlist.getId(), 0L),
+                        subscribedPlaylistIds.contains(playlist.getId())))
+            .toList();
+
+    // 다음 커서 생성을 위한 마지막 플레이리스트 추출
     Playlist lastPlaylist =
         hasNext && !pagePlaylists.isEmpty() ? pagePlaylists.get(pagePlaylists.size() - 1) : null;
 
-    long totalCount =
-        playlistRepository.countBySearchCondition(normalizeKeyword(keywordLike), ownerId);
+    // 조회 조건에 맞는 전체 플레이리스트 개수 조회
+    long totalCount = playlistRepository.countByCondition(normalizedKeyword, ownerId, subscriberId);
 
     return new CursorPageResponse<>(
         data,
-        getNextCursor(lastPlaylist),
+        getNextCursor(lastPlaylist, sortBy, subscriberCountByPlaylistId),
         getNextIdAfter(lastPlaylist),
         hasNext,
         totalCount,
@@ -241,17 +309,77 @@ public class PlaylistServiceImpl implements PlaylistService {
         sortDirection);
   }
 
+  // PlaylistDto에 실제 구독자 수와 구독 여부를 반영
+  private PlaylistDto toPlaylistDto(Playlist playlist, UUID currentUserId) {
+
+    long subscriberCount = playlistSubscriptionRepository.countByPlaylistId(playlist.getId());
+
+    boolean subscribedByMe =
+        currentUserId != null
+            && playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
+                currentUserId, playlist.getId());
+
+    return playlistMapper.toDto(playlist, subscriberCount, subscribedByMe);
+  }
+
+  // 목록 응답용 구독자 수를 playlistId 기준으로 bulk 조회
+  private Map<UUID, Long> getSubscriberCountByPlaylistId(List<Playlist> playlists) {
+
+    List<UUID> playlistIds = getPlaylistIds(playlists);
+
+    if (playlistIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return playlistSubscriptionRepository.countByPlaylistIds(playlistIds).stream()
+        .collect(
+            Collectors.toMap(
+                PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection::getPlaylistId,
+                PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection
+                    ::getSubscriberCount));
+  }
+
+  // 현재 사용자가 구독한 playlistId 목록을 bulk 조회
+  private Set<UUID> getSubscribedPlaylistIds(List<Playlist> playlists, UUID currentUserId) {
+
+    List<UUID> playlistIds = getPlaylistIds(playlists);
+
+    if (currentUserId == null || playlistIds.isEmpty()) {
+      return Set.of();
+    }
+
+    return playlistSubscriptionRepository.findSubscribedPlaylistIds(currentUserId, playlistIds);
+  }
+
+  // Playlist 목록에서 id만 추출
+  private List<UUID> getPlaylistIds(List<Playlist> playlists) {
+    return playlists.stream().map(Playlist::getId).toList();
+  }
+
+  // 검색어 공백 제거 및 빈 문자열 null 처리
   private String normalizeKeyword(String keywordLike) {
     return keywordLike == null || keywordLike.isBlank() ? null : keywordLike.trim();
   }
 
-  private String getNextCursor(Playlist lastPlaylist) {
-    // 마지막 플리가 없으면 다음 커서를 생성하지 않음
-    return lastPlaylist == null ? null : lastPlaylist.getUpdatedAt().toString();
+  // 다음 페이지 요청에 사용할 커서 생성
+  private String getNextCursor(
+      Playlist lastPlaylist, String sortBy, Map<UUID, Long> subscriberCountByPlaylistId) {
+
+    // 마지막 플레이리스트가 없으면 다음 커서를 생성하지 않음
+    if (lastPlaylist == null) {
+      return null;
+    }
+
+    if (SORT_BY_SUBSCRIBER_COUNT.equals(sortBy)) {
+      return String.valueOf(subscriberCountByPlaylistId.getOrDefault(lastPlaylist.getId(), 0L));
+    }
+
+    return lastPlaylist.getUpdatedAt().toString();
   }
 
+  // 다음 페이지 요청에 사용할 보조 커서 생성
   private UUID getNextIdAfter(Playlist lastPlaylist) {
-    // 마지막 플리가 없으면 다음 보조 커서를 생성하지 않음
+    // 마지막 플레이리스트가 없으면 다음 보조 커서를 생성하지 않음
     return lastPlaylist == null ? null : lastPlaylist.getId();
   }
 }
