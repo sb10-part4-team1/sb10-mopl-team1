@@ -21,7 +21,7 @@ public class ShedLockConfig {
 
   // 운영 및 개발 분산 환경용 Redis 락 프로바이더
   @Bean
-  @Profile({"prod", "aws", "dev"})
+  @Profile({"prod", "dev"})
   public LockProvider lockProvider(RedisConnectionFactory connectionFactory) {
     return new RedisLockProvider(connectionFactory, "mopl-lock");
   }

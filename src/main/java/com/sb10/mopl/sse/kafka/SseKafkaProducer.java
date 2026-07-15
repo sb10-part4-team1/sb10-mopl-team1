@@ -13,22 +13,37 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Profile({"prod", "aws", "dev"})
+@Profile({"prod", "dev"})
 @RequiredArgsConstructor
 public class SseKafkaProducer {
 
   private static final String SSE_TOPIC = "mopl-sse-topic";
   private final KafkaTemplate<String, Object> kafkaTemplate;
 
-  public void sendNotification(Collection<UUID> receiverIds, String eventName, Object data) {
-    SseEventPayload payload = new SseEventPayload(receiverIds, eventName, data, false);
-    log.info("SSE 카프카 이벤트 발행 - 수신자: {}, 이벤트: {}", receiverIds, eventName);
-    kafkaTemplate.send(SSE_TOPIC, payload);
+  public void sendNotification(
+      UUID eventId, Collection<UUID> receiverIds, String eventName, Object data) {
+    SseEventPayload payload = new SseEventPayload(eventId, receiverIds, eventName, data, false);
+    log.info("SSE 카프카 이벤트 발행 - 이벤트: {}, ID: {}", eventName, eventId);
+    kafkaTemplate
+        .send(SSE_TOPIC, payload)
+        .whenComplete(
+            (result, ex) -> {
+              if (ex != null) {
+                log.error("SSE 카프카 이벤트 발행 실패 - ID: {}", eventId, ex);
+              }
+            });
   }
 
-  public void broadcastNotification(String eventName, Object data) {
-    SseEventPayload payload = new SseEventPayload(null, eventName, data, true);
-    log.info("SSE 카프카 브로드캐스트 이벤트 발행 - 이벤트: {}", eventName);
-    kafkaTemplate.send(SSE_TOPIC, payload);
+  public void broadcastNotification(UUID eventId, String eventName, Object data) {
+    SseEventPayload payload = new SseEventPayload(eventId, null, eventName, data, true);
+    log.info("SSE 카프카 브로드캐스트 이벤트 발행 - 이벤트: {}, ID: {}", eventName, eventId);
+    kafkaTemplate
+        .send(SSE_TOPIC, payload)
+        .whenComplete(
+            (result, ex) -> {
+              if (ex != null) {
+                log.error("SSE 카프카 브로드캐스트 이벤트 발행 실패 - ID: {}", eventId, ex);
+              }
+            });
   }
 }

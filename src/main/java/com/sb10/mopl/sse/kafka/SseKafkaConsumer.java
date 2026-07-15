@@ -15,7 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  */
 @Slf4j
 @Component
-@Profile({"prod", "aws", "dev"})
+@Profile({"prod", "dev"})
 @RequiredArgsConstructor
 public class SseKafkaConsumer {
 
@@ -38,7 +38,8 @@ public class SseKafkaConsumer {
 
   private void sendToEmitter(SseEmitter emitter, SseEventPayload payload) {
     try {
-      emitter.send(SseEmitter.event().name(payload.eventName()).data(payload.data()));
+      String eventId = payload.eventId() != null ? payload.eventId().toString() : "";
+      emitter.send(SseEmitter.event().id(eventId).name(payload.eventName()).data(payload.data()));
     } catch (IOException e) {
       log.error("SseEmitter로 이벤트 전송 실패 (접속 끊김 감지)", e);
     }

@@ -78,14 +78,14 @@ public class KafkaSseService implements SseService {
 
   @Override
   public void send(Collection<UUID> receiverIds, String eventName, Object data) {
-    sseMessageRepository.save(SseMessage.create(receiverIds, eventName, data));
-    sseKafkaProducer.sendNotification(receiverIds, eventName, data);
+    SseMessage message = sseMessageRepository.save(SseMessage.create(receiverIds, eventName, data));
+    sseKafkaProducer.sendNotification(message.getEventId(), receiverIds, eventName, data);
   }
 
   @Override
   public void broadcast(String eventName, Object data) {
-    sseMessageRepository.save(SseMessage.createBroadcast(eventName, data));
-    sseKafkaProducer.broadcastNotification(eventName, data);
+    SseMessage message = sseMessageRepository.save(SseMessage.createBroadcast(eventName, data));
+    sseKafkaProducer.broadcastNotification(message.getEventId(), eventName, data);
   }
 
   @Scheduled(fixedDelay = 1000 * 60 * 30)

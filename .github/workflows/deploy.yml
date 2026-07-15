@@ -10,6 +10,9 @@ on:
     types:
       - closed
 
+permissions:
+  contents: read
+
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
   ECR_REPOSITORY_URI: ${{ vars.ECR_REPOSITORY_URI }}

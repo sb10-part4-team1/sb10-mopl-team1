@@ -36,7 +36,7 @@
   ],
   "family": "mopl-task",
   "executionRoleArn": "arn:aws:iam::380277571299:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::380277571299:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::380277571299:role/ecsTaskRole",
   "networkMode": "awsvpc",
   "volumes": [],
   "placementConstraints": [],

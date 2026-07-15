@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Slf4j
 @Service
-@Profile({"prod", "aws"})
+@Profile("prod")
 @RequiredArgsConstructor
 public class S3StorageService implements ImageStorageService {
 
