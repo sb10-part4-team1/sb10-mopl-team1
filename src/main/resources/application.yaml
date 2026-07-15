@@ -163,6 +163,8 @@ springdoc:
 
 # Actuator 설정
 management:
+  server:
+    port: 8081 # Actuator 포트 이원화 격리
   endpoints:
     web:
       exposure:
