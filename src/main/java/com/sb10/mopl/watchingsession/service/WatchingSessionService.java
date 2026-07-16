@@ -58,6 +58,7 @@ public class WatchingSessionService {
     WatchingSession watchingSession =
         WatchingSession.builder().watcher(watcher).content(content).build();
     watchingSessionRepository.save(watchingSession);
+    contentRepository.incrementWatcherCount(contentId);
 
     return watchingSessionMapper.toDto(watchingSession);
   }
@@ -70,14 +71,21 @@ public class WatchingSessionService {
             watchingSession -> {
               WatchingSessionDto dto = watchingSessionMapper.toDto(watchingSession);
               watchingSessionRepository.delete(watchingSession);
+              contentRepository.decrementWatcherCount(contentId);
               return dto;
             });
   }
 
-  // 특정 콘텐츠를 현재 시청 중인 인원 수
+  // 특정 콘텐츠를 현재 시청 중인 인원 수.
   @Transactional(readOnly = true)
   public long countWatchers(UUID contentId) {
-    return watchingSessionRepository.countByContentId(contentId);
+    return contentRepository
+        .findById(contentId)
+        .map(Content::getWatcherCount)
+        .orElseThrow(
+            () ->
+                new ContentException(
+                    ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId)));
   }
 
   // 특정 사용자의 가장 최근 시청 세션 조회 (nullable)

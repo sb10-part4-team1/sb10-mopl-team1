@@ -13,6 +13,4 @@ public interface WatchingSessionRepository
   Optional<WatchingSession> findTopByWatcherIdOrderByCreatedAtDesc(UUID watcherId);
 
   Optional<WatchingSession> findByWatcherIdAndContentId(UUID watcherId, UUID contentId);
-
-  long countByContentId(UUID contentId);
 }
