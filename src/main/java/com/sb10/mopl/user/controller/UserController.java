@@ -42,32 +42,32 @@ public class UserController {
 
   @PatchMapping("/{userId}/password")
   public ResponseEntity<Void> changePassword(
-      @PathVariable UUID userId,
-      @Valid @RequestBody ChangePasswordRequest request,
-      @CurrentUser AuthenticatedUser currentUser) {
+    @PathVariable UUID userId,
+    @Valid @RequestBody ChangePasswordRequest request,
+    @CurrentUser AuthenticatedUser currentUser) {
     userService.changePassword(userId, currentUser.id(), request);
     return ResponseEntity.noContent().build();
   }
 
   @PatchMapping("/{userId}/role")
   public ResponseEntity<Void> updateRole(
-      @PathVariable UUID userId,
-      @Valid @RequestBody UserRoleUpdateRequest request,
-      @CurrentUser AuthenticatedUser currentUser) {
+    @PathVariable UUID userId,
+    @Valid @RequestBody UserRoleUpdateRequest request,
+    @CurrentUser AuthenticatedUser currentUser) {
     userService.updateRole(userId, currentUser.id(), request);
     return ResponseEntity.noContent().build();
   }
 
   @PatchMapping("/{userId}/locked")
   public ResponseEntity<Void> updateLocked(
-      @PathVariable UUID userId, @Valid @RequestBody UserLockUpdateRequest request) {
+    @PathVariable UUID userId, @Valid @RequestBody UserLockUpdateRequest request) {
     userService.updateLocked(userId, request);
     return ResponseEntity.noContent().build();
   }
 
   @GetMapping
   public ResponseEntity<CursorPageResponse<UserDto>> findUsers(
-      @ModelAttribute @Valid UserSearchRequest request) {
+    @ModelAttribute @Valid UserSearchRequest request) {
     CursorPageResponse<UserDto> response = userService.findUsers(request);
     return ResponseEntity.ok(response);
   }
@@ -75,7 +75,6 @@ public class UserController {
   // 특정 사용자의 현재 시청 세션 조회 (nullable)
   @GetMapping("/{watcherId}/watching-sessions")
   public ResponseEntity<WatchingSessionDto> findWatchingSession(@PathVariable UUID watcherId) {
-    WatchingSessionDto dto = watchingSessionService.findLatestByWatcher(watcherId).orElse(null);
-    return ResponseEntity.ok(dto);
+    return ResponseEntity.of(watchingSessionService.findLatestByWatcher(watcherId));
   }
 }
