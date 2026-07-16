@@ -9,9 +9,21 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${AWS_RDS_ENDPOINT}:5432/prod_db
-    username: ${AWS_RDS_USERNAME}
-    password: ${AWS_RDS_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+
+  batch:
+    jdbc:
+      initialize-schema: never # 운영 환경에서는 배치 메타 테이블 자동 초기화 방지
 
   sql:
     init:
@@ -39,10 +51,13 @@ mopl:
 
   datasource:
     api-pool-name: HikariPool-Prod-API
-    api-pool-size: 30
+    api-pool-size: 15
     batch-pool-name: HikariPool-Prod-Batch
     batch-pool-size: 5
 
   mail:
     temporary-password:
       from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}
+
+server:
+  forward-headers-strategy: framework

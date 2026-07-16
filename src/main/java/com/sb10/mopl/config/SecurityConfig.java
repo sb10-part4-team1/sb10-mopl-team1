@@ -87,7 +87,8 @@ public class SecurityConfig {
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-in"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/reset-password"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/refresh"),
-    methodAndPathMatcher(HttpMethod.GET, "/api/auth/csrf-token")
+    methodAndPathMatcher(HttpMethod.GET, "/api/auth/csrf-token"),
+    pathMatcher("/actuator/health")
   };
 
   // 관리자 권한이 필요한 사용자 관리 API 목록

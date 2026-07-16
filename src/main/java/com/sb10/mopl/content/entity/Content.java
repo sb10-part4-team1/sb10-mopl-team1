@@ -37,7 +37,7 @@ public class Content extends BaseUpdatableEntity {
   @Column(name = "thumbnail_url", nullable = false, columnDefinition = "TEXT")
   private String thumbnailUrl;
 
-  @Column(name = "average_rating", nullable = false)
+  @Column(name = "average_rating", nullable = false, columnDefinition = "numeric(2,1)")
   private double averageRating = 0.0;
 
   @Column(name = "review_count", nullable = false)

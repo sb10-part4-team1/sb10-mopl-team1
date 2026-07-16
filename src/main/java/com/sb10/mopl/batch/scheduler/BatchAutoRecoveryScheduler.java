@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
@@ -80,14 +81,16 @@ public class BatchAutoRecoveryScheduler {
     this.consecutiveFailures.put(jobName, value);
   }
 
-  /** 10분마다 실패한 스포츠 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
+  /* 10분마다 실패한 스포츠 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
   @Scheduled(fixedDelay = 600000)
+  @SchedulerLock(name = "recoverSportsJobLock", lockAtMostFor = "9m", lockAtLeastFor = "1m")
   public void recoverSportsJob() {
     recoverJob("sportsJob", sportsJob, "[RECOVERY-SPORTS]");
   }
 
-  /** 10분마다 실패한 TMDB 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
+  /* 10분마다 실패한 TMDB 배치를 자동 복구합니다. (KST 02:00~07:00 시간대만 동작) */
   @Scheduled(fixedDelay = 600000)
+  @SchedulerLock(name = "recoverTmdbJobLock", lockAtMostFor = "9m", lockAtLeastFor = "1m")
   public void recoverTmdbJob() {
     recoverJob("tmdbJob", tmdbJob, "[RECOVERY-TMDB]");
   }
