@@ -87,8 +87,7 @@ class UserServiceTest {
 
     when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
     when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
-    when(userRepository.saveAndFlush(any(User.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
     when(userMapper.toDto(any(User.class))).thenReturn(expectedDto);
 
     // when
@@ -97,7 +96,7 @@ class UserServiceTest {
 
     // then
     ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-    verify(userRepository).saveAndFlush(userCaptor.capture());
+    verify(userRepository).save(userCaptor.capture());
 
     User savedUser = userCaptor.getValue();
     String savedPassword = (String) ReflectionTestUtils.getField(savedUser, "password");
@@ -134,34 +133,28 @@ class UserServiceTest {
 
     verify(userRepository).existsByEmail("user@example.com");
     verify(passwordEncoder, never()).encode(any());
-    verify(userRepository, never()).saveAndFlush(any());
+    verify(userRepository, never()).save(any());
     verify(userMapper, never()).toDto(any());
   }
 
   @Test
-  @DisplayName("저장 중 이메일 중복 제약이 발생하면 사용자 예외로 변환한다")
+  @DisplayName("저장 시점에 이메일 중복 제약이 발생하면 DataIntegrityViolationException이 그대로 전파된다")
   void signUp_fail_whenEmailDuplicatedDuringSave() {
     // given
+    when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
+    when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
+    when(userRepository.save(any(User.class)))
+        .thenThrow(new DataIntegrityViolationException("duplicate email"));
+
     UserCreateRequest request =
         new UserCreateRequest("test-user", "user@example.com", "password123");
 
-    when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
-    when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
-    when(userRepository.saveAndFlush(any(User.class)))
-        .thenThrow(new DataIntegrityViolationException("duplicate email"));
-
-    // when
-    UserException exception = assertThrows(UserException.class, () -> userService.signUp(request));
-
-    // then
-    assertAll(
-        () -> assertEquals(UserErrorCode.EMAIL_ALREADY_EXISTS, exception.getErrorCode()),
-        () -> assertEquals("user@example.com", exception.getDetails().get("email")),
-        () -> assertTrue(exception.getCause() instanceof DataIntegrityViolationException));
+    // when & then
+    assertThrows(DataIntegrityViolationException.class, () -> userService.signUp(request));
 
     verify(userRepository).existsByEmail("user@example.com");
     verify(passwordEncoder).encode("password123");
-    verify(userRepository).saveAndFlush(any(User.class));
+    verify(userRepository).save(any(User.class));
     verify(userMapper, never()).toDto(any());
   }
 
