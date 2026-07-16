@@ -10,6 +10,8 @@ import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.service.UserService;
+import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;
+import com.sb10.mopl.watchingsession.service.WatchingSessionService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
   private final UserService userService;
+  private final WatchingSessionService watchingSessionService;
 
   @PostMapping
   public ResponseEntity<UserDto> signUp(@Valid @RequestBody UserCreateRequest userCreateRequest) {
@@ -67,5 +70,12 @@ public class UserController {
       @ModelAttribute @Valid UserSearchRequest request) {
     CursorPageResponse<UserDto> response = userService.findUsers(request);
     return ResponseEntity.ok(response);
+  }
+
+  // 특정 사용자의 현재 시청 세션 조회 (nullable)
+  @GetMapping("/{watcherId}/watching-sessions")
+  public ResponseEntity<WatchingSessionDto> findWatchingSession(@PathVariable UUID watcherId) {
+    WatchingSessionDto dto = watchingSessionService.findLatestByWatcher(watcherId).orElse(null);
+    return ResponseEntity.ok(dto);
   }
 }

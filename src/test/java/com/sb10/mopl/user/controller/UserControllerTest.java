@@ -31,6 +31,7 @@ import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.service.UserService;
+import com.sb10.mopl.watchingsession.service.WatchingSessionService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,8 @@ class UserControllerTest {
   @Autowired private ObjectMapper objectMapper;
 
   @MockitoBean private UserService userService;
+
+  @MockitoBean private WatchingSessionService watchingSessionService;
 
   @AfterEach
   void tearDown() {

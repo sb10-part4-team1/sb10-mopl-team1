@@ -6,6 +6,9 @@ import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.common.exception.MoplException;
+import com.sb10.mopl.content.exception.ContentErrorCode;
+import com.sb10.mopl.content.exception.ContentException;
+import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.conversation.entity.ConversationParticipantId;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
 import com.sb10.mopl.conversation.exception.ConversationException;
@@ -41,17 +44,22 @@ public class StompChannelInterceptor implements ChannelInterceptor {
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String PUBLISH_PREFIX = "/pub";
 
+  private static final String UUID_PATTERN =
+      "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+
   // UUID 형식만 들어올 수 있음
   private static final Pattern DIRECT_MESSAGE_TOPIC_PATTERN =
-      Pattern.compile(
-          "^/sub/conversations"
-              + "/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
-              + "/direct-messages$");
+      Pattern.compile("^/sub/conversations/(" + UUID_PATTERN + ")/direct-messages$");
+
+  // UUID 형식만 들어올 수 있음. 시청 세션(watch)과 실시간 채팅(chat)은 둘 다 콘텐츠 존재 여부만 검증하면 됩니다.
+  private static final Pattern CONTENT_TOPIC_PATTERN =
+      Pattern.compile("^/sub/contents/(" + UUID_PATTERN + ")/(?:watch|chat)$");
 
   private final JwtProvider jwtProvider;
   private final JwtSessionService jwtSessionService;
   private final AuthenticatedUserFactory authenticatedUserFactory;
   private final ConversationParticipantRepository conversationParticipantRepository;
+  private final ContentRepository contentRepository;
 
   // stomp 프레임 종류에 따라 connect 인증, sub는 구독 권한을 검사
   @Override
@@ -96,18 +104,31 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     }
   }
 
-  // 대화 참여자가 아닌 사용자가 다른 대화의 DM 토픽을 구독하는 것을 방지
+  // destination 패턴에 맞는 토픽별 구독 권한 검사로 위임하고, 알 수 없는 destination은 모두 거부합니다.
   private void authorizeSubscription(StompHeaderAccessor accessor) {
     String destination = accessor.getDestination();
-
-    // /sub는 DM 토픽 전용 브로커 prefix이므로, 형식이 맞지 않는 destination은 구독을 거부합니다.
-    Matcher matcher =
-        destination == null ? null : DIRECT_MESSAGE_TOPIC_PATTERN.matcher(destination);
-    if (matcher == null || !matcher.matches()) {
-      log.warn("[DM] 허용되지 않은 SUBSCRIBE 엔드포인트입니다. destination={}", destination);
-      throw new MoplException(AuthErrorCode.AUTHENTICATION_FAILED, Map.of());
+    if (destination == null) {
+      rejectSubscription(destination);
+      return;
     }
 
+    Matcher directMessageMatcher = DIRECT_MESSAGE_TOPIC_PATTERN.matcher(destination);
+    if (directMessageMatcher.matches()) {
+      authorizeDirectMessageSubscription(directMessageMatcher, accessor);
+      return;
+    }
+
+    Matcher contentTopicMatcher = CONTENT_TOPIC_PATTERN.matcher(destination);
+    if (contentTopicMatcher.matches()) {
+      authorizeContentTopicSubscription(contentTopicMatcher);
+      return;
+    }
+
+    rejectSubscription(destination);
+  }
+
+  // 대화 참여자가 아닌 사용자가 다른 대화의 DM 토픽을 구독하는 것을 방지
+  private void authorizeDirectMessageSubscription(Matcher matcher, StompHeaderAccessor accessor) {
     UUID conversationId = UUID.fromString(matcher.group(1));
     UUID userId = resolveUserId(accessor.getUser());
 
@@ -119,6 +140,20 @@ public class StompChannelInterceptor implements ChannelInterceptor {
           ConversationErrorCode.DIRECT_MESSAGE_TOPIC_ACCESS_DENIED,
           Map.of("conversationId", conversationId, "userId", userId));
     }
+  }
+
+  // 존재하지 않는 콘텐츠의 시청 세션/채팅 토픽을 구독하는 것을 방지 (참여자 제한은 없음 - 누구나 같이 볼 수 있음)
+  private void authorizeContentTopicSubscription(Matcher matcher) {
+    UUID contentId = UUID.fromString(matcher.group(1));
+    if (!contentRepository.existsById(contentId)) {
+      throw new ContentException(
+          ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId));
+    }
+  }
+
+  private void rejectSubscription(String destination) {
+    log.warn("[STOMP] 허용되지 않은 SUBSCRIBE 목적지입니다. destination={}", destination);
+    throw new MoplException(AuthErrorCode.AUTHENTICATION_FAILED, Map.of());
   }
 
   // sub 프레임에 저장된 principal에서 인증된 사용자의 id를 구한다
