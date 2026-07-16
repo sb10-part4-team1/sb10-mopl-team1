@@ -29,8 +29,7 @@ class PlaylistSubscriptionTest {
   @DisplayName("구독 요청자와 플레이리스트가 유효하면 PlaylistSubscription을 생성한다")
   void create_success_whenSubscriberAndPlaylistAreValid() {
     // when
-    PlaylistSubscription playlistSubscription =
-      new PlaylistSubscription(subscriber, playlist);
+    PlaylistSubscription playlistSubscription = new PlaylistSubscription(subscriber, playlist);
 
     // then
     assertSame(subscriber, playlistSubscription.getSubscriber());
@@ -42,14 +41,13 @@ class PlaylistSubscriptionTest {
   void create_throwInvalidValue_whenSubscriberIsNull() {
     // when
     PlaylistSubscriptionException exception =
-      assertThrows(
-        PlaylistSubscriptionException.class,
-        () -> new PlaylistSubscription(null, playlist));
+        assertThrows(
+            PlaylistSubscriptionException.class, () -> new PlaylistSubscription(null, playlist));
 
     // then
     assertEquals(
-      PlaylistSubscriptionErrorCode.INVALID_PLAYLIST_SUBSCRIPTION_VALUE,
-      exception.getErrorCode());
+        PlaylistSubscriptionErrorCode.INVALID_PLAYLIST_SUBSCRIPTION_VALUE,
+        exception.getErrorCode());
     assertTrue(exception.getDetails().containsKey("subscriber"));
   }
 
@@ -58,14 +56,13 @@ class PlaylistSubscriptionTest {
   void create_throwInvalidValue_whenPlaylistIsNull() {
     // when
     PlaylistSubscriptionException exception =
-      assertThrows(
-        PlaylistSubscriptionException.class,
-        () -> new PlaylistSubscription(subscriber, null));
+        assertThrows(
+            PlaylistSubscriptionException.class, () -> new PlaylistSubscription(subscriber, null));
 
     // then
     assertEquals(
-      PlaylistSubscriptionErrorCode.INVALID_PLAYLIST_SUBSCRIPTION_VALUE,
-      exception.getErrorCode());
+        PlaylistSubscriptionErrorCode.INVALID_PLAYLIST_SUBSCRIPTION_VALUE,
+        exception.getErrorCode());
     assertTrue(exception.getDetails().containsKey("playlist"));
   }
 
@@ -74,14 +71,13 @@ class PlaylistSubscriptionTest {
   void create_throwInvalidValue_whenSubscriberAndPlaylistAreNull() {
     // when
     PlaylistSubscriptionException exception =
-      assertThrows(
-        PlaylistSubscriptionException.class,
-        () -> new PlaylistSubscription(null, null));
+        assertThrows(
+            PlaylistSubscriptionException.class, () -> new PlaylistSubscription(null, null));
 
     // then
     assertEquals(
-      PlaylistSubscriptionErrorCode.INVALID_PLAYLIST_SUBSCRIPTION_VALUE,
-      exception.getErrorCode());
+        PlaylistSubscriptionErrorCode.INVALID_PLAYLIST_SUBSCRIPTION_VALUE,
+        exception.getErrorCode());
     assertTrue(exception.getDetails().containsKey("subscriber"));
     assertTrue(exception.getDetails().containsKey("playlist"));
   }

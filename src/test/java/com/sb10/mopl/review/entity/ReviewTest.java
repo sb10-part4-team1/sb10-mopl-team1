@@ -43,9 +43,7 @@ class ReviewTest {
   void create_throwInvalidValue_whenContentIsNull() {
     // when
     ReviewException exception =
-      assertThrows(
-        ReviewException.class,
-        () -> new Review(null, user, "좋은 콘텐츠입니다.", 5));
+        assertThrows(ReviewException.class, () -> new Review(null, user, "좋은 콘텐츠입니다.", 5));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -57,9 +55,7 @@ class ReviewTest {
   void create_throwInvalidValue_whenUserIsNull() {
     // when
     ReviewException exception =
-      assertThrows(
-        ReviewException.class,
-        () -> new Review(content, null, "좋은 콘텐츠입니다.", 5));
+        assertThrows(ReviewException.class, () -> new Review(content, null, "좋은 콘텐츠입니다.", 5));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -71,9 +67,7 @@ class ReviewTest {
   void create_throwInvalidValue_whenTextIsNull() {
     // when
     ReviewException exception =
-      assertThrows(
-        ReviewException.class,
-        () -> new Review(content, user, null, 5));
+        assertThrows(ReviewException.class, () -> new Review(content, user, null, 5));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -85,9 +79,7 @@ class ReviewTest {
   void create_throwInvalidValue_whenTextIsBlank() {
     // when
     ReviewException exception =
-      assertThrows(
-        ReviewException.class,
-        () -> new Review(content, user, " ", 5));
+        assertThrows(ReviewException.class, () -> new Review(content, user, " ", 5));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -99,9 +91,7 @@ class ReviewTest {
   void create_throwInvalidValue_whenRatingIsNull() {
     // when
     ReviewException exception =
-      assertThrows(
-        ReviewException.class,
-        () -> new Review(content, user, "좋은 콘텐츠입니다.", null));
+        assertThrows(ReviewException.class, () -> new Review(content, user, "좋은 콘텐츠입니다.", null));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -113,9 +103,7 @@ class ReviewTest {
   void create_throwInvalidValue_whenRatingIsLessThanOne() {
     // when
     ReviewException exception =
-      assertThrows(
-        ReviewException.class,
-        () -> new Review(content, user, "좋은 콘텐츠입니다.", 0));
+        assertThrows(ReviewException.class, () -> new Review(content, user, "좋은 콘텐츠입니다.", 0));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -127,9 +115,7 @@ class ReviewTest {
   void create_throwInvalidValue_whenRatingIsGreaterThanFive() {
     // when
     ReviewException exception =
-      assertThrows(
-        ReviewException.class,
-        () -> new Review(content, user, "좋은 콘텐츠입니다.", 6));
+        assertThrows(ReviewException.class, () -> new Review(content, user, "좋은 콘텐츠입니다.", 6));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -157,8 +143,7 @@ class ReviewTest {
     Review review = new Review(content, user, "기존 리뷰", 3);
 
     // when
-    ReviewException exception =
-      assertThrows(ReviewException.class, () -> review.update(null, 5));
+    ReviewException exception = assertThrows(ReviewException.class, () -> review.update(null, 5));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -174,8 +159,7 @@ class ReviewTest {
     Review review = new Review(content, user, "기존 리뷰", 3);
 
     // when
-    ReviewException exception =
-      assertThrows(ReviewException.class, () -> review.update(" ", 5));
+    ReviewException exception = assertThrows(ReviewException.class, () -> review.update(" ", 5));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -192,7 +176,7 @@ class ReviewTest {
 
     // when
     ReviewException exception =
-      assertThrows(ReviewException.class, () -> review.update("수정된 리뷰", null));
+        assertThrows(ReviewException.class, () -> review.update("수정된 리뷰", null));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -209,7 +193,7 @@ class ReviewTest {
 
     // when
     ReviewException exception =
-      assertThrows(ReviewException.class, () -> review.update("수정된 리뷰", 0));
+        assertThrows(ReviewException.class, () -> review.update("수정된 리뷰", 0));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -226,7 +210,7 @@ class ReviewTest {
 
     // when
     ReviewException exception =
-      assertThrows(ReviewException.class, () -> review.update("수정된 리뷰", 6));
+        assertThrows(ReviewException.class, () -> review.update("수정된 리뷰", 6));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());
@@ -240,9 +224,7 @@ class ReviewTest {
   void create_throwInvalidValue_whenMultipleValuesAreInvalid() {
     // when
     ReviewException exception =
-      assertThrows(
-        ReviewException.class,
-        () -> new Review(null, null, " ", 0));
+        assertThrows(ReviewException.class, () -> new Review(null, null, " ", 0));
 
     // then
     assertEquals(ReviewErrorCode.INVALID_REVIEW_VALUE, exception.getErrorCode());

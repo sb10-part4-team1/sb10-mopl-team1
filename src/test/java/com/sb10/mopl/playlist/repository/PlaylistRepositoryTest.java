@@ -34,17 +34,13 @@ class PlaylistRepositoryTest {
 
   private static final Pageable DEFAULT_PAGEABLE = PageRequest.of(0, 10);
 
-  @Autowired
-  private PlaylistRepository playlistRepository;
+  @Autowired private PlaylistRepository playlistRepository;
 
-  @Autowired
-  private PlaylistSubscriptionRepository playlistSubscriptionRepository;
+  @Autowired private PlaylistSubscriptionRepository playlistSubscriptionRepository;
 
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private UserRepository userRepository;
 
-  @Autowired
-  private EntityManager entityManager;
+  @Autowired private EntityManager entityManager;
 
   private User owner;
   private User subscriber;
@@ -58,24 +54,16 @@ class PlaylistRepositoryTest {
   void setUp() {
     owner = userRepository.save(createUser("소유자", "owner@example.com"));
 
-    User otherOwner =
-      userRepository.save(createUser("다른 소유자", "other-owner@example.com"));
+    final User otherOwner = userRepository.save(createUser("다른 소유자", "other-owner@example.com"));
 
     subscriber = userRepository.save(createUser("구독자", "subscriber@example.com"));
-    otherSubscriber =
-      userRepository.save(createUser("다른 구독자", "other-subscriber@example.com"));
+    otherSubscriber = userRepository.save(createUser("다른 구독자", "other-subscriber@example.com"));
 
-    firstPlaylist =
-      playlistRepository.save(
-        new Playlist(owner, "영화 추천 모음", "재미있는 영화 플레이리스트"));
+    firstPlaylist = playlistRepository.save(new Playlist(owner, "영화 추천 모음", "재미있는 영화 플레이리스트"));
 
-    secondPlaylist =
-      playlistRepository.save(
-        new Playlist(owner, "음악 추천 모음", "집중할 때 듣는 음악"));
+    secondPlaylist = playlistRepository.save(new Playlist(owner, "음악 추천 모음", "집중할 때 듣는 음악"));
 
-    thirdPlaylist =
-      playlistRepository.save(
-        new Playlist(otherOwner, "드라마 정주행", "주말에 볼 드라마"));
+    thirdPlaylist = playlistRepository.save(new Playlist(otherOwner, "드라마 정주행", "주말에 볼 드라마"));
 
     entityManager.flush();
     entityManager.clear();
@@ -86,20 +74,13 @@ class PlaylistRepositoryTest {
   void findAllByCondition_returnAll_whenConditionIsEmpty() {
     // when
     List<Playlist> result =
-      findAllByCondition(
-        null,
-        null,
-        null,
-        null,
-        null,
-        "updatedAt",
-        SortDirection.DESCENDING);
+        findAllByCondition(null, null, null, null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
     assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactlyInAnyOrder(
-        firstPlaylist.getId(), secondPlaylist.getId(), thirdPlaylist.getId());
+        .extracting(Playlist::getId)
+        .containsExactlyInAnyOrder(
+            firstPlaylist.getId(), secondPlaylist.getId(), thirdPlaylist.getId());
   }
 
   @Test
@@ -107,19 +88,10 @@ class PlaylistRepositoryTest {
   void findAllByCondition_filterByTitleKeyword() {
     // when
     List<Playlist> result =
-      findAllByCondition(
-        "영화",
-        null,
-        null,
-        null,
-        null,
-        "updatedAt",
-        SortDirection.DESCENDING);
+        findAllByCondition("영화", null, null, null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
-    assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactly(firstPlaylist.getId());
+    assertThat(result).extracting(Playlist::getId).containsExactly(firstPlaylist.getId());
   }
 
   @Test
@@ -127,19 +99,11 @@ class PlaylistRepositoryTest {
   void findAllByCondition_filterByDescriptionKeyword() {
     // when
     List<Playlist> result =
-      findAllByCondition(
-        "  드라마  ",
-        null,
-        null,
-        null,
-        null,
-        "updatedAt",
-        SortDirection.DESCENDING);
+        findAllByCondition(
+            "  드라마  ", null, null, null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
-    assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactly(thirdPlaylist.getId());
+    assertThat(result).extracting(Playlist::getId).containsExactly(thirdPlaylist.getId());
   }
 
   @Test
@@ -147,19 +111,13 @@ class PlaylistRepositoryTest {
   void findAllByCondition_filterByOwnerId() {
     // when
     List<Playlist> result =
-      findAllByCondition(
-        null,
-        owner.getId(),
-        null,
-        null,
-        null,
-        "updatedAt",
-        SortDirection.DESCENDING);
+        findAllByCondition(
+            null, owner.getId(), null, null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
     assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactlyInAnyOrder(firstPlaylist.getId(), secondPlaylist.getId());
+        .extracting(Playlist::getId)
+        .containsExactlyInAnyOrder(firstPlaylist.getId(), secondPlaylist.getId());
   }
 
   @Test
@@ -167,29 +125,23 @@ class PlaylistRepositoryTest {
   void findAllByCondition_filterBySubscriberId() {
     // given
     playlistSubscriptionRepository.saveAll(
-      List.of(
-        new PlaylistSubscription(subscriber, firstPlaylist),
-        new PlaylistSubscription(subscriber, thirdPlaylist),
-        new PlaylistSubscription(otherSubscriber, secondPlaylist)));
+        List.of(
+            new PlaylistSubscription(subscriber, firstPlaylist),
+            new PlaylistSubscription(subscriber, thirdPlaylist),
+            new PlaylistSubscription(otherSubscriber, secondPlaylist)));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
     List<Playlist> result =
-      findAllByCondition(
-        null,
-        null,
-        subscriber.getId(),
-        null,
-        null,
-        "updatedAt",
-        SortDirection.DESCENDING);
+        findAllByCondition(
+            null, null, subscriber.getId(), null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
     assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactlyInAnyOrder(firstPlaylist.getId(), thirdPlaylist.getId());
+        .extracting(Playlist::getId)
+        .containsExactlyInAnyOrder(firstPlaylist.getId(), thirdPlaylist.getId());
   }
 
   @Test
@@ -197,28 +149,26 @@ class PlaylistRepositoryTest {
   void findAllByCondition_filterByCombinedConditions() {
     // given
     playlistSubscriptionRepository.saveAll(
-      List.of(
-        new PlaylistSubscription(subscriber, firstPlaylist),
-        new PlaylistSubscription(subscriber, thirdPlaylist)));
+        List.of(
+            new PlaylistSubscription(subscriber, firstPlaylist),
+            new PlaylistSubscription(subscriber, thirdPlaylist)));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
     List<Playlist> result =
-      findAllByCondition(
-        "추천",
-        owner.getId(),
-        subscriber.getId(),
-        null,
-        null,
-        "updatedAt",
-        SortDirection.DESCENDING);
+        findAllByCondition(
+            "추천",
+            owner.getId(),
+            subscriber.getId(),
+            null,
+            null,
+            "updatedAt",
+            SortDirection.DESCENDING);
 
     // then
-    assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactly(firstPlaylist.getId());
+    assertThat(result).extracting(Playlist::getId).containsExactly(firstPlaylist.getId());
   }
 
   @Test
@@ -229,22 +179,13 @@ class PlaylistRepositoryTest {
 
     // when
     List<Playlist> result =
-      findAllByCondition(
-        null,
-        null,
-        null,
-        null,
-        null,
-        "subscriberCount",
-        SortDirection.ASCENDING);
+        findAllByCondition(
+            null, null, null, null, null, "subscriberCount", SortDirection.ASCENDING);
 
     // then
     assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactly(
-        firstPlaylist.getId(),
-        secondPlaylist.getId(),
-        thirdPlaylist.getId());
+        .extracting(Playlist::getId)
+        .containsExactly(firstPlaylist.getId(), secondPlaylist.getId(), thirdPlaylist.getId());
   }
 
   @Test
@@ -255,22 +196,13 @@ class PlaylistRepositoryTest {
 
     // when
     List<Playlist> result =
-      findAllByCondition(
-        null,
-        null,
-        null,
-        null,
-        null,
-        "subscriberCount",
-        SortDirection.DESCENDING);
+        findAllByCondition(
+            null, null, null, null, null, "subscriberCount", SortDirection.DESCENDING);
 
     // then
     assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactly(
-        thirdPlaylist.getId(),
-        secondPlaylist.getId(),
-        firstPlaylist.getId());
+        .extracting(Playlist::getId)
+        .containsExactly(thirdPlaylist.getId(), secondPlaylist.getId(), firstPlaylist.getId());
   }
 
   @Test
@@ -281,19 +213,17 @@ class PlaylistRepositoryTest {
 
     // when
     List<Playlist> result =
-      findAllByCondition(
-        null,
-        null,
-        null,
-        1L,
-        secondPlaylist.getId(),
-        "subscriberCount",
-        SortDirection.ASCENDING);
+        findAllByCondition(
+            null,
+            null,
+            null,
+            1L,
+            secondPlaylist.getId(),
+            "subscriberCount",
+            SortDirection.ASCENDING);
 
     // then
-    assertThat(result)
-      .extracting(Playlist::getId)
-      .containsExactly(thirdPlaylist.getId());
+    assertThat(result).extracting(Playlist::getId).containsExactly(thirdPlaylist.getId());
   }
 
   @Test
@@ -304,16 +234,8 @@ class PlaylistRepositoryTest {
 
     // when
     List<Playlist> result =
-      playlistRepository.findAllByCondition(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        "updatedAt",
-        SortDirection.DESCENDING,
-        pageable);
+        playlistRepository.findAllByCondition(
+            null, null, null, null, null, null, "updatedAt", SortDirection.DESCENDING, pageable);
 
     // then
     assertThat(result).hasSize(2);
@@ -323,8 +245,7 @@ class PlaylistRepositoryTest {
   @DisplayName("조회 조건에 맞는 플레이리스트 개수를 반환한다")
   void countByCondition_returnCount_whenConditionMatches() {
     // when
-    long result =
-      playlistRepository.countByCondition("추천", owner.getId(), null);
+    long result = playlistRepository.countByCondition("추천", owner.getId(), null);
 
     // then
     assertThat(result).isEqualTo(2L);
@@ -335,17 +256,16 @@ class PlaylistRepositoryTest {
   void countByCondition_filterBySubscriberId() {
     // given
     playlistSubscriptionRepository.saveAll(
-      List.of(
-        new PlaylistSubscription(subscriber, firstPlaylist),
-        new PlaylistSubscription(subscriber, thirdPlaylist),
-        new PlaylistSubscription(otherSubscriber, secondPlaylist)));
+        List.of(
+            new PlaylistSubscription(subscriber, firstPlaylist),
+            new PlaylistSubscription(subscriber, thirdPlaylist),
+            new PlaylistSubscription(otherSubscriber, secondPlaylist)));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
-    long result =
-      playlistRepository.countByCondition(null, null, subscriber.getId());
+    long result = playlistRepository.countByCondition(null, null, subscriber.getId());
 
     // then
     assertThat(result).isEqualTo(2L);
@@ -355,8 +275,7 @@ class PlaylistRepositoryTest {
   @DisplayName("조회 조건에 맞는 플레이리스트가 없으면 0을 반환한다")
   void countByCondition_returnZero_whenConditionDoesNotMatch() {
     // when
-    long result =
-      playlistRepository.countByCondition("존재하지 않는 검색어", null, null);
+    long result = playlistRepository.countByCondition("존재하지 않는 검색어", null, null);
 
     // then
     assertThat(result).isZero();
@@ -369,8 +288,7 @@ class PlaylistRepositoryTest {
     entityManager.clear();
 
     // when
-    Optional<Playlist> result =
-      playlistRepository.findByIdWithOwner(firstPlaylist.getId());
+    Optional<Playlist> result = playlistRepository.findByIdWithOwner(firstPlaylist.getId());
 
     // then
     assertThat(result).isPresent();
@@ -378,7 +296,7 @@ class PlaylistRepositoryTest {
     assertThat(result.get().getOwner().getId()).isEqualTo(owner.getId());
 
     PersistenceUnitUtil persistenceUnitUtil =
-      entityManager.getEntityManagerFactory().getPersistenceUnitUtil();
+        entityManager.getEntityManagerFactory().getPersistenceUnitUtil();
 
     assertThat(persistenceUnitUtil.isLoaded(result.get().getOwner())).isTrue();
   }
@@ -387,41 +305,40 @@ class PlaylistRepositoryTest {
   @DisplayName("존재하지 않는 플레이리스트 ID로 조회하면 빈 Optional을 반환한다")
   void findByIdWithOwner_returnEmpty_whenPlaylistDoesNotExist() {
     // when
-    Optional<Playlist> result =
-      playlistRepository.findByIdWithOwner(UUID.randomUUID());
+    Optional<Playlist> result = playlistRepository.findByIdWithOwner(UUID.randomUUID());
 
     // then
     assertThat(result).isEmpty();
   }
 
   private List<Playlist> findAllByCondition(
-    String keywordLike,
-    UUID ownerId,
-    UUID subscriberId,
-    Long subscriberCountCursor,
-    UUID idAfter,
-    String sortBy,
-    SortDirection sortDirection) {
+      String keywordLike,
+      UUID ownerId,
+      UUID subscriberId,
+      Long subscriberCountCursor,
+      UUID idAfter,
+      String sortBy,
+      SortDirection sortDirection) {
 
     return playlistRepository.findAllByCondition(
-      keywordLike,
-      ownerId,
-      subscriberId,
-      null,
-      subscriberCountCursor,
-      idAfter,
-      sortBy,
-      sortDirection,
-      DEFAULT_PAGEABLE);
+        keywordLike,
+        ownerId,
+        subscriberId,
+        null,
+        subscriberCountCursor,
+        idAfter,
+        sortBy,
+        sortDirection,
+        DEFAULT_PAGEABLE);
   }
 
   // 구독자 수 정렬 테스트용 구독 정보 저장
   private void saveSubscriptionsForSubscriberCountSort() {
     playlistSubscriptionRepository.saveAll(
-      List.of(
-        new PlaylistSubscription(subscriber, secondPlaylist),
-        new PlaylistSubscription(subscriber, thirdPlaylist),
-        new PlaylistSubscription(otherSubscriber, thirdPlaylist)));
+        List.of(
+            new PlaylistSubscription(subscriber, secondPlaylist),
+            new PlaylistSubscription(subscriber, thirdPlaylist),
+            new PlaylistSubscription(otherSubscriber, thirdPlaylist)));
 
     entityManager.flush();
     entityManager.clear();

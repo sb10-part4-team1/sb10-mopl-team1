@@ -45,12 +45,12 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @WebMvcTest(
-  controllers = PlaylistSubscriptionController.class,
-  excludeAutoConfiguration = {
-    OAuth2ClientWebSecurityAutoConfiguration.class,
-    SecurityAutoConfiguration.class,
-    SecurityFilterAutoConfiguration.class
-  })
+    controllers = PlaylistSubscriptionController.class,
+    excludeAutoConfiguration = {
+      OAuth2ClientWebSecurityAutoConfiguration.class,
+      SecurityAutoConfiguration.class,
+      SecurityFilterAutoConfiguration.class
+    })
 @Import({
   GlobalExceptionHandler.class,
   PlaylistSubscriptionControllerTest.TestCurrentUserConfig.class
@@ -60,13 +60,11 @@ class PlaylistSubscriptionControllerTest {
   private static final String SUBSCRIPTION_URL = "/api/playlists/{playlistId}/subscription";
 
   private static final UUID CURRENT_USER_ID =
-    UUID.fromString("00000000-0000-0000-0000-000000000001");
+      UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-  @Autowired
-  private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-  @MockitoBean
-  private PlaylistSubscriptionService playlistSubscriptionService;
+  @MockitoBean private PlaylistSubscriptionService playlistSubscriptionService;
 
   private UUID playlistId;
 
@@ -92,16 +90,16 @@ class PlaylistSubscriptionControllerTest {
   void subscribe_returnNotFound_whenSubscriberDoesNotExist() throws Exception {
     // given
     doThrow(userNotFoundException())
-      .when(playlistSubscriptionService)
-      .subscribe(CURRENT_USER_ID, playlistId);
+        .when(playlistSubscriptionService)
+        .subscribe(CURRENT_USER_ID, playlistId);
 
     // when
     ResultActions resultActions = mockMvc.perform(post(SUBSCRIPTION_URL, playlistId));
 
     // then
     resultActions
-      .andExpect(status().isNotFound())
-      .andExpect(jsonPath("$.code").value(UserErrorCode.USER_NOT_FOUND.getCode()));
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value(UserErrorCode.USER_NOT_FOUND.getCode()));
 
     verify(playlistSubscriptionService).subscribe(CURRENT_USER_ID, playlistId);
   }
@@ -111,16 +109,16 @@ class PlaylistSubscriptionControllerTest {
   void subscribe_returnNotFound_whenPlaylistDoesNotExist() throws Exception {
     // given
     doThrow(playlistNotFoundException())
-      .when(playlistSubscriptionService)
-      .subscribe(CURRENT_USER_ID, playlistId);
+        .when(playlistSubscriptionService)
+        .subscribe(CURRENT_USER_ID, playlistId);
 
     // when
     ResultActions resultActions = mockMvc.perform(post(SUBSCRIPTION_URL, playlistId));
 
     // then
     resultActions
-      .andExpect(status().isNotFound())
-      .andExpect(jsonPath("$.code").value(PlaylistErrorCode.PLAYLIST_NOT_FOUND.getCode()));
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value(PlaylistErrorCode.PLAYLIST_NOT_FOUND.getCode()));
 
     verify(playlistSubscriptionService).subscribe(CURRENT_USER_ID, playlistId);
   }
@@ -130,21 +128,20 @@ class PlaylistSubscriptionControllerTest {
   void subscribe_returnForbidden_whenPlaylistIsOwnedBySubscriber() throws Exception {
     // given
     doThrow(unauthorizedException())
-      .when(playlistSubscriptionService)
-      .subscribe(CURRENT_USER_ID, playlistId);
+        .when(playlistSubscriptionService)
+        .subscribe(CURRENT_USER_ID, playlistId);
 
     // when
     ResultActions resultActions = mockMvc.perform(post(SUBSCRIPTION_URL, playlistId));
 
     // then
     resultActions
-      .andExpect(status().isForbidden())
-      .andExpect(
-        jsonPath("$.code")
-          .value(
-            PlaylistSubscriptionErrorCode
-              .UNAUTHORIZED_PLAYLIST_SUBSCRIPTION_ACCESS
-              .getCode()));
+        .andExpect(status().isForbidden())
+        .andExpect(
+            jsonPath("$.code")
+                .value(
+                    PlaylistSubscriptionErrorCode.UNAUTHORIZED_PLAYLIST_SUBSCRIPTION_ACCESS
+                        .getCode()));
 
     verify(playlistSubscriptionService).subscribe(CURRENT_USER_ID, playlistId);
   }
@@ -154,21 +151,19 @@ class PlaylistSubscriptionControllerTest {
   void subscribe_returnConflict_whenSubscriptionAlreadyExists() throws Exception {
     // given
     doThrow(alreadyExistsException())
-      .when(playlistSubscriptionService)
-      .subscribe(CURRENT_USER_ID, playlistId);
+        .when(playlistSubscriptionService)
+        .subscribe(CURRENT_USER_ID, playlistId);
 
     // when
     ResultActions resultActions = mockMvc.perform(post(SUBSCRIPTION_URL, playlistId));
 
     // then
     resultActions
-      .andExpect(status().isConflict())
-      .andExpect(
-        jsonPath("$.code")
-          .value(
-            PlaylistSubscriptionErrorCode
-              .PLAYLIST_SUBSCRIPTION_ALREADY_EXISTS
-              .getCode()));
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.code")
+                .value(
+                    PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_ALREADY_EXISTS.getCode()));
 
     verify(playlistSubscriptionService).subscribe(CURRENT_USER_ID, playlistId);
   }
@@ -190,49 +185,47 @@ class PlaylistSubscriptionControllerTest {
   void unsubscribe_returnNotFound_whenSubscriptionDoesNotExist() throws Exception {
     // given
     doThrow(subscriptionNotFoundException())
-      .when(playlistSubscriptionService)
-      .unsubscribe(CURRENT_USER_ID, playlistId);
+        .when(playlistSubscriptionService)
+        .unsubscribe(CURRENT_USER_ID, playlistId);
 
     // when
     ResultActions resultActions = mockMvc.perform(delete(SUBSCRIPTION_URL, playlistId));
 
     // then
     resultActions
-      .andExpect(status().isNotFound())
-      .andExpect(
-        jsonPath("$.code")
-          .value(
-            PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_NOT_FOUND.getCode()));
+        .andExpect(status().isNotFound())
+        .andExpect(
+            jsonPath("$.code")
+                .value(PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_NOT_FOUND.getCode()));
 
     verify(playlistSubscriptionService).unsubscribe(CURRENT_USER_ID, playlistId);
   }
 
   private UserException userNotFoundException() {
-    return new UserException(
-      UserErrorCode.USER_NOT_FOUND, Map.of("subscriberId", CURRENT_USER_ID));
+    return new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("subscriberId", CURRENT_USER_ID));
   }
 
   private PlaylistException playlistNotFoundException() {
     return new PlaylistException(
-      PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId));
+        PlaylistErrorCode.PLAYLIST_NOT_FOUND, Map.of("playlistId", playlistId));
   }
 
   private PlaylistSubscriptionException unauthorizedException() {
     return new PlaylistSubscriptionException(
-      PlaylistSubscriptionErrorCode.UNAUTHORIZED_PLAYLIST_SUBSCRIPTION_ACCESS,
-      Map.of("subscriberId", CURRENT_USER_ID, "playlistId", playlistId));
+        PlaylistSubscriptionErrorCode.UNAUTHORIZED_PLAYLIST_SUBSCRIPTION_ACCESS,
+        Map.of("subscriberId", CURRENT_USER_ID, "playlistId", playlistId));
   }
 
   private PlaylistSubscriptionException alreadyExistsException() {
     return new PlaylistSubscriptionException(
-      PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_ALREADY_EXISTS,
-      Map.of("subscriberId", CURRENT_USER_ID, "playlistId", playlistId));
+        PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_ALREADY_EXISTS,
+        Map.of("subscriberId", CURRENT_USER_ID, "playlistId", playlistId));
   }
 
   private PlaylistSubscriptionException subscriptionNotFoundException() {
     return new PlaylistSubscriptionException(
-      PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_NOT_FOUND,
-      Map.of("subscriberId", CURRENT_USER_ID, "playlistId", playlistId));
+        PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_NOT_FOUND,
+        Map.of("subscriberId", CURRENT_USER_ID, "playlistId", playlistId));
   }
 
   @TestConfiguration
@@ -241,24 +234,24 @@ class PlaylistSubscriptionControllerTest {
     @Override
     public void addArgumentResolvers(@NonNull List<HandlerMethodArgumentResolver> resolvers) {
       resolvers.add(
-        new HandlerMethodArgumentResolver() {
-          @Override
-          public boolean supportsParameter(@NonNull MethodParameter parameter) {
-            return parameter.hasParameterAnnotation(CurrentUser.class)
-              && parameter.getParameterType().equals(AuthenticatedUser.class);
-          }
+          new HandlerMethodArgumentResolver() {
+            @Override
+            public boolean supportsParameter(@NonNull MethodParameter parameter) {
+              return parameter.hasParameterAnnotation(CurrentUser.class)
+                  && parameter.getParameterType().equals(AuthenticatedUser.class);
+            }
 
-          @Override
-          public Object resolveArgument(
-            @NonNull MethodParameter parameter,
-            @Nullable ModelAndViewContainer mavContainer,
-            @NonNull NativeWebRequest webRequest,
-            @Nullable WebDataBinderFactory binderFactory) {
-            AuthenticatedUser currentUser = mock(AuthenticatedUser.class);
-            when(currentUser.id()).thenReturn(CURRENT_USER_ID);
-            return currentUser;
-          }
-        });
+            @Override
+            public Object resolveArgument(
+                @NonNull MethodParameter parameter,
+                @Nullable ModelAndViewContainer mavContainer,
+                @NonNull NativeWebRequest webRequest,
+                @Nullable WebDataBinderFactory binderFactory) {
+              AuthenticatedUser currentUser = mock(AuthenticatedUser.class);
+              when(currentUser.id()).thenReturn(CURRENT_USER_ID);
+              return currentUser;
+            }
+          });
     }
   }
 }

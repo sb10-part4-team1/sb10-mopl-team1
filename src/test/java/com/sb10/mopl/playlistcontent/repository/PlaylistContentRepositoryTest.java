@@ -29,20 +29,15 @@ import org.springframework.test.context.ActiveProfiles;
 @Import({JpaAuditingConfig.class, QuerydslConfig.class})
 class PlaylistContentRepositoryTest {
 
-  @Autowired
-  private PlaylistContentRepository playlistContentRepository;
+  @Autowired private PlaylistContentRepository playlistContentRepository;
 
-  @Autowired
-  private PlaylistRepository playlistRepository;
+  @Autowired private PlaylistRepository playlistRepository;
 
-  @Autowired
-  private ContentRepository contentRepository;
+  @Autowired private ContentRepository contentRepository;
 
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private UserRepository userRepository;
 
-  @Autowired
-  private EntityManager entityManager;
+  @Autowired private EntityManager entityManager;
 
   private Playlist playlist;
   private Content content;
@@ -51,17 +46,11 @@ class PlaylistContentRepositoryTest {
   void setUp() {
     User owner = userRepository.save(createUser("소유자", "owner@example.com"));
 
-    playlist =
-      playlistRepository.save(
-        new Playlist(owner, "플레이리스트 제목", "플레이리스트 설명"));
+    playlist = playlistRepository.save(new Playlist(owner, "플레이리스트 제목", "플레이리스트 설명"));
 
     content =
-      contentRepository.save(
-        Content.create(
-          "콘텐츠 제목",
-          ContentType.MOVIE,
-          "콘텐츠 설명",
-          "/uploads/content.jpg"));
+        contentRepository.save(
+            Content.create("콘텐츠 제목", ContentType.MOVIE, "콘텐츠 설명", "/uploads/content.jpg"));
 
     entityManager.flush();
     entityManager.clear();
@@ -78,8 +67,7 @@ class PlaylistContentRepositoryTest {
 
     // when
     boolean result =
-      playlistContentRepository.existsByPlaylistIdAndContentId(
-        playlist.getId(), content.getId());
+        playlistContentRepository.existsByPlaylistIdAndContentId(playlist.getId(), content.getId());
 
     // then
     assertThat(result).isTrue();
@@ -90,8 +78,7 @@ class PlaylistContentRepositoryTest {
   void existsByPlaylistIdAndContentId_returnFalse_whenPlaylistContentDoesNotExist() {
     // when
     boolean result =
-      playlistContentRepository.existsByPlaylistIdAndContentId(
-        playlist.getId(), content.getId());
+        playlistContentRepository.existsByPlaylistIdAndContentId(playlist.getId(), content.getId());
 
     // then
     assertThat(result).isFalse();
@@ -101,16 +88,15 @@ class PlaylistContentRepositoryTest {
   @DisplayName("플레이리스트 ID와 콘텐츠 ID로 매핑 정보를 조회한다")
   void findByPlaylistIdAndContentId_returnPlaylistContent_whenExists() {
     // given
-    PlaylistContent savedPlaylistContent =
-      playlistContentRepository.save(new PlaylistContent(playlist, content));
+    final PlaylistContent savedPlaylistContent =
+        playlistContentRepository.save(new PlaylistContent(playlist, content));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
     Optional<PlaylistContent> result =
-      playlistContentRepository.findByPlaylistIdAndContentId(
-        playlist.getId(), content.getId());
+        playlistContentRepository.findByPlaylistIdAndContentId(playlist.getId(), content.getId());
 
     // then
     assertThat(result).isPresent();
@@ -124,8 +110,7 @@ class PlaylistContentRepositoryTest {
   void findByPlaylistIdAndContentId_returnEmpty_whenPlaylistContentDoesNotExist() {
     // when
     Optional<PlaylistContent> result =
-      playlistContentRepository.findByPlaylistIdAndContentId(
-        playlist.getId(), content.getId());
+        playlistContentRepository.findByPlaylistIdAndContentId(playlist.getId(), content.getId());
 
     // then
     assertThat(result).isEmpty();

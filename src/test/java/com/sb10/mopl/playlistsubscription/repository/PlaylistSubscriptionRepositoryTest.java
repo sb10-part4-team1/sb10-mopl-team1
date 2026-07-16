@@ -29,17 +29,13 @@ import org.springframework.test.context.ActiveProfiles;
 @Import({JpaAuditingConfig.class, QuerydslConfig.class})
 class PlaylistSubscriptionRepositoryTest {
 
-  @Autowired
-  private PlaylistSubscriptionRepository playlistSubscriptionRepository;
+  @Autowired private PlaylistSubscriptionRepository playlistSubscriptionRepository;
 
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private UserRepository userRepository;
 
-  @Autowired
-  private PlaylistRepository playlistRepository;
+  @Autowired private PlaylistRepository playlistRepository;
 
-  @Autowired
-  private EntityManager entityManager;
+  @Autowired private EntityManager entityManager;
 
   private User subscriber;
   private User otherSubscriber;
@@ -52,16 +48,11 @@ class PlaylistSubscriptionRepositoryTest {
     User owner = userRepository.save(createUser("소유자", "owner@example.com"));
 
     subscriber = userRepository.save(createUser("구독자", "subscriber@example.com"));
-    otherSubscriber =
-      userRepository.save(createUser("다른 구독자", "other-subscriber@example.com"));
+    otherSubscriber = userRepository.save(createUser("다른 구독자", "other-subscriber@example.com"));
 
-    playlist =
-      playlistRepository.save(
-        new Playlist(owner, "플레이리스트 제목", "플레이리스트 설명"));
+    playlist = playlistRepository.save(new Playlist(owner, "플레이리스트 제목", "플레이리스트 설명"));
 
-    otherPlaylist =
-      playlistRepository.save(
-        new Playlist(owner, "다른 플레이리스트 제목", "다른 플레이리스트 설명"));
+    otherPlaylist = playlistRepository.save(new Playlist(owner, "다른 플레이리스트 제목", "다른 플레이리스트 설명"));
 
     entityManager.flush();
     entityManager.clear();
@@ -71,16 +62,15 @@ class PlaylistSubscriptionRepositoryTest {
   @DisplayName("플레이리스트 구독 Repository - 구독 관계 존재 여부 조회 성공")
   void existsBySubscriberIdAndPlaylistId_success() {
     // given
-    playlistSubscriptionRepository.save(
-      new PlaylistSubscription(subscriber, playlist));
+    playlistSubscriptionRepository.save(new PlaylistSubscription(subscriber, playlist));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
     boolean result =
-      playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
-        subscriber.getId(), playlist.getId());
+        playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
+            subscriber.getId(), playlist.getId());
 
     // then
     assertThat(result).isTrue();
@@ -91,8 +81,8 @@ class PlaylistSubscriptionRepositoryTest {
   void existsBySubscriberIdAndPlaylistId_notExists() {
     // when
     boolean result =
-      playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
-        subscriber.getId(), playlist.getId());
+        playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
+            subscriber.getId(), playlist.getId());
 
     // then
     assertThat(result).isFalse();
@@ -102,17 +92,16 @@ class PlaylistSubscriptionRepositoryTest {
   @DisplayName("플레이리스트 구독 Repository - 사용자와 플레이리스트 기준 구독 조회 성공")
   void findBySubscriberIdAndPlaylistId_success() {
     // given
-    PlaylistSubscription savedSubscription =
-      playlistSubscriptionRepository.save(
-        new PlaylistSubscription(subscriber, playlist));
+    final PlaylistSubscription savedSubscription =
+        playlistSubscriptionRepository.save(new PlaylistSubscription(subscriber, playlist));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
     Optional<PlaylistSubscription> result =
-      playlistSubscriptionRepository.findBySubscriberIdAndPlaylistId(
-        subscriber.getId(), playlist.getId());
+        playlistSubscriptionRepository.findBySubscriberIdAndPlaylistId(
+            subscriber.getId(), playlist.getId());
 
     // then
     assertThat(result).isPresent();
@@ -126,8 +115,8 @@ class PlaylistSubscriptionRepositoryTest {
   void findBySubscriberIdAndPlaylistId_notFound() {
     // when
     Optional<PlaylistSubscription> result =
-      playlistSubscriptionRepository.findBySubscriberIdAndPlaylistId(
-        subscriber.getId(), playlist.getId());
+        playlistSubscriptionRepository.findBySubscriberIdAndPlaylistId(
+            subscriber.getId(), playlist.getId());
 
     // then
     assertThat(result).isEmpty();
@@ -138,16 +127,15 @@ class PlaylistSubscriptionRepositoryTest {
   void countByPlaylistId_success() {
     // given
     playlistSubscriptionRepository.saveAll(
-      List.of(
-        new PlaylistSubscription(subscriber, playlist),
-        new PlaylistSubscription(otherSubscriber, playlist)));
+        List.of(
+            new PlaylistSubscription(subscriber, playlist),
+            new PlaylistSubscription(otherSubscriber, playlist)));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
-    long result =
-      playlistSubscriptionRepository.countByPlaylistId(playlist.getId());
+    long result = playlistSubscriptionRepository.countByPlaylistId(playlist.getId());
 
     // then
     assertThat(result).isEqualTo(2L);
@@ -157,8 +145,7 @@ class PlaylistSubscriptionRepositoryTest {
   @DisplayName("플레이리스트 구독 Repository - 구독자가 없으면 0 반환")
   void countByPlaylistId_noSubscriber() {
     // when
-    long result =
-      playlistSubscriptionRepository.countByPlaylistId(playlist.getId());
+    long result = playlistSubscriptionRepository.countByPlaylistId(playlist.getId());
 
     // then
     assertThat(result).isZero();
@@ -169,48 +156,47 @@ class PlaylistSubscriptionRepositoryTest {
   void countByPlaylistIds_success() {
     // given
     playlistSubscriptionRepository.saveAll(
-      List.of(
-        new PlaylistSubscription(subscriber, playlist),
-        new PlaylistSubscription(otherSubscriber, playlist),
-        new PlaylistSubscription(subscriber, otherPlaylist)));
+        List.of(
+            new PlaylistSubscription(subscriber, playlist),
+            new PlaylistSubscription(otherSubscriber, playlist),
+            new PlaylistSubscription(subscriber, otherPlaylist)));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
     List<PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection> result =
-      playlistSubscriptionRepository.countByPlaylistIds(
-        List.of(playlist.getId(), otherPlaylist.getId()));
+        playlistSubscriptionRepository.countByPlaylistIds(
+            List.of(playlist.getId(), otherPlaylist.getId()));
 
     // then
     assertThat(result)
-      .hasSize(2)
-      .anySatisfy(
-        projection -> {
-          assertThat(projection.getPlaylistId()).isEqualTo(playlist.getId());
-          assertThat(projection.getSubscriberCount()).isEqualTo(2L);
-        })
-      .anySatisfy(
-        projection -> {
-          assertThat(projection.getPlaylistId()).isEqualTo(otherPlaylist.getId());
-          assertThat(projection.getSubscriberCount()).isEqualTo(1L);
-        });
+        .hasSize(2)
+        .anySatisfy(
+            projection -> {
+              assertThat(projection.getPlaylistId()).isEqualTo(playlist.getId());
+              assertThat(projection.getSubscriberCount()).isEqualTo(2L);
+            })
+        .anySatisfy(
+            projection -> {
+              assertThat(projection.getPlaylistId()).isEqualTo(otherPlaylist.getId());
+              assertThat(projection.getSubscriberCount()).isEqualTo(1L);
+            });
   }
 
   @Test
   @DisplayName("플레이리스트 구독 Repository - 구독자가 없는 플레이리스트는 bulk 조회 결과에서 제외")
   void countByPlaylistIds_excludesPlaylistWithoutSubscriber() {
     // given
-    playlistSubscriptionRepository.save(
-      new PlaylistSubscription(subscriber, playlist));
+    playlistSubscriptionRepository.save(new PlaylistSubscription(subscriber, playlist));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
     List<PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection> result =
-      playlistSubscriptionRepository.countByPlaylistIds(
-        List.of(playlist.getId(), otherPlaylist.getId()));
+        playlistSubscriptionRepository.countByPlaylistIds(
+            List.of(playlist.getId(), otherPlaylist.getId()));
 
     // then
     assertThat(result).hasSize(1);
@@ -223,7 +209,7 @@ class PlaylistSubscriptionRepositoryTest {
   void countByPlaylistIds_emptyPlaylistIds() {
     // when
     List<PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection> result =
-      playlistSubscriptionRepository.countByPlaylistIds(List.of());
+        playlistSubscriptionRepository.countByPlaylistIds(List.of());
 
     // then
     assertThat(result).isEmpty();
@@ -233,20 +219,17 @@ class PlaylistSubscriptionRepositoryTest {
   @DisplayName("플레이리스트 구독 Repository - 현재 사용자가 구독한 플레이리스트 ID bulk 조회 성공")
   void findSubscribedPlaylistIds_success() {
     // given
-    playlistSubscriptionRepository.save(
-      new PlaylistSubscription(subscriber, playlist));
+    playlistSubscriptionRepository.save(new PlaylistSubscription(subscriber, playlist));
 
-    playlistSubscriptionRepository.save(
-      new PlaylistSubscription(otherSubscriber, otherPlaylist));
+    playlistSubscriptionRepository.save(new PlaylistSubscription(otherSubscriber, otherPlaylist));
 
     entityManager.flush();
     entityManager.clear();
 
     // when
     Set<UUID> result =
-      playlistSubscriptionRepository.findSubscribedPlaylistIds(
-        subscriber.getId(),
-        List.of(playlist.getId(), otherPlaylist.getId()));
+        playlistSubscriptionRepository.findSubscribedPlaylistIds(
+            subscriber.getId(), List.of(playlist.getId(), otherPlaylist.getId()));
 
     // then
     assertThat(result).containsExactly(playlist.getId());
@@ -257,9 +240,8 @@ class PlaylistSubscriptionRepositoryTest {
   void findSubscribedPlaylistIds_notSubscribed() {
     // when
     Set<UUID> result =
-      playlistSubscriptionRepository.findSubscribedPlaylistIds(
-        subscriber.getId(),
-        List.of(playlist.getId(), otherPlaylist.getId()));
+        playlistSubscriptionRepository.findSubscribedPlaylistIds(
+            subscriber.getId(), List.of(playlist.getId(), otherPlaylist.getId()));
 
     // then
     assertThat(result).isEmpty();
@@ -270,8 +252,7 @@ class PlaylistSubscriptionRepositoryTest {
   void findSubscribedPlaylistIds_emptyPlaylistIds() {
     // when
     Set<UUID> result =
-      playlistSubscriptionRepository.findSubscribedPlaylistIds(
-        subscriber.getId(), List.of());
+        playlistSubscriptionRepository.findSubscribedPlaylistIds(subscriber.getId(), List.of());
 
     // then
     assertThat(result).isEmpty();
