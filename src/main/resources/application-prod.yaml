@@ -58,3 +58,6 @@ mopl:
   mail:
     temporary-password:
       from: ${MOPL_TEMPORARY_PASSWORD_MAIL_FROM:${MAIL_USERNAME}}
+
+server:
+  forward-headers-strategy: framework
