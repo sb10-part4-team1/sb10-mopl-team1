@@ -5,6 +5,7 @@ import com.sb10.mopl.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -18,6 +19,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
     name = "jwt_sessions",
+    indexes = {@Index(name = "IDX_JWT_SESSIONS_EXPIRES_AT", columnList = "expires_at")},
     uniqueConstraints = {
       @UniqueConstraint(name = "UK_JWT_SESSIONS_USER", columnNames = "user_id"),
       @UniqueConstraint(name = "UK_JWT_SESSIONS_SESSION", columnNames = "session_id")

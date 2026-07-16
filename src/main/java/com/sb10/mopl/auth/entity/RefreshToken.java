@@ -5,6 +5,7 @@ import com.sb10.mopl.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -17,6 +18,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
     name = "refresh_tokens",
+    indexes = {@Index(name = "IDX_REFRESH_TOKENS_EXPIRES_AT", columnList = "expires_at")},
     uniqueConstraints = {
       @UniqueConstraint(name = "UK_REFRESH_TOKENS_USER", columnNames = "user_id"),
       @UniqueConstraint(name = "UK_REFRESH_TOKENS_TOKEN", columnNames = "token")
