@@ -21,7 +21,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
     name = "notifications",
-    indexes = {@Index(name = "IDX_NOTIFICATIONS_USER_READ", columnList = "user_id, is_read")})
+    indexes = {
+      @Index(
+          name = "IDX_NOTIFICATIONS_USER_READ_CREATED_ID",
+          columnList = "user_id, is_read, created_at, id")
+    })
 public class Notification extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)
