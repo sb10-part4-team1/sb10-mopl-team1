@@ -31,9 +31,9 @@ public class ContentChatSocketController {
   // 메시지 전송
   @MessageMapping("/contents/{contentId}/chat")
   public void send(
-    @DestinationVariable UUID contentId,
-    @Payload @Valid ContentChatSendRequest request,
-    Principal principal) {
+      @DestinationVariable UUID contentId,
+      @Payload @Valid ContentChatSendRequest request,
+      Principal principal) {
     AuthenticatedUser sender = resolve(principal);
 
     ContentChatDto dto = contentChatService.createMessageDto(sender.id(), contentId, request);
@@ -45,7 +45,7 @@ public class ContentChatSocketController {
   // CONNECT 시점에 StompChannelInterceptor가 세션에 부여한 Principal에서 발신자를 꺼낸다.
   private AuthenticatedUser resolve(Principal principal) {
     if (principal instanceof Authentication authentication
-      && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
+        && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
       return authenticatedUser;
     }
 

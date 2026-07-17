@@ -26,18 +26,18 @@ public class ContentChatService {
   private final UserMapper userMapper;
 
   // 채팅 dto 생성
-  public ContentChatDto createMessageDto(UUID senderId, UUID contentId,
-    ContentChatSendRequest request) {
+  public ContentChatDto createMessageDto(
+      UUID senderId, UUID contentId, ContentChatSendRequest request) {
     if (!contentRepository.existsById(contentId)) {
       throw new ContentException(
-        ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId));
+          ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId));
     }
 
     User sender =
-      userRepository
-        .findById(senderId)
-        .orElseThrow(
-          () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
+        userRepository
+            .findById(senderId)
+            .orElseThrow(
+                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
 
     return new ContentChatDto(userMapper.toSummary(sender), request.content());
   }
