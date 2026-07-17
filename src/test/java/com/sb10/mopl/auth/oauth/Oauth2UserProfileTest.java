@@ -2,6 +2,7 @@ package com.sb10.mopl.auth.oauth;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.sb10.mopl.auth.entity.SocialProvider;
@@ -24,7 +25,7 @@ class Oauth2UserProfileTest {
         () -> assertEquals("provider-user-id", profile.providerUserId()),
         () -> assertEquals("user@example.com", profile.email()),
         () -> assertEquals("name", profile.name()),
-        () -> assertEquals(null, profile.profileImageUrl()));
+        () -> assertNull(profile.profileImageUrl()));
   }
 
   @Test
