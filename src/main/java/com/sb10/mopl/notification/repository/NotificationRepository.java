@@ -9,5 +9,5 @@ import org.springframework.stereotype.Repository;
 public interface NotificationRepository
     extends JpaRepository<Notification, UUID>, NotificationRepositoryCustom {
 
-  long countByUserId(UUID userId);
+  long countByUserIdAndIsReadFalse(UUID userId);
 }

@@ -24,12 +24,14 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
 
   private final JPAQueryFactory queryFactory;
 
+  // isRead갸 false인 알림만 반환합니다.
   @Override
   public List<Notification> search(UUID receiverId, NotificationSearchRequest request) {
     return queryFactory
       .selectFrom(notification)
       .where(
         notification.user.id.eq(receiverId),
+        notification.isRead.isFalse(),
         cursorCondition(request.cursor(), request.idAfter(), request.sortDirection()))
       .orderBy(orderSpecifiers(request.sortDirection()))
       .limit(request.limit() + 1L)
