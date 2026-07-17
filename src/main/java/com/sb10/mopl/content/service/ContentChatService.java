@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -30,14 +29,14 @@ public class ContentChatService {
   public ContentChatDto sendMessage(UUID senderId, UUID contentId, ContentChatSendRequest request) {
     if (!contentRepository.existsById(contentId)) {
       throw new ContentException(
-        ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId));
+          ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId));
     }
 
     User sender =
-      userRepository
-        .findById(senderId)
-        .orElseThrow(
-          () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
+        userRepository
+            .findById(senderId)
+            .orElseThrow(
+                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", senderId)));
 
     return new ContentChatDto(userMapper.toSummary(sender), request.content());
   }
