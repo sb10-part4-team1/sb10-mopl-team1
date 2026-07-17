@@ -23,6 +23,7 @@ import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.content.exception.ContentErrorCode;
 import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.service.ContentService;
+import com.sb10.mopl.watchingsession.service.WatchingSessionService;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,8 @@ class ContentControllerTest {
   @Autowired private ObjectMapper objectMapper;
 
   @MockitoBean private ContentService contentService;
+
+  @MockitoBean private WatchingSessionService watchingSessionService;
 
   @Test
   @DisplayName("콘텐츠 생성 요청이 유효하면 201 Created와 ContentDto를 반환한다")

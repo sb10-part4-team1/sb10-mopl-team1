@@ -227,6 +227,8 @@ CREATE TABLE IF NOT EXISTS "watching_session" (
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
     "watcher_id"         UUID                        NOT NULL,
     "content_id"         UUID                        NOT NULL,
+    CONSTRAINT "UQ_WATCHING_SESSION_WATCHER_CONTENT"
+        UNIQUE ("watcher_id", "content_id"),
     CONSTRAINT "FK_USERS_TO_WATCHING_SESSION"
         FOREIGN KEY ("watcher_id") REFERENCES "users" ("id") ON DELETE CASCADE,
     CONSTRAINT "FK_CONTENTS_TO_WATCHING_SESSION"
@@ -273,6 +275,9 @@ CREATE INDEX IF NOT EXISTS "IDX_NOTIFICATIONS_USER_READ"
 
 CREATE INDEX IF NOT EXISTS "IDX_WATCHING_SESSION_WATCHER"
     ON "watching_session" ("watcher_id");
+
+CREATE INDEX IF NOT EXISTS "IDX_WATCHING_SESSION_CONTENT"
+    ON "watching_session" ("content_id");
 
 CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_CREATED_AT"
     ON "contents" ("created_at");

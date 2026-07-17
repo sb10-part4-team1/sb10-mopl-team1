@@ -1,6 +1,7 @@
 package com.sb10.mopl.content.mapper;
 
 import com.sb10.mopl.content.dto.ContentDto;
+import com.sb10.mopl.content.dto.ContentSummary;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentTag;
 import java.util.List;
@@ -13,6 +14,9 @@ public interface ContentMapper {
 
   @Mapping(target = "tags", source = "contentTags", qualifiedByName = "mapContentTagsToStrings")
   ContentDto toDto(Content content);
+
+  @Mapping(target = "tags", source = "contentTags", qualifiedByName = "mapContentTagsToStrings")
+  ContentSummary toSummary(Content content);
 
   @Named("mapContentTagsToStrings")
   default List<String> mapContentTagsToStrings(List<ContentTag> contentTags) {
