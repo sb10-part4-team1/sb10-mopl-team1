@@ -77,6 +77,7 @@ class JwtProviderTest {
   private MoplUserDetails userDetails(UUID id, String email, UserRole role) {
     User user = User.createUser("jwt-user", email, "encoded-password", null);
     ReflectionTestUtils.setField(user, "id", id);
+    ReflectionTestUtils.setField(user, "role", role);
     ReflectionTestUtils.setField(user, "createdAt", NOW);
     return new MoplUserDetails(user);
   }
