@@ -16,10 +16,12 @@ import com.sb10.mopl.auth.service.AuthSessionService;
 import com.sb10.mopl.auth.service.TemporaryPasswordService;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
+import com.sb10.mopl.common.storage.ImageStorageService;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
+import com.sb10.mopl.user.dto.request.UserUpdateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
@@ -42,6 +44,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -61,6 +64,8 @@ class UserServiceTest {
   @Mock private ApplicationEventPublisher eventPublisher;
 
   @Mock private Clock clock;
+
+  @Mock private ImageStorageService imageStorageService;
 
   @InjectMocks private UserService userService;
 
@@ -82,8 +87,7 @@ class UserServiceTest {
 
     when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
     when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
-    when(userRepository.saveAndFlush(any(User.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
     when(userMapper.toDto(any(User.class))).thenReturn(expectedDto);
 
     // when
@@ -92,7 +96,7 @@ class UserServiceTest {
 
     // then
     ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-    verify(userRepository).saveAndFlush(userCaptor.capture());
+    verify(userRepository).save(userCaptor.capture());
 
     User savedUser = userCaptor.getValue();
     String savedPassword = (String) ReflectionTestUtils.getField(savedUser, "password");
@@ -129,34 +133,28 @@ class UserServiceTest {
 
     verify(userRepository).existsByEmail("user@example.com");
     verify(passwordEncoder, never()).encode(any());
-    verify(userRepository, never()).saveAndFlush(any());
+    verify(userRepository, never()).save(any());
     verify(userMapper, never()).toDto(any());
   }
 
   @Test
-  @DisplayName("저장 중 이메일 중복 제약이 발생하면 사용자 예외로 변환한다")
+  @DisplayName("저장 시점에 이메일 중복 제약이 발생하면 DataIntegrityViolationException이 그대로 전파된다")
   void signUp_fail_whenEmailDuplicatedDuringSave() {
     // given
+    when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
+    when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
+    when(userRepository.save(any(User.class)))
+        .thenThrow(new DataIntegrityViolationException("duplicate email"));
+
     UserCreateRequest request =
         new UserCreateRequest("test-user", "user@example.com", "password123");
 
-    when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
-    when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
-    when(userRepository.saveAndFlush(any(User.class)))
-        .thenThrow(new DataIntegrityViolationException("duplicate email"));
-
-    // when
-    UserException exception = assertThrows(UserException.class, () -> userService.signUp(request));
-
-    // then
-    assertAll(
-        () -> assertEquals(UserErrorCode.EMAIL_ALREADY_EXISTS, exception.getErrorCode()),
-        () -> assertEquals("user@example.com", exception.getDetails().get("email")),
-        () -> assertTrue(exception.getCause() instanceof DataIntegrityViolationException));
+    // when & then
+    assertThrows(DataIntegrityViolationException.class, () -> userService.signUp(request));
 
     verify(userRepository).existsByEmail("user@example.com");
     verify(passwordEncoder).encode("password123");
-    verify(userRepository).saveAndFlush(any(User.class));
+    verify(userRepository).save(any(User.class));
     verify(userMapper, never()).toDto(any());
   }
 
@@ -505,6 +503,188 @@ class UserServiceTest {
 
     verify(userRepository, never()).findAllByCondition(any());
     verify(userRepository, never()).countByCondition(any());
+    verify(userMapper, never()).toDto(any());
+  }
+
+  @Test
+  @DisplayName("활성 사용자를 조회하면 UserDto를 반환한다")
+  void findUser_success_whenActiveUserExists() {
+    // given
+    UUID userId = UUID.randomUUID();
+    User user =
+        userWithIdentity(
+            userId,
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "test-user",
+            "user@example.com",
+            UserRole.USER,
+            false);
+    UserDto expectedDto = toDto(user);
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.of(user));
+    when(userMapper.toDto(user)).thenReturn(expectedDto);
+
+    // when
+    UserDto actual = userService.findUser(userId);
+
+    // then
+    assertEquals(expectedDto, actual);
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
+    verify(userMapper).toDto(user);
+  }
+
+  @Test
+  @DisplayName("존재하지 않거나 삭제된 사용자를 조회하면 USER_NOT_FOUND 예외를 반환한다")
+  void findUser_fail_whenUserIsUnavailable() {
+    // given
+    UUID userId = UUID.randomUUID();
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.empty());
+
+    // when
+    UserException exception = assertThrows(UserException.class, () -> userService.findUser(userId));
+
+    // then
+    assertAll(
+        () -> assertEquals(UserErrorCode.USER_NOT_FOUND, exception.getErrorCode()),
+        () -> assertEquals(userId, exception.getDetails().get("userId")));
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
+    verify(userMapper, never()).toDto(any());
+  }
+
+  @Test
+  @DisplayName("본인이 프로필 이미지와 이름을 수정하면 변경된 UserDto를 반환한다")
+  void updateProfile_success_whenRequesterIsTargetUserAndImageIsProvided() {
+    // given
+    UUID userId = UUID.randomUUID();
+    User user =
+        User.createUser("old-name", "user@example.com", "encoded-password", "/uploads/old.png");
+    UserUpdateRequest request = new UserUpdateRequest("new-name");
+    MockMultipartFile image =
+        new MockMultipartFile("image", "profile.png", "image/png", "image-bytes".getBytes());
+    UserDto expectedDto =
+        new UserDto(
+            userId,
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "user@example.com",
+            "new-name",
+            "/uploads/new.png",
+            UserRole.USER,
+            false);
+
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.of(user));
+    when(imageStorageService.upload(image)).thenReturn("/uploads/new.png");
+    when(userMapper.toDto(user)).thenReturn(expectedDto);
+
+    // when
+    UserDto actual = userService.updateProfile(userId, userId, request, image);
+
+    // then
+    assertAll(
+        () -> assertEquals(expectedDto, actual),
+        () -> assertEquals("new-name", user.getName()),
+        () -> assertEquals("/uploads/new.png", user.getProfileImageUrl()));
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
+    verify(imageStorageService).upload(image);
+    verify(userMapper).toDto(user);
+  }
+
+  @Test
+  @DisplayName("프로필 이미지 없이 수정하면 기존 프로필 이미지 URL을 유지한다")
+  void updateProfile_success_whenImageIsNotProvided() {
+    // given
+    UUID userId = UUID.randomUUID();
+    User user =
+        User.createUser("old-name", "user@example.com", "encoded-password", "/uploads/old.png");
+    UserUpdateRequest request = new UserUpdateRequest("new-name");
+    UserDto expectedDto =
+        new UserDto(
+            userId,
+            Instant.parse("2026-06-24T00:00:00Z"),
+            "user@example.com",
+            "new-name",
+            "/uploads/old.png",
+            UserRole.USER,
+            false);
+
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.of(user));
+    when(userMapper.toDto(user)).thenReturn(expectedDto);
+
+    // when
+    UserDto actual = userService.updateProfile(userId, userId, request, null);
+
+    // then
+    assertAll(
+        () -> assertEquals(expectedDto, actual),
+        () -> assertEquals("new-name", user.getName()),
+        () -> assertEquals("/uploads/old.png", user.getProfileImageUrl()));
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
+    verify(imageStorageService, never()).upload(any());
+    verify(userMapper).toDto(user);
+  }
+
+  @Test
+  @DisplayName("업로드 결과가 비어 있으면 기존 프로필 이미지 URL을 유지한다")
+  void updateProfile_success_whenImageUploadResultIsBlank() {
+    // given
+    UUID userId = UUID.randomUUID();
+    User user =
+        User.createUser("old-name", "user@example.com", "encoded-password", "/uploads/old.png");
+    UserUpdateRequest request = new UserUpdateRequest("new-name");
+    MockMultipartFile image =
+        new MockMultipartFile("image", "profile.png", "image/png", "image-bytes".getBytes());
+
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.of(user));
+    when(imageStorageService.upload(image)).thenReturn(" ");
+
+    // when
+    userService.updateProfile(userId, userId, request, image);
+
+    // then
+    assertEquals("/uploads/old.png", user.getProfileImageUrl());
+    verify(imageStorageService).upload(image);
+  }
+
+  @Test
+  @DisplayName("다른 사용자의 프로필 수정 요청은 사용자 조회 전에 거부한다")
+  void updateProfile_fail_whenRequesterIsNotTargetUser() {
+    // given
+    UUID targetUserId = UUID.randomUUID();
+    UUID requesterUserId = UUID.randomUUID();
+    UserUpdateRequest request = new UserUpdateRequest("new-name");
+
+    // when
+    UserException exception =
+        assertThrows(
+            UserException.class,
+            () -> userService.updateProfile(targetUserId, requesterUserId, request, null));
+
+    // then
+    assertAll(
+        () -> assertEquals(UserErrorCode.USER_ACCESS_DENIED, exception.getErrorCode()),
+        () -> assertEquals(targetUserId, exception.getDetails().get("userId")),
+        () -> assertEquals(requesterUserId, exception.getDetails().get("requesterId")));
+    verify(userRepository, never()).findByIdAndIsDeletedFalse(any());
+    verify(imageStorageService, never()).upload(any());
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 사용자의 프로필 수정 요청은 USER_NOT_FOUND 예외를 반환한다")
+  void updateProfile_fail_whenUserDoesNotExist() {
+    // given
+    UUID userId = UUID.randomUUID();
+    UserUpdateRequest request = new UserUpdateRequest("new-name");
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.empty());
+
+    // when
+    UserException exception =
+        assertThrows(
+            UserException.class, () -> userService.updateProfile(userId, userId, request, null));
+
+    // then
+    assertAll(
+        () -> assertEquals(UserErrorCode.USER_NOT_FOUND, exception.getErrorCode()),
+        () -> assertEquals(userId, exception.getDetails().get("userId")));
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
+    verify(imageStorageService, never()).upload(any());
     verify(userMapper, never()).toDto(any());
   }
 

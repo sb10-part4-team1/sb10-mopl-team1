@@ -4,18 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
-import com.sb10.mopl.notification.dto.NotificationDto;
-import com.sb10.mopl.notification.dto.NotificationLevel;
-import com.sb10.mopl.sse.service.SseService;
+import com.sb10.mopl.notification.entity.NotificationLevel;
+import com.sb10.mopl.notification.service.NotificationService;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.event.UserRoleChangedEvent;
 import java.lang.reflect.Method;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,46 +30,41 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @ExtendWith(MockitoExtension.class)
 class UserRoleChangedNotificationListenerTest {
 
-  private static final String NOTIFICATIONS_EVENT_NAME = "notifications";
-
-  @Mock private SseService sseService;
+  @Mock private NotificationService notificationService;
 
   @InjectMocks private UserRoleChangedNotificationListener listener;
 
   @Test
-  @DisplayName("권한 변경 이벤트를 notifications SSE 알림으로 발송한다")
-  void sendRoleChangedNotification_sendsNotificationSseEvent() {
+  @DisplayName("권한 변경 이벤트를 받으면 알림을 생성한다")
+  void sendRoleChangedNotification_createsNotification() {
     // given
     UUID targetUserId = UUID.randomUUID();
-    Instant occurredAt = Instant.parse("2026-07-08T00:00:00Z");
     UserRoleChangedEvent event =
         new UserRoleChangedEvent(
-            targetUserId, UserRole.USER, UserRole.ADMIN, UUID.randomUUID(), occurredAt);
+            targetUserId,
+            UserRole.USER,
+            UserRole.ADMIN,
+            UUID.randomUUID(),
+            Instant.parse("2026-07-08T00:00:00Z"));
 
     // when
     listener.sendRoleChangedNotification(event);
 
     // then
-    ArgumentCaptor<Collection<UUID>> receiverIdsCaptor = collectionCaptor();
-    ArgumentCaptor<Object> dataCaptor = ArgumentCaptor.forClass(Object.class);
+    ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
+    verify(notificationService)
+        .create(
+            eq(targetUserId),
+            eq("내 권한이 변경되었어요."),
+            contentCaptor.capture(),
+            eq(NotificationLevel.INFO));
 
-    verify(sseService)
-        .send(receiverIdsCaptor.capture(), eq(NOTIFICATIONS_EVENT_NAME), dataCaptor.capture());
-
-    NotificationDto notification = (NotificationDto) dataCaptor.getValue();
-    assertAll(
-        () -> assertThat(receiverIdsCaptor.getValue()).containsExactly(targetUserId),
-        () -> assertThat(notification.id()).isNotNull(),
-        () -> assertThat(notification.createdAt()).isEqualTo(occurredAt),
-        () -> assertThat(notification.receiverId()).isEqualTo(targetUserId),
-        () -> assertThat(notification.title()).isEqualTo("내 권한이 변경되었어요."),
-        () -> assertThat(notification.content()).contains("USER", "ADMIN"),
-        () -> assertThat(notification.level()).isEqualTo(NotificationLevel.INFO));
+    assertThat(contentCaptor.getValue()).contains("USER", "ADMIN");
   }
 
   @Test
-  @DisplayName("SSE 발송 실패 시 예외를 전파하지 않는다")
-  void sendRoleChangedNotification_doesNotPropagateException_whenSseSendFails() {
+  @DisplayName("알림 생성 실패 시 예외를 전파하지 않는다")
+  void sendRoleChangedNotification_doesNotPropagateException_whenNotificationCreateFails() {
     // given
     UserRoleChangedEvent event =
         new UserRoleChangedEvent(
@@ -80,14 +74,14 @@ class UserRoleChangedNotificationListenerTest {
             UUID.randomUUID(),
             Instant.parse("2026-07-08T00:00:00Z"));
 
-    doThrow(new RuntimeException("sse failed"))
-        .when(sseService)
-        .send(any(), eq(NOTIFICATIONS_EVENT_NAME), any(NotificationDto.class));
+    doThrow(new RuntimeException("notification create failed"))
+        .when(notificationService)
+        .create(any(), anyString(), anyString(), eq(NotificationLevel.INFO));
 
     // when & then
     assertDoesNotThrow(() -> listener.sendRoleChangedNotification(event));
 
-    verify(sseService).send(any(), eq(NOTIFICATIONS_EVENT_NAME), any());
+    verify(notificationService).create(any(), anyString(), anyString(), eq(NotificationLevel.INFO));
   }
 
   @Test
@@ -108,10 +102,5 @@ class UserRoleChangedNotificationListenerTest {
         () -> assertThat(eventListener.phase()).isEqualTo(TransactionPhase.AFTER_COMMIT),
         () -> assertThat(async).isNotNull(),
         () -> assertThat(async.value()).isEqualTo("notificationExecutor"));
-  }
-
-  @SuppressWarnings("unchecked")
-  private ArgumentCaptor<Collection<UUID>> collectionCaptor() {
-    return ArgumentCaptor.forClass(Collection.class);
   }
 }

@@ -5,8 +5,9 @@ import com.sb10.mopl.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
@@ -17,6 +18,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
     name = "refresh_tokens",
+    indexes = {@Index(name = "IDX_REFRESH_TOKENS_EXPIRES_AT", columnList = "expires_at")},
     uniqueConstraints = {
       @UniqueConstraint(name = "UK_REFRESH_TOKENS_USER", columnNames = "user_id"),
       @UniqueConstraint(name = "UK_REFRESH_TOKENS_TOKEN", columnNames = "token")
@@ -25,11 +27,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RefreshToken extends BaseEntity {
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @OneToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @Column(name = "token", nullable = false, unique = true, length = 64)
+  @Column(name = "token", nullable = false, length = 64)
   private String tokenHash;
 
   @Column(name = "expires_at", nullable = false)

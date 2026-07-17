@@ -14,11 +14,11 @@ public interface PlaylistMapper {
     return new Playlist(owner, request.title(), request.description());
   }
 
-  @Mapping(source = "owner.id", target = "owner.userId")
-  @Mapping(source = "owner.name", target = "owner.name")
-  @Mapping(source = "owner.profileImageUrl", target = "owner.profileImageUrl")
-  @Mapping(target = "subscriberCount", expression = "java(0L)")
-  @Mapping(target = "subscribedByMe", constant = "false")
+  @Mapping(source = "playlist.owner.id", target = "owner.userId")
+  @Mapping(source = "playlist.owner.name", target = "owner.name")
+  @Mapping(source = "playlist.owner.profileImageUrl", target = "owner.profileImageUrl")
+  @Mapping(source = "subscriberCount", target = "subscriberCount")
+  @Mapping(source = "subscribedByMe", target = "subscribedByMe")
   @Mapping(target = "contents", expression = "java(java.util.List.of())")
-  PlaylistDto toDto(Playlist playlist);
+  PlaylistDto toDto(Playlist playlist, long subscriberCount, boolean subscribedByMe);
 }

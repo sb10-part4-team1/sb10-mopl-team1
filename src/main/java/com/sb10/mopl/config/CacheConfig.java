@@ -10,15 +10,14 @@ import org.springframework.cache.transaction.TransactionAwareCacheManagerProxy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 
 /*
- * 스프링 통합 캐시 설정 클래스입니다.
- *
- * 1. batchCacheManager: 배치 가공 전용 캐시 매니저로, 30분 만료 및 트랜잭션 롤백 방어(TransactionAware) 기능을 내장합니다.
- * 2. queryCacheManager: 일반 API 조회용 기본 캐시 매니저로, 24시간 캐시 유지 정책을 가지며 @Primary로 지정되어 기본 매칭됩니다.
+ * 로컬 및 테스트 환경 전용 JVM 메모리 기반 캐시 설정 클래스입니다.
  */
 @Configuration
 @EnableCaching
+@Profile({"local", "test", "default"})
 public class CacheConfig {
 
   // 배치 가공 전용 트랜잭션 인지형 캐시 매니저

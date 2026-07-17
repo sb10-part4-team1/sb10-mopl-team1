@@ -8,6 +8,7 @@ import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.request.UserLockUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
+import com.sb10.mopl.user.dto.request.UserUpdateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.service.UserService;
 import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -24,7 +26,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -38,6 +42,22 @@ public class UserController {
   public ResponseEntity<UserDto> signUp(@Valid @RequestBody UserCreateRequest userCreateRequest) {
     UserDto userDto = userService.signUp(userCreateRequest);
     return ResponseEntity.created(URI.create("/api/users/" + userDto.id())).body(userDto);
+  }
+
+  @GetMapping("/{userId}")
+  public ResponseEntity<UserDto> findUser(@PathVariable UUID userId) {
+    UserDto userDto = userService.findUser(userId);
+    return ResponseEntity.ok(userDto);
+  }
+
+  @PatchMapping(value = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<UserDto> updateProfile(
+      @PathVariable UUID userId,
+      @RequestPart("request") @Valid UserUpdateRequest request,
+      @RequestPart(value = "image", required = false) MultipartFile image,
+      @CurrentUser AuthenticatedUser currentUser) {
+    UserDto userDto = userService.updateProfile(userId, currentUser.id(), request, image);
+    return ResponseEntity.ok(userDto);
   }
 
   @PatchMapping("/{userId}/password")

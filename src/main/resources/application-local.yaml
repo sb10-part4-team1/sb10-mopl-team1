@@ -6,6 +6,12 @@ spring:
     activate:
       on-profile: local
 
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+
   datasource:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:mem:localdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE # PostgreSQL 모드 활성화

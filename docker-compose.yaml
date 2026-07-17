@@ -35,7 +35,7 @@ services:
       - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=dev
       # postgres
-      - DB_HOST=${DB_HOST:-db}
+      - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=${DB_NAME}
       - DB_USERNAME=${DB_USERNAME}
@@ -49,6 +49,8 @@ services:
       # redis
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
+      # kafka
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       # file uploads configuration
       - MOPL_UPLOAD_DIR=/app/uploads/
     depends_on:

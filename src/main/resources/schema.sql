@@ -285,6 +285,12 @@ CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_CREATED_AT"
 CREATE INDEX IF NOT EXISTS "IDX_PLAYLIST_CONTENTS_CONTENT"
     ON "playlist_contents" ("content_id");
 
+CREATE INDEX IF NOT EXISTS "IDX_REFRESH_TOKENS_EXPIRES_AT"
+    ON "refresh_tokens" ("expires_at");
+
+CREATE INDEX IF NOT EXISTS "IDX_JWT_SESSIONS_EXPIRES_AT"
+    ON "jwt_sessions" ("expires_at");
+
 -- 콘텐츠 정렬 및 커서 페이지네이션 성능 최적화를 위한 복합 인덱스 (전체 조회용 - type 조건 없을 때)
 CREATE INDEX IF NOT EXISTS "IDX_CONTENTS_WATCHER_REVIEW_ID"
     ON "contents" ("watcher_count" DESC, "review_count" DESC, "id" DESC);

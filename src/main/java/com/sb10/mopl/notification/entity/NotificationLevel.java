@@ -1,4 +1,4 @@
-package com.sb10.mopl.notification.dto;
+package com.sb10.mopl.notification.entity;
 
 public enum NotificationLevel {
   INFO,

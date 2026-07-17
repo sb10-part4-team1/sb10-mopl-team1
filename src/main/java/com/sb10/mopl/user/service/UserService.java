@@ -3,11 +3,13 @@ package com.sb10.mopl.user.service;
 import com.sb10.mopl.auth.service.AuthSessionService;
 import com.sb10.mopl.auth.service.TemporaryPasswordService;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.common.storage.ImageStorageService;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.request.UserLockUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
+import com.sb10.mopl.user.dto.request.UserUpdateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
@@ -22,10 +24,10 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +40,7 @@ public class UserService {
   private final TemporaryPasswordService temporaryPasswordService;
   private final ApplicationEventPublisher eventPublisher;
   private final Clock clock;
+  private final ImageStorageService imageStorageService;
 
   @Transactional
   public UserDto signUp(UserCreateRequest userCreateRequest) {
@@ -51,13 +54,44 @@ public class UserService {
     String password = passwordEncoder.encode(userCreateRequest.password());
     User user = User.createUser(name, email, password, null);
 
-    // 이메일 중복 검사 이후 동시 요청으로 DB 고유 제약 조건에 걸리는 것을 방지한다.
-    try {
-      User saved = userRepository.saveAndFlush(user);
-      return userMapper.toDto(saved);
-    } catch (DataIntegrityViolationException e) {
-      throw new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS, Map.of("email", email), e);
+    User saved = userRepository.save(user);
+    return userMapper.toDto(saved);
+  }
+
+  @Transactional(readOnly = true)
+  public UserDto findUser(UUID userId) {
+    User user =
+        userRepository
+            .findByIdAndIsDeletedFalse(userId)
+            .orElseThrow(
+                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", userId)));
+    return userMapper.toDto(user);
+  }
+
+  @Transactional
+  public UserDto updateProfile(
+      UUID targetUserId,
+      UUID requesterUserId,
+      UserUpdateRequest userUpdateRequest,
+      MultipartFile image) {
+    if (!targetUserId.equals(requesterUserId)) {
+      throw new UserException(
+          UserErrorCode.USER_ACCESS_DENIED,
+          Map.of("userId", targetUserId, "requesterId", requesterUserId));
     }
+
+    User user =
+        userRepository
+            .findByIdAndIsDeletedFalse(targetUserId)
+            .orElseThrow(
+                () ->
+                    new UserException(
+                        UserErrorCode.USER_NOT_FOUND, Map.of("userId", targetUserId)));
+
+    String profileImageUrl = uploadProfileImageOrKeep(image, user.getProfileImageUrl());
+    user.updateProfile(userUpdateRequest.name(), profileImageUrl);
+
+    return userMapper.toDto(user);
   }
 
   @Transactional
@@ -176,5 +210,14 @@ public class UserService {
 
   private UUID getNextIdAfter(User lastUser) {
     return lastUser == null ? null : lastUser.getId();
+  }
+
+  private String uploadProfileImageOrKeep(MultipartFile image, String currentProfileImageUrl) {
+    if (image == null || image.isEmpty()) {
+      return currentProfileImageUrl;
+    }
+
+    String uploadedUrl = imageStorageService.upload(image);
+    return uploadedUrl == null || uploadedUrl.isBlank() ? currentProfileImageUrl : uploadedUrl;
   }
 }
