@@ -38,7 +38,7 @@ public class ContentChatSocketController {
 
     ContentChatDto dto = contentChatService.sendMessage(sender.id(), contentId, request);
 
-    // 메시지 수신
+    // 메시지 브로드캐스트
     messagingTemplate.convertAndSend("/sub/contents/" + contentId + "/chat", dto);
   }
 
