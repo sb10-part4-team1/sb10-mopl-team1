@@ -19,16 +19,16 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-  name = "watching_session",
-  indexes = {
-    @Index(name = "IDX_WATCHING_SESSION_WATCHER", columnList = "watcher_id"),
-    @Index(name = "IDX_WATCHING_SESSION_CONTENT", columnList = "content_id")
-  },
-  uniqueConstraints = {
-    @UniqueConstraint(
-        name = "UQ_WATCHING_SESSION_WATCHER_CONTENT",
-        columnNames = {"watcher_id", "content_id"})
-  })
+    name = "watching_session",
+    indexes = {
+      @Index(name = "IDX_WATCHING_SESSION_WATCHER", columnList = "watcher_id"),
+      @Index(name = "IDX_WATCHING_SESSION_CONTENT", columnList = "content_id")
+    },
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "UQ_WATCHING_SESSION_WATCHER_CONTENT",
+          columnNames = {"watcher_id", "content_id"})
+    })
 public class WatchingSession extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)

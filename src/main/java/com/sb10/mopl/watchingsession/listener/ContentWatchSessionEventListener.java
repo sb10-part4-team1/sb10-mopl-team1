@@ -39,14 +39,14 @@ import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 public class ContentWatchSessionEventListener {
 
   private static final Pattern CONTENT_WATCH_TOPIC_PATTERN =
-    Pattern.compile(
-      "^/sub/contents/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/watch$");
+      Pattern.compile(
+          "^/sub/contents/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/watch$");
 
   private final WatchingSessionService watchingSessionService;
   private final SimpMessagingTemplate messagingTemplate;
 
   private final Map<String, WatchSubscription> subscriptionsBySubscriptionId =
-    new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();
 
   // handleDisconnect에서 sessionId로 구독을 O(1)에 찾기 위한 보조 인덱스
   private final Map<String, Set<String>> subscriptionIdsBySessionId = new ConcurrentHashMap<>();
@@ -115,8 +115,8 @@ public class ContentWatchSessionEventListener {
   private void track(String subscriptionId, WatchSubscription subscription) {
     subscriptionsBySubscriptionId.put(subscriptionId, subscription);
     subscriptionIdsBySessionId
-      .computeIfAbsent(subscription.sessionId(), key -> ConcurrentHashMap.newKeySet())
-      .add(subscriptionId);
+        .computeIfAbsent(subscription.sessionId(), key -> ConcurrentHashMap.newKeySet())
+        .add(subscriptionId);
   }
 
   // 보조 인덱스에서도 함께 제거하며, 세션의 마지막 구독이었다면 세션 항목 자체도 정리합니다.
@@ -124,41 +124,41 @@ public class ContentWatchSessionEventListener {
     WatchSubscription subscription = subscriptionsBySubscriptionId.remove(subscriptionId);
     if (subscription != null) {
       subscriptionIdsBySessionId.computeIfPresent(
-        subscription.sessionId(),
-        (sessionId, subscriptionIds) -> {
-          subscriptionIds.remove(subscriptionId);
-          return subscriptionIds.isEmpty() ? null : subscriptionIds;
-        });
+          subscription.sessionId(),
+          (sessionId, subscriptionIds) -> {
+            subscriptionIds.remove(subscriptionId);
+            return subscriptionIds.isEmpty() ? null : subscriptionIds;
+          });
     }
     return subscription;
   }
 
   private void leave(WatchSubscription subscription) {
     Optional<WatchingSessionDto> dto =
-      watchingSessionService.leave(subscription.watcherId(), subscription.contentId());
+        watchingSessionService.leave(subscription.watcherId(), subscription.contentId());
 
     dto.ifPresent(
-      watchingSessionDto -> {
-        log.info(
-          "[WATCH] 시청 이탈: contentId={}, watcherId={}",
-          subscription.contentId(),
-          subscription.watcherId());
-        broadcast(subscription.contentId(), ChangeType.LEAVE, watchingSessionDto);
-      });
+        watchingSessionDto -> {
+          log.info(
+              "[WATCH] 시청 이탈: contentId={}, watcherId={}",
+              subscription.contentId(),
+              subscription.watcherId());
+          broadcast(subscription.contentId(), ChangeType.LEAVE, watchingSessionDto);
+        });
   }
 
   private void broadcast(UUID contentId, ChangeType type, WatchingSessionDto dto) {
     long watcherCount = watchingSessionService.countWatchers(contentId);
     messagingTemplate.convertAndSend(
-      "/sub/contents/" + contentId + "/watch",
-      new WatchingSessionChange(type, dto, watcherCount));
+        "/sub/contents/" + contentId + "/watch",
+        new WatchingSessionChange(type, dto, watcherCount));
   }
 
   // CONNECT 시점에 StompChannelInterceptor가 세션에 부여한 Principal에서 시청자를 꺼낸다.
   // 이 시점의 구독은 이미 StompChannelInterceptor의 인증 검사를 통과했으므로 정상적으로는 항상 존재한다.
   private UUID resolveUserId(Principal principal) {
     if (principal instanceof Authentication authentication
-      && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
+        && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
       return authenticatedUser.id();
     }
 
@@ -166,7 +166,5 @@ public class ContentWatchSessionEventListener {
     return null;
   }
 
-  private record WatchSubscription(String sessionId, UUID contentId, UUID watcherId) {
-
-  }
+  private record WatchSubscription(String sessionId, UUID contentId, UUID watcherId) {}
 }
