@@ -40,7 +40,9 @@ public class ContentWatchSessionEventListener {
 
   private static final Pattern CONTENT_WATCH_TOPIC_PATTERN =
       Pattern.compile(
-          "^/sub/contents/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/watch$");
+          "^/sub/contents"
+              + "/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
+              + "/watch$");
 
   private final WatchingSessionService watchingSessionService;
   private final SimpMessagingTemplate messagingTemplate;
