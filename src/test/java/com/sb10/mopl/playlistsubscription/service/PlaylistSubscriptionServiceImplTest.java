@@ -3,17 +3,21 @@ package com.sb10.mopl.playlistsubscription.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sb10.mopl.playlist.entity.Playlist;
+import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistsubscription.entity.PlaylistSubscription;
+import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionErrorCode;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionException;
 import com.sb10.mopl.playlistsubscription.repository.PlaylistSubscriptionRepository;
 import com.sb10.mopl.user.entity.User;
+import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
 import java.util.Optional;
@@ -45,9 +49,9 @@ class PlaylistSubscriptionServiceImplTest {
     UUID playlistId = UUID.randomUUID();
     UUID ownerId = UUID.randomUUID();
 
-    User subscriber = org.mockito.Mockito.mock(User.class);
-    User owner = org.mockito.Mockito.mock(User.class);
-    Playlist playlist = org.mockito.Mockito.mock(Playlist.class);
+    User subscriber = mock(User.class);
+    User owner = mock(User.class);
+    Playlist playlist = mock(Playlist.class);
 
     when(owner.getId()).thenReturn(ownerId);
     when(playlist.getOwner()).thenReturn(owner);
@@ -83,7 +87,13 @@ class PlaylistSubscriptionServiceImplTest {
 
     // when & then
     assertThatThrownBy(() -> playlistSubscriptionService.subscribe(subscriberId, playlistId))
-        .isInstanceOf(UserException.class);
+        .isInstanceOf(UserException.class)
+        .satisfies(
+            throwable -> {
+              UserException exception = (UserException) throwable;
+
+              assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.USER_NOT_FOUND);
+            });
 
     verify(playlistRepository, never()).findByIdWithOwner(any());
     verify(playlistSubscriptionRepository, never()).save(any());
@@ -96,7 +106,7 @@ class PlaylistSubscriptionServiceImplTest {
     UUID subscriberId = UUID.randomUUID();
     UUID playlistId = UUID.randomUUID();
 
-    User subscriber = org.mockito.Mockito.mock(User.class);
+    User subscriber = mock(User.class);
 
     when(userRepository.findByIdAndIsDeletedFalse(subscriberId))
         .thenReturn(Optional.of(subscriber));
@@ -104,7 +114,13 @@ class PlaylistSubscriptionServiceImplTest {
 
     // when & then
     assertThatThrownBy(() -> playlistSubscriptionService.subscribe(subscriberId, playlistId))
-        .isInstanceOf(PlaylistException.class);
+        .isInstanceOf(PlaylistException.class)
+        .satisfies(
+            throwable -> {
+              PlaylistException exception = (PlaylistException) throwable;
+
+              assertThat(exception.getErrorCode()).isEqualTo(PlaylistErrorCode.PLAYLIST_NOT_FOUND);
+            });
 
     verify(playlistSubscriptionRepository, never()).existsBySubscriberIdAndPlaylistId(any(), any());
     verify(playlistSubscriptionRepository, never()).save(any());
@@ -117,9 +133,9 @@ class PlaylistSubscriptionServiceImplTest {
     UUID subscriberId = UUID.randomUUID();
     UUID playlistId = UUID.randomUUID();
 
-    User subscriber = org.mockito.Mockito.mock(User.class);
-    User owner = org.mockito.Mockito.mock(User.class);
-    Playlist playlist = org.mockito.Mockito.mock(Playlist.class);
+    User subscriber = mock(User.class);
+    User owner = mock(User.class);
+    Playlist playlist = mock(Playlist.class);
 
     when(owner.getId()).thenReturn(subscriberId);
     when(playlist.getOwner()).thenReturn(owner);
@@ -130,7 +146,15 @@ class PlaylistSubscriptionServiceImplTest {
 
     // when & then
     assertThatThrownBy(() -> playlistSubscriptionService.subscribe(subscriberId, playlistId))
-        .isInstanceOf(PlaylistSubscriptionException.class);
+        .isInstanceOf(PlaylistSubscriptionException.class)
+        .satisfies(
+            throwable -> {
+              PlaylistSubscriptionException exception = (PlaylistSubscriptionException) throwable;
+
+              assertThat(exception.getErrorCode())
+                  .isEqualTo(
+                      PlaylistSubscriptionErrorCode.UNAUTHORIZED_PLAYLIST_SUBSCRIPTION_ACCESS);
+            });
 
     verify(playlistSubscriptionRepository, never()).existsBySubscriberIdAndPlaylistId(any(), any());
     verify(playlistSubscriptionRepository, never()).save(any());
@@ -144,9 +168,9 @@ class PlaylistSubscriptionServiceImplTest {
     UUID playlistId = UUID.randomUUID();
     UUID ownerId = UUID.randomUUID();
 
-    User subscriber = org.mockito.Mockito.mock(User.class);
-    User owner = org.mockito.Mockito.mock(User.class);
-    Playlist playlist = org.mockito.Mockito.mock(Playlist.class);
+    User subscriber = mock(User.class);
+    User owner = mock(User.class);
+    Playlist playlist = mock(Playlist.class);
 
     when(owner.getId()).thenReturn(ownerId);
     when(playlist.getOwner()).thenReturn(owner);
@@ -158,7 +182,14 @@ class PlaylistSubscriptionServiceImplTest {
 
     // when & then
     assertThatThrownBy(() -> playlistSubscriptionService.subscribe(subscriberId, playlistId))
-        .isInstanceOf(PlaylistSubscriptionException.class);
+        .isInstanceOf(PlaylistSubscriptionException.class)
+        .satisfies(
+            throwable -> {
+              PlaylistSubscriptionException exception = (PlaylistSubscriptionException) throwable;
+
+              assertThat(exception.getErrorCode())
+                  .isEqualTo(PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_ALREADY_EXISTS);
+            });
 
     verify(playlistSubscriptionRepository, never()).save(any());
   }
@@ -170,8 +201,7 @@ class PlaylistSubscriptionServiceImplTest {
     UUID subscriberId = UUID.randomUUID();
     UUID playlistId = UUID.randomUUID();
 
-    PlaylistSubscription playlistSubscription =
-        org.mockito.Mockito.mock(PlaylistSubscription.class);
+    PlaylistSubscription playlistSubscription = mock(PlaylistSubscription.class);
 
     when(playlistSubscriptionRepository.findBySubscriberIdAndPlaylistId(subscriberId, playlistId))
         .thenReturn(Optional.of(playlistSubscription));
@@ -195,7 +225,14 @@ class PlaylistSubscriptionServiceImplTest {
 
     // when & then
     assertThatThrownBy(() -> playlistSubscriptionService.unsubscribe(subscriberId, playlistId))
-        .isInstanceOf(PlaylistSubscriptionException.class);
+        .isInstanceOf(PlaylistSubscriptionException.class)
+        .satisfies(
+            throwable -> {
+              PlaylistSubscriptionException exception = (PlaylistSubscriptionException) throwable;
+
+              assertThat(exception.getErrorCode())
+                  .isEqualTo(PlaylistSubscriptionErrorCode.PLAYLIST_SUBSCRIPTION_NOT_FOUND);
+            });
 
     verify(playlistSubscriptionRepository, never()).delete(any());
   }

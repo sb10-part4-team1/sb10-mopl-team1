@@ -58,6 +58,7 @@ class PlaylistRepositoryTest {
     final User otherOwner = userRepository.save(createUser("다른 소유자", "other-owner@example.com"));
 
     subscriber = userRepository.save(createUser("구독자", "subscriber@example.com"));
+
     otherSubscriber = userRepository.save(createUser("다른 구독자", "other-subscriber@example.com"));
 
     firstPlaylist = playlistRepository.save(new Playlist(owner, "영화 추천 모음", "재미있는 영화 플레이리스트"));
@@ -403,6 +404,7 @@ class PlaylistRepositoryTest {
 
   // 수정 시각을 지정하여 테스트용 플레이리스트 저장
   private void updateUpdatedAt(Playlist playlist, Instant updatedAt) {
+
     entityManager
         .createQuery(
             "update Playlist playlist "
@@ -430,6 +432,7 @@ class PlaylistRepositoryTest {
 
   // 테스트용 사용자 생성
   private User createUser(String name, String email) {
+
     return User.createUser(name, email, "password", null);
   }
 }
