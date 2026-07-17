@@ -13,6 +13,7 @@ import com.sb10.mopl.playlistcontent.entity.PlaylistContent;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +41,10 @@ class PlaylistContentRepositoryTest {
   @Autowired private EntityManager entityManager;
 
   private Playlist playlist;
+  private Playlist otherPlaylist;
+
   private Content content;
+  private Content otherContent;
 
   @BeforeEach
   void setUp() {
@@ -48,9 +52,16 @@ class PlaylistContentRepositoryTest {
 
     playlist = playlistRepository.save(new Playlist(owner, "플레이리스트 제목", "플레이리스트 설명"));
 
+    otherPlaylist = playlistRepository.save(new Playlist(owner, "다른 플레이리스트 제목", "다른 플레이리스트 설명"));
+
     content =
         contentRepository.save(
             Content.create("콘텐츠 제목", ContentType.MOVIE, "콘텐츠 설명", "/uploads/content.jpg"));
+
+    otherContent =
+        contentRepository.save(
+            Content.create(
+                "다른 콘텐츠 제목", ContentType.MOVIE, "다른 콘텐츠 설명", "/uploads/other-content.jpg"));
 
     entityManager.flush();
     entityManager.clear();
@@ -74,8 +85,17 @@ class PlaylistContentRepositoryTest {
   }
 
   @Test
-  @DisplayName("플레이리스트와 콘텐츠의 매핑이 존재하지 않으면 false를 반환한다")
-  void existsByPlaylistIdAndContentId_returnFalse_whenPlaylistContentDoesNotExist() {
+  @DisplayName("플레이리스트와 콘텐츠 조합이 일치하지 않으면 false를 반환한다")
+  void existsByPlaylistIdAndContentId_returnFalse_whenCombinationDoesNotMatch() {
+    // given
+    playlistContentRepository.saveAll(
+        List.of(
+            new PlaylistContent(playlist, otherContent),
+            new PlaylistContent(otherPlaylist, content)));
+
+    entityManager.flush();
+    entityManager.clear();
+
     // when
     boolean result =
         playlistContentRepository.existsByPlaylistIdAndContentId(playlist.getId(), content.getId());
@@ -106,8 +126,17 @@ class PlaylistContentRepositoryTest {
   }
 
   @Test
-  @DisplayName("플레이리스트와 콘텐츠의 매핑이 존재하지 않으면 빈 Optional을 반환한다")
-  void findByPlaylistIdAndContentId_returnEmpty_whenPlaylistContentDoesNotExist() {
+  @DisplayName("플레이리스트와 콘텐츠 조합이 일치하지 않으면 빈 Optional을 반환한다")
+  void findByPlaylistIdAndContentId_returnEmpty_whenCombinationDoesNotMatch() {
+    // given
+    playlistContentRepository.saveAll(
+        List.of(
+            new PlaylistContent(playlist, otherContent),
+            new PlaylistContent(otherPlaylist, content)));
+
+    entityManager.flush();
+    entityManager.clear();
+
     // when
     Optional<PlaylistContent> result =
         playlistContentRepository.findByPlaylistIdAndContentId(playlist.getId(), content.getId());

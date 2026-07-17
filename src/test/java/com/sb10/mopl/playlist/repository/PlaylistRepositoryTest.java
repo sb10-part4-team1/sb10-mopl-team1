@@ -12,6 +12,7 @@ import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceUnitUtil;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -74,7 +75,8 @@ class PlaylistRepositoryTest {
   void findAllByCondition_returnAll_whenConditionIsEmpty() {
     // when
     List<Playlist> result =
-        findAllByCondition(null, null, null, null, null, "updatedAt", SortDirection.DESCENDING);
+        findAllByCondition(
+            null, null, null, null, null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
     assertThat(result)
@@ -88,7 +90,8 @@ class PlaylistRepositoryTest {
   void findAllByCondition_filterByTitleKeyword() {
     // when
     List<Playlist> result =
-        findAllByCondition("영화", null, null, null, null, "updatedAt", SortDirection.DESCENDING);
+        findAllByCondition(
+            "영화", null, null, null, null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
     assertThat(result).extracting(Playlist::getId).containsExactly(firstPlaylist.getId());
@@ -100,7 +103,7 @@ class PlaylistRepositoryTest {
     // when
     List<Playlist> result =
         findAllByCondition(
-            "  드라마  ", null, null, null, null, "updatedAt", SortDirection.DESCENDING);
+            "  드라마  ", null, null, null, null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
     assertThat(result).extracting(Playlist::getId).containsExactly(thirdPlaylist.getId());
@@ -112,7 +115,7 @@ class PlaylistRepositoryTest {
     // when
     List<Playlist> result =
         findAllByCondition(
-            null, owner.getId(), null, null, null, "updatedAt", SortDirection.DESCENDING);
+            null, owner.getId(), null, null, null, null, "updatedAt", SortDirection.DESCENDING);
 
     // then
     assertThat(result)
@@ -136,7 +139,14 @@ class PlaylistRepositoryTest {
     // when
     List<Playlist> result =
         findAllByCondition(
-            null, null, subscriber.getId(), null, null, "updatedAt", SortDirection.DESCENDING);
+            null,
+            null,
+            subscriber.getId(),
+            null,
+            null,
+            null,
+            "updatedAt",
+            SortDirection.DESCENDING);
 
     // then
     assertThat(result)
@@ -164,6 +174,7 @@ class PlaylistRepositoryTest {
             subscriber.getId(),
             null,
             null,
+            null,
             "updatedAt",
             SortDirection.DESCENDING);
 
@@ -180,7 +191,7 @@ class PlaylistRepositoryTest {
     // when
     List<Playlist> result =
         findAllByCondition(
-            null, null, null, null, null, "subscriberCount", SortDirection.ASCENDING);
+            null, null, null, null, null, null, "subscriberCount", SortDirection.ASCENDING);
 
     // then
     assertThat(result)
@@ -197,7 +208,7 @@ class PlaylistRepositoryTest {
     // when
     List<Playlist> result =
         findAllByCondition(
-            null, null, null, null, null, "subscriberCount", SortDirection.DESCENDING);
+            null, null, null, null, null, null, "subscriberCount", SortDirection.DESCENDING);
 
     // then
     assertThat(result)
@@ -217,6 +228,7 @@ class PlaylistRepositoryTest {
             null,
             null,
             null,
+            null,
             1L,
             secondPlaylist.getId(),
             "subscriberCount",
@@ -224,6 +236,62 @@ class PlaylistRepositoryTest {
 
     // then
     assertThat(result).extracting(Playlist::getId).containsExactly(thirdPlaylist.getId());
+  }
+
+  @Test
+  @DisplayName("수정 시각 커서 다음에 위치한 플레이리스트를 조회한다")
+  void findAllByCondition_applyUpdatedAtCursor() {
+    // given
+    Instant oldestUpdatedAt = Instant.parse("2026-07-14T00:00:00Z");
+    Instant cursorUpdatedAt = Instant.parse("2026-07-15T00:00:00Z");
+    Instant newestUpdatedAt = Instant.parse("2026-07-16T00:00:00Z");
+
+    updateUpdatedAt(firstPlaylist, oldestUpdatedAt);
+    updateUpdatedAt(secondPlaylist, cursorUpdatedAt);
+    updateUpdatedAt(thirdPlaylist, newestUpdatedAt);
+
+    // when
+    List<Playlist> result =
+        findAllByCondition(
+            null,
+            null,
+            null,
+            cursorUpdatedAt,
+            null,
+            secondPlaylist.getId(),
+            "updatedAt",
+            SortDirection.DESCENDING);
+
+    // then
+    assertThat(result).extracting(Playlist::getId).containsExactly(firstPlaylist.getId());
+  }
+
+  @Test
+  @DisplayName("구독자 수가 같으면 ID 커서를 기준으로 다음 플레이리스트를 조회한다")
+  void findAllByCondition_applyIdAfter_whenSubscriberCountsAreEqual() {
+    // given
+    List<Playlist> firstPage =
+        findAllByCondition(
+            null, null, null, null, null, null, "subscriberCount", SortDirection.ASCENDING);
+
+    Playlist cursorPlaylist = firstPage.get(0);
+
+    // when
+    List<Playlist> nextPage =
+        findAllByCondition(
+            null,
+            null,
+            null,
+            null,
+            0L,
+            cursorPlaylist.getId(),
+            "subscriberCount",
+            SortDirection.ASCENDING);
+
+    // then
+    assertThat(nextPage)
+        .extracting(Playlist::getId)
+        .containsExactlyElementsOf(firstPage.stream().skip(1).map(Playlist::getId).toList());
   }
 
   @Test
@@ -315,6 +383,7 @@ class PlaylistRepositoryTest {
       String keywordLike,
       UUID ownerId,
       UUID subscriberId,
+      Instant updatedAtCursor,
       Long subscriberCountCursor,
       UUID idAfter,
       String sortBy,
@@ -324,12 +393,27 @@ class PlaylistRepositoryTest {
         keywordLike,
         ownerId,
         subscriberId,
-        null,
+        updatedAtCursor,
         subscriberCountCursor,
         idAfter,
         sortBy,
         sortDirection,
         DEFAULT_PAGEABLE);
+  }
+
+  // 수정 시각을 지정하여 테스트용 플레이리스트 저장
+  private void updateUpdatedAt(Playlist playlist, Instant updatedAt) {
+    entityManager
+        .createQuery(
+            "update Playlist playlist "
+                + "set playlist.updatedAt = :updatedAt "
+                + "where playlist.id = :playlistId")
+        .setParameter("updatedAt", updatedAt)
+        .setParameter("playlistId", playlist.getId())
+        .executeUpdate();
+
+    entityManager.flush();
+    entityManager.clear();
   }
 
   // 구독자 수 정렬 테스트용 구독 정보 저장

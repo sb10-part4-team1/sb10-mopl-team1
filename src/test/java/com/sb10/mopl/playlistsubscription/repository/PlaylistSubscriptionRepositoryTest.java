@@ -1,6 +1,7 @@
 package com.sb10.mopl.playlistsubscription.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sb10.mopl.config.JpaAuditingConfig;
 import com.sb10.mopl.config.QuerydslConfig;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
@@ -48,6 +50,7 @@ class PlaylistSubscriptionRepositoryTest {
     User owner = userRepository.save(createUser("소유자", "owner@example.com"));
 
     subscriber = userRepository.save(createUser("구독자", "subscriber@example.com"));
+
     otherSubscriber = userRepository.save(createUser("다른 구독자", "other-subscriber@example.com"));
 
     playlist = playlistRepository.save(new Playlist(owner, "플레이리스트 제목", "플레이리스트 설명"));
@@ -120,6 +123,24 @@ class PlaylistSubscriptionRepositoryTest {
 
     // then
     assertThat(result).isEmpty();
+  }
+
+  @Test
+  @DisplayName("동일한 사용자와 플레이리스트를 중복 구독하면 무결성 예외가 발생한다")
+  void save_throwDataIntegrityViolation_whenSubscriptionIsDuplicated() {
+    // given
+    playlistSubscriptionRepository.save(new PlaylistSubscription(subscriber, playlist));
+    playlistSubscriptionRepository.flush();
+
+    entityManager.clear();
+
+    // when & then
+    assertThatThrownBy(
+            () -> {
+              playlistSubscriptionRepository.save(new PlaylistSubscription(subscriber, playlist));
+              playlistSubscriptionRepository.flush();
+            })
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test

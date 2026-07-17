@@ -60,7 +60,9 @@ class ReviewRepositoryTest {
             Content.create("다른 콘텐츠", ContentType.MOVIE, "다른 콘텐츠 설명", "/uploads/other.jpg"));
 
     user = userRepository.save(createUser("사용자", "user@example.com"));
+
     otherUser = userRepository.save(createUser("다른 사용자", "other-user@example.com"));
+
     thirdUser = userRepository.save(createUser("세 번째 사용자", "third-user@example.com"));
 
     entityManager.flush();
@@ -194,6 +196,34 @@ class ReviewRepositoryTest {
 
     // then
     assertThat(result).extracting(Review::getId).containsExactly(oldestReview.getId());
+  }
+
+  @Test
+  @DisplayName("생성 시각이 같으면 ID 커서를 기준으로 다음 리뷰를 조회한다")
+  void findAllByCursorDesc_applyIdAfter_whenCreatedAtIsSame() {
+    // given
+    Instant sameCreatedAt = Instant.parse("2026-07-15T00:00:00Z");
+
+    saveReview(content, user, "첫 번째 리뷰", 3, sameCreatedAt);
+
+    saveReview(content, otherUser, "두 번째 리뷰", 4, sameCreatedAt);
+
+    saveReview(content, thirdUser, "세 번째 리뷰", 5, sameCreatedAt);
+
+    List<Review> firstPage =
+        reviewRepository.findAllByCursorDesc(content.getId(), null, null, DEFAULT_PAGEABLE);
+
+    Review cursorReview = firstPage.get(0);
+
+    // when
+    List<Review> nextPage =
+        reviewRepository.findAllByCursorDesc(
+            content.getId(), sameCreatedAt, cursorReview.getId(), DEFAULT_PAGEABLE);
+
+    // then
+    assertThat(nextPage)
+        .extracting(Review::getId)
+        .containsExactlyElementsOf(firstPage.stream().skip(1).map(Review::getId).toList());
   }
 
   @Test
