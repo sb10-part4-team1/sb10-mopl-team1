@@ -15,7 +15,7 @@ public interface ContentRepository extends JpaRepository<Content, UUID>, Content
 
   List<Content> findByProviderAndProviderIdIn(ContentProvider provider, List<String> providerIds);
 
-  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Modifying(flushAutomatically = true)
   @Query(
       """
       UPDATE Content c
@@ -24,7 +24,7 @@ public interface ContentRepository extends JpaRepository<Content, UUID>, Content
       """)
   void incrementWatcherCount(@Param("contentId") UUID contentId);
 
-  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Modifying(flushAutomatically = true)
   @Query(
       """
       UPDATE Content c
