@@ -270,8 +270,8 @@ CREATE INDEX IF NOT EXISTS "IDX_CONV_PARTICIPANTS_USER"
 CREATE INDEX IF NOT EXISTS "IDX_DM_CONVERSATION_TIME"
     ON "direct_messages" ("conversation_id", "created_at");
 
-CREATE INDEX IF NOT EXISTS "IDX_NOTIFICATIONS_USER_READ"
-    ON "notifications" ("user_id", "is_read");
+CREATE INDEX IF NOT EXISTS "IDX_NOTIFICATIONS_USER_READ_CREATED_ID"
+    ON "notifications" ("user_id", "is_read", "created_at", "id");
 
 CREATE INDEX IF NOT EXISTS "IDX_WATCHING_SESSION_WATCHER"
     ON "watching_session" ("watcher_id");
