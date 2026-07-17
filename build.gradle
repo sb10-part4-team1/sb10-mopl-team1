@@ -139,8 +139,24 @@ tasks.named('test') {
   finalizedBy jacocoTestReport
 }
 
-tasks.named('jacocoTestReport') {
+def jacocoExcludes = [
+  '**/*Application.class',
+  '**/Q*.class',
+  '**/dto/**',
+  '**/mapper/**',
+  '**/config/**',
+  '**/exception/**',
+  '**/event/**'
+]
+
+tasks.named('jacocoTestReport', JacocoReport) {
   dependsOn test
+
+  classDirectories.setFrom(
+    files(classDirectories.files.collect {
+      fileTree(dir: it, exclude: jacocoExcludes)
+    })
+  )
 
   reports {
     xml.required = true
