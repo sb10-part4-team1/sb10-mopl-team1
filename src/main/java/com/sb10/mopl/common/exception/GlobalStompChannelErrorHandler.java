@@ -36,9 +36,6 @@ public class GlobalStompChannelErrorHandler extends StompSubProtocolErrorHandler
     ErrorCode errorCode = moplException.getErrorCode();
     log.warn("[STOMP] 채널 인터셉터 단계에서 예외 발생: {}", errorCode.getCode(), moplException);
 
-    ErrorResponse errorResponse =
-        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), moplException.getDetails());
-
     StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.ERROR);
     accessor.setMessage(errorCode.getMessage());
     accessor.setContentType(MimeTypeUtils.APPLICATION_JSON);
@@ -50,6 +47,8 @@ public class GlobalStompChannelErrorHandler extends StompSubProtocolErrorHandler
       accessor.setReceiptId(clientAccessor.getReceipt());
     }
 
+    ErrorResponse errorResponse =
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), moplException.getDetails());
     return handleInternal(accessor, writeValueAsBytes(errorResponse), ex, clientAccessor);
   }
 
