@@ -43,4 +43,16 @@ public class GlobalStompExceptionHandler {
     log.warn("[STOMP] 검증 실패: {}", details);
     return new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), details);
   }
+
+  // 위의 핸들러들이 처리하지 못한 나머지 예외들을 처리합니다.
+  @MessageExceptionHandler(Exception.class)
+  @SendToUser("/sub/queue/errors")
+  public ErrorResponse handleException(Exception ex) {
+    SystemErrorCode errorCode = SystemErrorCode.INTERNAL_SERVER_ERROR;
+    log.error("[STOMP] 기타 예외 발생", ex);
+    return new ErrorResponse(
+        errorCode.getCode(),
+        errorCode.getMessage(),
+        Map.of("message", "An unexpected system error occurred"));
+  }
 }

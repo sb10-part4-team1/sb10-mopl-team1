@@ -2,6 +2,7 @@ package com.sb10.mopl.common.exception;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -29,12 +30,19 @@ public class GlobalStompChannelErrorHandler extends StompSubProtocolErrorHandler
   public Message<byte[]> handleClientMessageProcessingError(
       Message<byte[]> clientMessage, Throwable ex) {
     MoplException moplException = findMoplException(ex);
-    if (moplException == null) {
-      return super.handleClientMessageProcessingError(clientMessage, ex);
-    }
+    ErrorCode errorCode;
+    Map<String, Object> details;
 
-    ErrorCode errorCode = moplException.getErrorCode();
-    log.warn("[STOMP] 채널 인터셉터 단계에서 예외 발생: {}", errorCode.getCode(), moplException);
+    if (moplException != null) {
+      errorCode = moplException.getErrorCode();
+      details = moplException.getDetails();
+      log.warn("[STOMP] 채널 인터셉터 단계에서 예외 발생: {}", errorCode.getCode(), moplException);
+    } else {
+      // 정의되지 않은 예외는 내부 메시지를 감추고 동일한 형식으로 응답합니다.
+      errorCode = SystemErrorCode.INTERNAL_SERVER_ERROR;
+      details = Map.of("message", "An unexpected system error occurred");
+      log.error("[STOMP] 채널 인터셉터 단계에서 처리되지 않은 예외 발생", ex);
+    }
 
     StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.ERROR);
     accessor.setMessage(errorCode.getMessage());
@@ -48,7 +56,7 @@ public class GlobalStompChannelErrorHandler extends StompSubProtocolErrorHandler
     }
 
     ErrorResponse errorResponse =
-        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), moplException.getDetails());
+        new ErrorResponse(errorCode.getCode(), errorCode.getMessage(), details);
     return handleInternal(accessor, writeValueAsBytes(errorResponse), ex, clientAccessor);
   }
 
