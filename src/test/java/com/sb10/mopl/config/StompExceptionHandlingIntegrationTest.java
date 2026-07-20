@@ -75,7 +75,7 @@ class StompExceptionHandlingIntegrationTest {
   }
 
   @Test
-  @DisplayName("@Valid 검증 실패는 GlobalStompExceptionHandler가 처리해 /user/sub/queue/errors로 응답한다")
+  @DisplayName("@Valid 검증 실패를 /user/sub/queue/errors로 응답한다")
   void send_respondWithValidationError_whenPayloadIsBlank() throws Exception {
     String token = issueAccessToken("chat-user@example.com");
     stompSession = connect(token, new StompSessionHandlerAdapter() {});
@@ -109,7 +109,7 @@ class StompExceptionHandlingIntegrationTest {
   }
 
   @Test
-  @DisplayName("채널 인터셉터 단계의 예외는 GlobalStompChannelErrorHandler가 처리해 STOMP ERROR 프레임으로 응답한다")
+  @DisplayName("채널 인터셉터 단계의 예외를 STOMP ERROR 프레임으로 응답한다")
   void subscribe_respondWithErrorFrame_whenContentDoesNotExist() throws Exception {
     String token = issueAccessToken("subscribe-user@example.com");
 
@@ -140,8 +140,7 @@ class StompExceptionHandlingIntegrationTest {
   }
 
   @Test
-  @DisplayName(
-      "CONNECT에 Bearer 토큰이 없으면 GlobalStompChannelErrorHandler가 처리해 AUTH01 ERROR 프레임으로 응답한다")
+  @DisplayName("CONNECT에 Bearer 토큰이 없으면 AUTH01 ERROR 프레임으로 응답한다")
   void connect_respondWithErrorFrame_whenBearerTokenIsMissing() throws Exception {
     StompHeaders connectHeaders = new StompHeaders(); // Authorization 헤더 없음
 
