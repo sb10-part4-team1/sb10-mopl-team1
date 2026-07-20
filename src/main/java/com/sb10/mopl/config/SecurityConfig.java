@@ -31,7 +31,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -77,7 +76,6 @@ public class SecurityConfig {
     pathMatcher("/error"),
     pathMatcher("/oauth2/**"),
     pathMatcher("/login/oauth2/**"),
-    pathMatcher("/h2-console/**"), // FIXME: 나중에 지워야 할 부분,
     pathMatcher("/api-docs/**"),
     pathMatcher("/swagger-ui/**"),
     pathMatcher("/swagger-ui.html"),
@@ -137,8 +135,7 @@ public class SecurityConfig {
 
     http.csrf(
             csrf ->
-                csrf.ignoringRequestMatchers(
-                        "/h2-console/**", "/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
+                csrf.ignoringRequestMatchers("/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
                     .csrfTokenRepository(csrfTokenRepository())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
@@ -158,8 +155,6 @@ public class SecurityConfig {
                     .logoutSuccessHandler(logoutSuccessHandler)
                     .clearAuthentication(true)
                     .invalidateHttpSession(false))
-        // H2-Console 사용을 위한 헤더 설정. 추후 제거 예정
-        .headers(headers -> headers.frameOptions(FrameOptionsConfig::sameOrigin))
         .authorizeHttpRequests(
             auth ->
                 auth
