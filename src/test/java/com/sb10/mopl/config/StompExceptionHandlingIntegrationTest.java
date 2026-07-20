@@ -1,6 +1,7 @@
 package com.sb10.mopl.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sb10.mopl.auth.repository.JwtSessionRepository;
@@ -14,6 +15,7 @@ import com.sb10.mopl.user.repository.UserRepository;
 import java.lang.reflect.Type;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -135,6 +137,46 @@ class StompExceptionHandlingIntegrationTest {
 
     ErrorResponse errorResponse = objectMapper.readValue(payload, ErrorResponse.class);
     assertThat(errorResponse.code()).isEqualTo("CT01");
+  }
+
+  @Test
+  @DisplayName(
+      "CONNECT에 Bearer 토큰이 없으면 GlobalStompChannelErrorHandler가 처리해 AUTH01 ERROR 프레임으로 응답한다")
+  void connect_respondWithErrorFrame_whenBearerTokenIsMissing() throws Exception {
+    StompHeaders connectHeaders = new StompHeaders(); // Authorization 헤더 없음
+
+    BlockingQueue<byte[]> errorFrames = new LinkedBlockingQueue<>();
+    StompSessionHandler handler =
+        new StompSessionHandlerAdapter() {
+          @Override
+          public void handleException(
+              StompSession session,
+              StompCommand command,
+              StompHeaders headers,
+              byte[] payload,
+              Throwable exception) {
+            errorFrames.add(payload);
+          }
+        };
+
+    // CONNECTED 프레임을 받지 못하므로 connectAsync().get()은 예외로 완료된다.
+    assertThatThrownBy(
+            () ->
+                stompClient
+                    .connectAsync(
+                        "ws://localhost:{port}/ws/websocket",
+                        new WebSocketHttpHeaders(),
+                        connectHeaders,
+                        handler,
+                        port)
+                    .get(5, TimeUnit.SECONDS))
+        .isInstanceOf(ExecutionException.class);
+
+    byte[] payload = errorFrames.poll(5, TimeUnit.SECONDS);
+    assertThat(payload).isNotNull();
+
+    ErrorResponse errorResponse = objectMapper.readValue(payload, ErrorResponse.class);
+    assertThat(errorResponse.code()).isEqualTo("AUTH01");
   }
 
   private String issueAccessToken(String email) {
