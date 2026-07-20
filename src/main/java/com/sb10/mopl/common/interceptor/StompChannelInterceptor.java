@@ -44,6 +44,9 @@ public class StompChannelInterceptor implements ChannelInterceptor {
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String PUBLISH_PREFIX = "/pub";
 
+  // Spring 기본 사용자 목적지 프리픽스
+  private static final String USER_DESTINATION_PREFIX = "/user/";
+
   private static final String UUID_PATTERN =
       "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 
@@ -109,6 +112,10 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     String destination = accessor.getDestination();
     if (destination == null) {
       rejectSubscription(destination);
+      return;
+    }
+
+    if (destination.startsWith(USER_DESTINATION_PREFIX)) {
       return;
     }
 

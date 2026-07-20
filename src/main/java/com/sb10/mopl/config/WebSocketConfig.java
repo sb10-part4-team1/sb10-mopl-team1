@@ -1,5 +1,6 @@
 package com.sb10.mopl.config;
 
+import com.sb10.mopl.common.exception.GlobalStompChannelErrorHandler;
 import com.sb10.mopl.common.interceptor.StompChannelInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   private final StompChannelInterceptor stompChannelInterceptor;
+  private final GlobalStompChannelErrorHandler globalStompChannelErrorHandler;
 
   @Override
   public void registerStompEndpoints(StompEndpointRegistry registry) {
@@ -23,6 +25,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         .addEndpoint("/ws")
         .setAllowedOriginPatterns("*") // fixme: 운영 단계에서 수정 필요
         .withSockJS(); // SockJS fallback 지원
+
+    // 채널 인터셉터(preSend) 단계에서 발생한 예외를 STOMP ERROR 프레임으로 응답
+    registry.setErrorHandler(globalStompChannelErrorHandler);
   }
 
   @Override
