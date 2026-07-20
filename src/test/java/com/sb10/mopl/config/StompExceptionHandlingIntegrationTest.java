@@ -76,7 +76,7 @@ class StompExceptionHandlingIntegrationTest {
 
   @Test
   @DisplayName("@Valid 검증 실패는 GlobalStompExceptionHandler가 처리해 /user/sub/queue/errors로 응답한다")
-  void invalidPayload_isHandledByGlobalStompExceptionHandler() throws Exception {
+  void send_respondWithValidationError_whenPayloadIsBlank() throws Exception {
     String token = issueAccessToken("chat-user@example.com");
     stompSession = connect(token, new StompSessionHandlerAdapter() {});
 
@@ -110,7 +110,7 @@ class StompExceptionHandlingIntegrationTest {
 
   @Test
   @DisplayName("채널 인터셉터 단계의 예외는 GlobalStompChannelErrorHandler가 처리해 STOMP ERROR 프레임으로 응답한다")
-  void interceptorException_isHandledByGlobalStompChannelErrorHandler() throws Exception {
+  void subscribe_respondWithErrorFrame_whenContentDoesNotExist() throws Exception {
     String token = issueAccessToken("subscribe-user@example.com");
 
     BlockingQueue<byte[]> errorFrames = new LinkedBlockingQueue<>();
