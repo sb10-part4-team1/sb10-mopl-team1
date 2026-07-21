@@ -4,6 +4,7 @@ import com.sb10.mopl.batch.dto.TmdbContentDto;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentProvider;
 import com.sb10.mopl.content.entity.ContentType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -12,7 +13,10 @@ import org.springframework.util.StringUtils;
 public class TmdbContentMapper {
 
   private static final String TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
-  private static final String DEFAULT_THUMBNAIL_URL = "/uploads/default-thumbnail.png";
+
+  @Value("${mopl.default-image-url}")
+  private String defaultImageUrl;
+
   private static final String DEFAULT_DESCRIPTION = "설명이 없는 컨텐츠입니다.";
 
   /**
@@ -25,7 +29,7 @@ public class TmdbContentMapper {
     String thumbnailUrl =
         StringUtils.hasText(dto.posterPath()) // 값이 없으면 기본 URL으로 설정
             ? TMDB_IMAGE_BASE_URL + dto.posterPath()
-            : DEFAULT_THUMBNAIL_URL;
+            : defaultImageUrl;
 
     // 값이 없으면 기본 문구로 설정
     String description = StringUtils.hasText(dto.overview()) ? dto.overview() : DEFAULT_DESCRIPTION;

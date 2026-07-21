@@ -122,6 +122,8 @@ class TmdbJobTest {
         .thenReturn(TmdbApiResponse.empty());
 
     // 매퍼는 실제 자바 코드 동작을 수행하도록 모킹
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        tmdbContentMapper, "defaultImageUrl", "/uploads/default-thumbnail.png");
     when(tmdbContentMapper.toEntity(any())).thenCallRealMethod();
 
     // when
