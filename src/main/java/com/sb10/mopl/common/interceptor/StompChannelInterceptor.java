@@ -9,7 +9,6 @@ import com.sb10.mopl.common.exception.MoplException;
 import com.sb10.mopl.content.exception.ContentErrorCode;
 import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.repository.ContentRepository;
-import com.sb10.mopl.conversation.entity.ConversationParticipantId;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
 import com.sb10.mopl.conversation.exception.ConversationException;
 import com.sb10.mopl.conversation.repository.ConversationParticipantRepository;
@@ -140,8 +139,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     UUID userId = resolveUserId(accessor.getUser());
 
     boolean isParticipant =
-        conversationParticipantRepository.existsById(
-            new ConversationParticipantId(conversationId, userId));
+        conversationParticipantRepository.existsByConversationIdAndUserId(conversationId, userId);
     if (!isParticipant) {
       throw new ConversationException(
           ConversationErrorCode.DIRECT_MESSAGE_TOPIC_ACCESS_DENIED,
