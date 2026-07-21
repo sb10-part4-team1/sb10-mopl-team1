@@ -38,8 +38,8 @@ public class ContentController {
   @PreAuthorize("hasRole('ADMIN')")
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ContentDto> create(
-      @RequestPart("request") @Valid ContentCreateRequest request,
-      @RequestPart(value = "thumbnail") MultipartFile thumbnail) {
+      @RequestPart(value = "request") @Valid ContentCreateRequest request,
+      @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail) {
     ContentDto contentDto = contentService.create(request, thumbnail);
     URI location = URI.create("/api/contents/" + contentDto.id());
     return ResponseEntity.created(location).body(contentDto);

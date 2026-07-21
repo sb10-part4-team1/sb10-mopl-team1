@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +33,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional(readOnly = true)
 public class ContentService {
 
-  private static final String DEFAULT_THUMBNAIL_URL = "/uploads/default-thumbnail.png";
+  @Value("${mopl.default-image-url}")
+  private String defaultImageUrl;
 
   private final ContentRepository contentRepository;
   private final TagRepository tagRepository;
@@ -41,7 +43,7 @@ public class ContentService {
 
   @Transactional
   public ContentDto create(ContentCreateRequest request, MultipartFile thumbnail) {
-    String thumbnailUrl = uploadThumbnailOrKeep(thumbnail, DEFAULT_THUMBNAIL_URL);
+    String thumbnailUrl = uploadThumbnailOrKeep(thumbnail, defaultImageUrl);
 
     Content content =
         Content.create(request.title(), request.type(), request.description(), thumbnailUrl);
