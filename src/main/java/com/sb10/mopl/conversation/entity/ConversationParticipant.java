@@ -27,11 +27,11 @@ import lombok.NoArgsConstructor;
 public class ConversationParticipant extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "conversation_id")
+  @JoinColumn(name = "conversation_id", nullable = false)
   private Conversation conversation;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id")
+  @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
   public ConversationParticipant(Conversation conversation, User user) {
