@@ -14,12 +14,9 @@ public interface ConversationRepository
   @Query(
       """
       SELECT c FROM Conversation c
-      WHERE c.id IN (
-          SELECT p.conversation.id FROM ConversationParticipant p WHERE p.user.id = :userId1
-      )
-      AND c.id IN (
-          SELECT p.conversation.id FROM ConversationParticipant p WHERE p.user.id = :userId2
-      )
+      JOIN c.participants p1
+      JOIN c.participants p2
+      WHERE p1.user.id = :userId1 AND p2.user.id = :userId2
       """)
   Optional<Conversation> findConversationByUserIds(
       @Param("userId1") UUID userId1, @Param("userId2") UUID userId2);

@@ -17,13 +17,13 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-  name = "conversation_participants",
-  indexes = {@Index(name = "IDX_CONV_PARTICIPANTS_USER", columnList = "user_id")},
-  uniqueConstraints = {
-    @UniqueConstraint(
-      name = "UQ_CONVERSATION_PARTICIPANTS_CONVERSATION_USER",
-      columnNames = {"conversation_id", "user_id"})
-  })
+    name = "conversation_participants",
+    indexes = {@Index(name = "IDX_CONV_PARTICIPANTS_USER", columnList = "user_id")},
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "UQ_CONVERSATION_PARTICIPANTS_CONVERSATION_USER",
+          columnNames = {"conversation_id", "user_id"})
+    })
 public class ConversationParticipant extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)
@@ -34,8 +34,13 @@ public class ConversationParticipant extends BaseEntity {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  public ConversationParticipant(Conversation conversation, User user) {
+  private ConversationParticipant(Conversation conversation, User user) {
     this.conversation = conversation;
     this.user = user;
+    conversation.getParticipants().add(this);
+  }
+
+  public static ConversationParticipant create(Conversation conversation, User user) {
+    return new ConversationParticipant(conversation, user);
   }
 }

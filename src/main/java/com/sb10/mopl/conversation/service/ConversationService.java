@@ -80,8 +80,8 @@ public class ConversationService {
     Conversation conversation = new Conversation();
     conversationRepository.save(conversation);
 
-    conversationParticipantRepository.save(new ConversationParticipant(conversation, me));
-    conversationParticipantRepository.save(new ConversationParticipant(conversation, withUser));
+    ConversationParticipant.create(conversation, me);
+    ConversationParticipant.create(conversation, withUser);
 
     return toDto(conversation, requestUserId);
   }
