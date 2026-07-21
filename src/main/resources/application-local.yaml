@@ -18,10 +18,6 @@ spring:
     username: sa
     password:
 
-  h2:
-    console:
-      enabled: true # 웹 브라우저에서 H2 콘솔 접근 허용
-
   sql:
     init:
       mode: always # 매번 시작할 때 schema.sql 실행

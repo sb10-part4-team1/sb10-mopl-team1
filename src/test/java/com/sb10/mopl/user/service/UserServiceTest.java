@@ -166,7 +166,7 @@ class UserServiceTest {
     User user = User.createUser("test-user", "user@example.com", "old-encoded-password", null);
     ChangePasswordRequest request = new ChangePasswordRequest("new-password");
 
-    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.of(user));
     when(passwordEncoder.encode("new-password")).thenReturn("new-encoded-password");
 
     // when
@@ -179,7 +179,7 @@ class UserServiceTest {
         () -> assertNotEquals("new-password", changedPassword),
         () -> assertEquals("new-encoded-password", changedPassword));
 
-    verify(userRepository).findById(userId);
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
     verify(passwordEncoder).encode("new-password");
     verify(temporaryPasswordService).deleteByUserId(userId);
     verify(authSessionService).invalidateAllByUserId(userId);
@@ -205,7 +205,7 @@ class UserServiceTest {
         () -> assertEquals(targetUserId, exception.getDetails().get("userId")),
         () -> assertEquals(requesterUserId, exception.getDetails().get("requesterId")));
 
-    verify(userRepository, never()).findById(any());
+    verify(userRepository, never()).findByIdAndIsDeletedFalse(any());
     verify(passwordEncoder, never()).encode(any());
     verify(temporaryPasswordService, never()).deleteByUserId(any());
     verify(authSessionService, never()).invalidateAllByUserId(any());
@@ -218,7 +218,7 @@ class UserServiceTest {
     UUID userId = UUID.randomUUID();
     ChangePasswordRequest request = new ChangePasswordRequest("new-password");
 
-    when(userRepository.findById(userId)).thenReturn(Optional.empty());
+    when(userRepository.findByIdAndIsDeletedFalse(userId)).thenReturn(Optional.empty());
 
     // when
     UserException exception =
@@ -230,7 +230,7 @@ class UserServiceTest {
         () -> assertEquals(UserErrorCode.USER_NOT_FOUND, exception.getErrorCode()),
         () -> assertEquals(userId, exception.getDetails().get("userId")));
 
-    verify(userRepository).findById(userId);
+    verify(userRepository).findByIdAndIsDeletedFalse(userId);
     verify(passwordEncoder, never()).encode(any());
     verify(temporaryPasswordService, never()).deleteByUserId(any());
     verify(authSessionService, never()).invalidateAllByUserId(any());
