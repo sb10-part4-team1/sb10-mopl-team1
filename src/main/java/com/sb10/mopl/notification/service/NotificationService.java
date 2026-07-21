@@ -5,11 +5,11 @@ import com.sb10.mopl.notification.dto.NotificationDto;
 import com.sb10.mopl.notification.dto.NotificationSearchRequest;
 import com.sb10.mopl.notification.entity.Notification;
 import com.sb10.mopl.notification.entity.NotificationLevel;
+import com.sb10.mopl.notification.event.NotificationCreatedEvent;
 import com.sb10.mopl.notification.exception.NotificationErrorCode;
 import com.sb10.mopl.notification.exception.NotificationException;
 import com.sb10.mopl.notification.mapper.NotificationMapper;
 import com.sb10.mopl.notification.repository.NotificationRepository;
-import com.sb10.mopl.sse.service.SseService;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,14 +29,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class NotificationService {
 
-  private static final String NOTIFICATIONS_EVENT_NAME = "notifications";
-
   private final NotificationRepository notificationRepository;
   private final UserRepository userRepository;
   private final NotificationMapper notificationMapper;
-  private final SseService sseService;
+  private final ApplicationEventPublisher eventPublisher;
 
-  // 알림을 저장하고 SSE로 실시간 발송한다. SSE 발송 실패가 저장된 알림까지 롤백시키지 않도록 별도로 처리한다.
+  // 알림을 저장하고, 커밋 이후 SSE로 실시간 발송되도록 이벤트를 발행한다.
   public NotificationDto create(
       UUID receiverId, String title, String content, NotificationLevel level) {
     User receiver =
@@ -51,16 +50,7 @@ public class NotificationService {
 
     NotificationDto dto = notificationMapper.toDto(notification);
 
-    try {
-      sseService.send(List.of(receiverId), NOTIFICATIONS_EVENT_NAME, dto);
-    } catch (RuntimeException exception) {
-      log.error(
-          "알림 SSE 발송 실패 - receiverId: {}, notificationId: {}, exceptionType: {}",
-          receiverId,
-          dto.id(),
-          exception.getClass().getSimpleName(),
-          exception);
-    }
+    eventPublisher.publishEvent(new NotificationCreatedEvent(dto));
 
     return dto;
   }
