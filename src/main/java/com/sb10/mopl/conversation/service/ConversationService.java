@@ -9,7 +9,6 @@ import com.sb10.mopl.conversation.dto.DirectMessageSearchRequest;
 import com.sb10.mopl.conversation.dto.DirectMessageSendRequest;
 import com.sb10.mopl.conversation.entity.Conversation;
 import com.sb10.mopl.conversation.entity.ConversationParticipant;
-import com.sb10.mopl.conversation.entity.ConversationParticipantId;
 import com.sb10.mopl.conversation.entity.DirectMessage;
 import com.sb10.mopl.conversation.event.DirectMessageSentEvent;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
@@ -263,8 +262,7 @@ public class ConversationService {
 
   private void requireParticipant(UUID myUserId, UUID conversationId) {
     boolean isParticipant =
-        conversationParticipantRepository.existsById(
-            new ConversationParticipantId(conversationId, myUserId));
+        conversationParticipantRepository.existsByConversationIdAndUserId(conversationId, myUserId);
     if (!isParticipant) {
       // 참여자가 아니면 존재 여부 노출 방지를 위해 404로 통일
       throw new ConversationException(

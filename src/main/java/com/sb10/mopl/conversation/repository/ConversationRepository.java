@@ -15,10 +15,10 @@ public interface ConversationRepository
       """
       SELECT c FROM Conversation c
       WHERE c.id IN (
-          SELECT p.id.conversationId FROM ConversationParticipant p WHERE p.id.userId = :userId1
+          SELECT p.conversation.id FROM ConversationParticipant p WHERE p.user.id = :userId1
       )
       AND c.id IN (
-          SELECT p.id.conversationId FROM ConversationParticipant p WHERE p.id.userId = :userId2
+          SELECT p.conversation.id FROM ConversationParticipant p WHERE p.user.id = :userId2
       )
       """)
   Optional<Conversation> findConversationByUserIds(
