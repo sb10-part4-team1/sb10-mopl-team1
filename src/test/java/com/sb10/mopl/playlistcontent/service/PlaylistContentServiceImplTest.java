@@ -39,20 +39,15 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class PlaylistContentServiceImplTest {
 
-  @Mock
-  private PlaylistContentRepository playlistContentRepository;
+  @Mock private PlaylistContentRepository playlistContentRepository;
 
-  @Mock
-  private PlaylistRepository playlistRepository;
+  @Mock private PlaylistRepository playlistRepository;
 
-  @Mock
-  private ContentRepository contentRepository;
+  @Mock private ContentRepository contentRepository;
 
-  @Mock
-  private ApplicationEventPublisher eventPublisher;
+  @Mock private ApplicationEventPublisher eventPublisher;
 
-  @InjectMocks
-  private PlaylistContentServiceImpl playlistContentService;
+  @InjectMocks private PlaylistContentServiceImpl playlistContentService;
 
   private UUID playlistId;
   private UUID contentId;
@@ -91,7 +86,7 @@ class PlaylistContentServiceImplTest {
     when(playlistRepository.findByIdWithOwner(playlistId)).thenReturn(Optional.of(playlist));
     when(contentRepository.findById(contentId)).thenReturn(Optional.of(content));
     when(playlistContentRepository.existsByPlaylistIdAndContentId(playlistId, contentId))
-      .thenReturn(false);
+        .thenReturn(false);
 
     // when
     assertDoesNotThrow(() -> playlistContentService.add(playlistId, contentId, ownerId));
@@ -105,7 +100,7 @@ class PlaylistContentServiceImplTest {
     assertSame(content, savedPlaylistContent.getContent());
 
     ArgumentCaptor<PlaylistContentAddedEvent> eventCaptor =
-      ArgumentCaptor.forClass(PlaylistContentAddedEvent.class);
+        ArgumentCaptor.forClass(PlaylistContentAddedEvent.class);
     verify(eventPublisher).publishEvent(eventCaptor.capture());
 
     PlaylistContentAddedEvent publishedEvent = eventCaptor.getValue();
@@ -122,9 +117,9 @@ class PlaylistContentServiceImplTest {
 
     // when
     PlaylistException exception =
-      assertThrows(
-        PlaylistException.class,
-        () -> playlistContentService.add(playlistId, contentId, ownerId));
+        assertThrows(
+            PlaylistException.class,
+            () -> playlistContentService.add(playlistId, contentId, ownerId));
 
     // then
     assertEquals(PlaylistErrorCode.PLAYLIST_NOT_FOUND, exception.getErrorCode());
@@ -137,17 +132,17 @@ class PlaylistContentServiceImplTest {
   void add_throwUnauthorized_whenUserIsNotOwner() {
     // given
     when(playlistRepository.findByIdWithOwner(playlistId))
-      .thenReturn(Optional.of(otherUserPlaylist));
+        .thenReturn(Optional.of(otherUserPlaylist));
 
     // when
     PlaylistContentException exception =
-      assertThrows(
-        PlaylistContentException.class,
-        () -> playlistContentService.add(playlistId, contentId, ownerId));
+        assertThrows(
+            PlaylistContentException.class,
+            () -> playlistContentService.add(playlistId, contentId, ownerId));
 
     // then
     assertEquals(
-      PlaylistContentErrorCode.UNAUTHORIZED_PLAYLIST_CONTENT_ACCESS, exception.getErrorCode());
+        PlaylistContentErrorCode.UNAUTHORIZED_PLAYLIST_CONTENT_ACCESS, exception.getErrorCode());
     verify(contentRepository, never()).findById(any(UUID.class));
     verify(playlistContentRepository, never()).save(any(PlaylistContent.class));
   }
@@ -161,9 +156,9 @@ class PlaylistContentServiceImplTest {
 
     // when
     ContentException exception =
-      assertThrows(
-        ContentException.class,
-        () -> playlistContentService.add(playlistId, contentId, ownerId));
+        assertThrows(
+            ContentException.class,
+            () -> playlistContentService.add(playlistId, contentId, ownerId));
 
     // then
     assertEquals(ContentErrorCode.CONTENT_NOT_FOUND, exception.getErrorCode());
@@ -177,17 +172,17 @@ class PlaylistContentServiceImplTest {
     when(playlistRepository.findByIdWithOwner(playlistId)).thenReturn(Optional.of(playlist));
     when(contentRepository.findById(contentId)).thenReturn(Optional.of(content));
     when(playlistContentRepository.existsByPlaylistIdAndContentId(playlistId, contentId))
-      .thenReturn(true);
+        .thenReturn(true);
 
     // when
     PlaylistContentException exception =
-      assertThrows(
-        PlaylistContentException.class,
-        () -> playlistContentService.add(playlistId, contentId, ownerId));
+        assertThrows(
+            PlaylistContentException.class,
+            () -> playlistContentService.add(playlistId, contentId, ownerId));
 
     // then
     assertEquals(
-      PlaylistContentErrorCode.PLAYLIST_CONTENT_ALREADY_EXISTS, exception.getErrorCode());
+        PlaylistContentErrorCode.PLAYLIST_CONTENT_ALREADY_EXISTS, exception.getErrorCode());
     verify(playlistContentRepository, never()).save(any(PlaylistContent.class));
   }
 
@@ -197,7 +192,7 @@ class PlaylistContentServiceImplTest {
     // given
     when(playlistRepository.findByIdWithOwner(playlistId)).thenReturn(Optional.of(playlist));
     when(playlistContentRepository.findByPlaylistIdAndContentId(playlistId, contentId))
-      .thenReturn(Optional.of(playlistContent));
+        .thenReturn(Optional.of(playlistContent));
 
     // when
     assertDoesNotThrow(() -> playlistContentService.delete(playlistId, contentId, ownerId));
@@ -214,9 +209,9 @@ class PlaylistContentServiceImplTest {
 
     // when
     PlaylistException exception =
-      assertThrows(
-        PlaylistException.class,
-        () -> playlistContentService.delete(playlistId, contentId, ownerId));
+        assertThrows(
+            PlaylistException.class,
+            () -> playlistContentService.delete(playlistId, contentId, ownerId));
 
     // then
     assertEquals(PlaylistErrorCode.PLAYLIST_NOT_FOUND, exception.getErrorCode());
@@ -229,17 +224,17 @@ class PlaylistContentServiceImplTest {
   void delete_throwUnauthorized_whenUserIsNotOwner() {
     // given
     when(playlistRepository.findByIdWithOwner(playlistId))
-      .thenReturn(Optional.of(otherUserPlaylist));
+        .thenReturn(Optional.of(otherUserPlaylist));
 
     // when
     PlaylistContentException exception =
-      assertThrows(
-        PlaylistContentException.class,
-        () -> playlistContentService.delete(playlistId, contentId, ownerId));
+        assertThrows(
+            PlaylistContentException.class,
+            () -> playlistContentService.delete(playlistId, contentId, ownerId));
 
     // then
     assertEquals(
-      PlaylistContentErrorCode.UNAUTHORIZED_PLAYLIST_CONTENT_ACCESS, exception.getErrorCode());
+        PlaylistContentErrorCode.UNAUTHORIZED_PLAYLIST_CONTENT_ACCESS, exception.getErrorCode());
     verify(playlistContentRepository, never()).findByPlaylistIdAndContentId(any(), any());
     verify(playlistContentRepository, never()).delete(any(PlaylistContent.class));
   }
@@ -250,13 +245,13 @@ class PlaylistContentServiceImplTest {
     // given
     when(playlistRepository.findByIdWithOwner(playlistId)).thenReturn(Optional.of(playlist));
     when(playlistContentRepository.findByPlaylistIdAndContentId(playlistId, contentId))
-      .thenReturn(Optional.empty());
+        .thenReturn(Optional.empty());
 
     // when
     PlaylistContentException exception =
-      assertThrows(
-        PlaylistContentException.class,
-        () -> playlistContentService.delete(playlistId, contentId, ownerId));
+        assertThrows(
+            PlaylistContentException.class,
+            () -> playlistContentService.delete(playlistId, contentId, ownerId));
 
     // then
     assertEquals(PlaylistContentErrorCode.PLAYLIST_CONTENT_NOT_FOUND, exception.getErrorCode());

@@ -36,16 +36,16 @@ public class NotificationService {
 
   // 알림을 저장하고, 커밋 이후 SSE로 실시간 발송되도록 이벤트를 발행한다.
   public NotificationDto create(
-    UUID receiverId, String title, String content, NotificationLevel level) {
+      UUID receiverId, String title, String content, NotificationLevel level) {
     User receiver =
-      userRepository
-        .findById(receiverId)
-        .orElseThrow(
-          () ->
-            new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", receiverId)));
+        userRepository
+            .findById(receiverId)
+            .orElseThrow(
+                () ->
+                    new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", receiverId)));
 
     Notification notification =
-      Notification.builder().user(receiver).title(title).content(content).level(level).build();
+        Notification.builder().user(receiver).title(title).content(content).level(level).build();
     notificationRepository.save(notification);
 
     NotificationDto dto = notificationMapper.toDto(notification);
@@ -57,20 +57,20 @@ public class NotificationService {
 
   // 여러 수신자에게 동일한 알림을 일괄 생성
   public void createAll(
-    List<UUID> receiverIds, String title, String content, NotificationLevel level) {
+      List<UUID> receiverIds, String title, String content, NotificationLevel level) {
     List<User> receivers = userRepository.findAllById(receiverIds);
 
     List<Notification> notifications =
-      receivers.stream()
-        .map(
-          receiver ->
-            Notification.builder()
-              .user(receiver)
-              .title(title)
-              .content(content)
-              .level(level)
-              .build())
-        .toList();
+        receivers.stream()
+            .map(
+                receiver ->
+                    Notification.builder()
+                        .user(receiver)
+                        .title(title)
+                        .content(content)
+                        .level(level)
+                        .build())
+            .toList();
 
     notificationRepository.saveAll(notifications);
 
@@ -82,7 +82,7 @@ public class NotificationService {
   // 특정 사용자의 알림 목록 조회 (커서 페이지네이션)
   @Transactional(readOnly = true)
   public CursorPageResponse<NotificationDto> findByReceiver(
-    UUID receiverId, NotificationSearchRequest request) {
+      UUID receiverId, NotificationSearchRequest request) {
     List<Notification> result = notificationRepository.search(receiverId, request);
 
     boolean hasNext = result.size() > request.limit();
@@ -101,31 +101,31 @@ public class NotificationService {
     long totalCount = notificationRepository.countByUserIdAndIsReadFalse(receiverId);
 
     return new CursorPageResponse<>(
-      dtos,
-      nextCursor,
-      nextIdAfter,
-      hasNext,
-      totalCount,
-      request.sortBy().name(),
-      request.sortDirection());
+        dtos,
+        nextCursor,
+        nextIdAfter,
+        hasNext,
+        totalCount,
+        request.sortBy().name(),
+        request.sortDirection());
   }
 
   // 알림 읽음 처리
   public void markAsRead(UUID notificationId, UUID requesterId) {
     Notification notification =
-      notificationRepository
-        .findById(notificationId)
-        .orElseThrow(
-          () ->
-            new NotificationException(
-              NotificationErrorCode.NOTIFICATION_NOT_FOUND,
-              Map.of("notificationId", notificationId)));
+        notificationRepository
+            .findById(notificationId)
+            .orElseThrow(
+                () ->
+                    new NotificationException(
+                        NotificationErrorCode.NOTIFICATION_NOT_FOUND,
+                        Map.of("notificationId", notificationId)));
 
     // 본인의 알림이 아니면 예외를 던진다.
     if (!notification.getUser().getId().equals(requesterId)) {
       throw new NotificationException(
-        NotificationErrorCode.NOTIFICATION_ACCESS_DENIED,
-        Map.of("notificationId", notificationId, "requesterId", requesterId));
+          NotificationErrorCode.NOTIFICATION_ACCESS_DENIED,
+          Map.of("notificationId", notificationId, "requesterId", requesterId));
     }
 
     notification.updateIsRead(true);
