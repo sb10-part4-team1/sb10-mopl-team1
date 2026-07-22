@@ -7,9 +7,6 @@ import com.sb10.mopl.content.dto.ContentDto;
 import com.sb10.mopl.content.dto.ContentSearchRequest;
 import com.sb10.mopl.content.dto.ContentUpdateRequest;
 import com.sb10.mopl.content.service.ContentService;
-import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;
-import com.sb10.mopl.watchingsession.dto.WatchingSessionSearchRequest;
-import com.sb10.mopl.watchingsession.service.WatchingSessionService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
@@ -34,7 +31,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class ContentController implements ContentControllerApiDocs {
 
   private final ContentService contentService;
-  private final WatchingSessionService watchingSessionService;
 
   @Override
   @PreAuthorize("hasRole('ADMIN')")
@@ -78,16 +74,6 @@ public class ContentController implements ContentControllerApiDocs {
   public ResponseEntity<CursorPageResponse<ContentDto>> findAll(
       @ModelAttribute @Valid ContentSearchRequest request) {
     CursorPageResponse<ContentDto> response = contentService.findAll(request);
-    return ResponseEntity.ok(response);
-  }
-
-  // 특정 콘텐츠의 시청 세션(현재 시청자) 목록 조회
-  @Override
-  @GetMapping("/{contentId}/watching-sessions")
-  public ResponseEntity<CursorPageResponse<WatchingSessionDto>> findWatchingSessions(
-      @PathVariable UUID contentId, @ModelAttribute @Valid WatchingSessionSearchRequest request) {
-    CursorPageResponse<WatchingSessionDto> response =
-        watchingSessionService.findByContent(contentId, request);
     return ResponseEntity.ok(response);
   }
 }

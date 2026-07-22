@@ -10,7 +10,6 @@ import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.request.UserUpdateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
-import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -214,32 +213,4 @@ public interface UserControllerApiDocs {
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
   ResponseEntity<CursorPageResponse<UserDto>> findUsers(@ParameterObject UserSearchRequest request);
-
-  @Operation(
-      tags = {"시청 세션 관리"},
-      summary = "특정 사용자의 시청 세션 조회 (nullable)")
-  @ApiResponses({
-    @ApiResponse(
-        responseCode = "200",
-        description = "성공",
-        content = @Content(schema = @Schema(implementation = WatchingSessionDto.class))),
-    @ApiResponse(
-        responseCode = "400",
-        description = "잘못된 요청",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-    @ApiResponse(
-        responseCode = "401",
-        description = "인증 오류",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-    @ApiResponse(
-        responseCode = "404",
-        description = "해당 리소스 없음",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-    @ApiResponse(
-        responseCode = "500",
-        description = "서버 오류",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-  })
-  ResponseEntity<WatchingSessionDto> findWatchingSession(
-      @Parameter(description = "시청자 ID") UUID watcherId);
 }

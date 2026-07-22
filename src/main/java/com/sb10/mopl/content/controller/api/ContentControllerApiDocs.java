@@ -6,8 +6,6 @@ import com.sb10.mopl.content.dto.ContentCreateRequest;
 import com.sb10.mopl.content.dto.ContentDto;
 import com.sb10.mopl.content.dto.ContentSearchRequest;
 import com.sb10.mopl.content.dto.ContentUpdateRequest;
-import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;
-import com.sb10.mopl.watchingsession.dto.WatchingSessionSearchRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -160,33 +158,4 @@ public interface ContentControllerApiDocs {
   })
   ResponseEntity<CursorPageResponse<ContentDto>> findAll(
       @ParameterObject ContentSearchRequest request);
-
-  @Operation(
-      tags = {"시청 세션 관리"},
-      summary = "특정 콘텐츠의 시청 세션 목록 조회 (커서 페이지네이션)")
-  @ApiResponses({
-    @ApiResponse(
-        responseCode = "200",
-        description = "성공",
-        content = @Content(schema = @Schema(implementation = CursorPageResponse.class))),
-    @ApiResponse(
-        responseCode = "400",
-        description = "잘못된 요청",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-    @ApiResponse(
-        responseCode = "401",
-        description = "인증 오류",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-    @ApiResponse(
-        responseCode = "404",
-        description = "해당 리소스 없음",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-    @ApiResponse(
-        responseCode = "500",
-        description = "서버 오류",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-  })
-  ResponseEntity<CursorPageResponse<WatchingSessionDto>> findWatchingSessions(
-      @Parameter(description = "콘텐츠 ID") UUID contentId,
-      @ParameterObject WatchingSessionSearchRequest request);
 }
