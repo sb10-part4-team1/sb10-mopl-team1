@@ -3,6 +3,7 @@ package com.sb10.mopl.user.controller;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.security.user.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.user.controller.api.UserControllerApiDocs;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.request.UserLockUpdateRequest;
@@ -34,23 +35,26 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-public class UserController {
+public class UserController implements UserControllerApiDocs {
 
   private final UserService userService;
   private final WatchingSessionService watchingSessionService;
 
+  @Override
   @PostMapping
   public ResponseEntity<UserDto> signUp(@Valid @RequestBody UserCreateRequest userCreateRequest) {
     UserDto userDto = userService.signUp(userCreateRequest);
     return ResponseEntity.created(URI.create("/api/users/" + userDto.id())).body(userDto);
   }
 
+  @Override
   @GetMapping("/{userId}")
   public ResponseEntity<UserDto> findUser(@PathVariable UUID userId) {
     UserDto userDto = userService.findUser(userId);
     return ResponseEntity.ok(userDto);
   }
 
+  @Override
   @PatchMapping(value = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<UserDto> updateProfile(
       @PathVariable UUID userId,
@@ -61,6 +65,7 @@ public class UserController {
     return ResponseEntity.ok(userDto);
   }
 
+  @Override
   @PatchMapping("/{userId}/password")
   public ResponseEntity<Void> changePassword(
       @PathVariable UUID userId,
@@ -70,6 +75,7 @@ public class UserController {
     return ResponseEntity.noContent().build();
   }
 
+  @Override
   @PreAuthorize("hasRole('ADMIN')")
   @PatchMapping("/{userId}/role")
   public ResponseEntity<Void> updateRole(
@@ -80,6 +86,7 @@ public class UserController {
     return ResponseEntity.noContent().build();
   }
 
+  @Override
   @PreAuthorize("hasRole('ADMIN')")
   @PatchMapping("/{userId}/locked")
   public ResponseEntity<Void> updateLocked(
@@ -88,6 +95,7 @@ public class UserController {
     return ResponseEntity.noContent().build();
   }
 
+  @Override
   @PreAuthorize("hasRole('ADMIN')")
   @GetMapping
   public ResponseEntity<CursorPageResponse<UserDto>> findUsers(
@@ -97,6 +105,7 @@ public class UserController {
   }
 
   // 특정 사용자의 현재 시청 세션 조회 (nullable)
+  @Override
   @GetMapping("/{watcherId}/watching-sessions")
   public ResponseEntity<WatchingSessionDto> findWatchingSession(@PathVariable UUID watcherId) {
     return ResponseEntity.of(watchingSessionService.findLatestByWatcher(watcherId));
