@@ -20,4 +20,7 @@ public interface PlaylistSubscriptionRepositoryCustom {
       Collection<UUID> playlistIds);
 
   Set<UUID> findSubscribedPlaylistIds(UUID subscriberId, Collection<UUID> playlistIds);
+
+  // 특정 플레이리스트를 구독 중인 유저 id 목록
+  List<UUID> findSubscriberIdsByPlaylistId(UUID playlistId);
 }

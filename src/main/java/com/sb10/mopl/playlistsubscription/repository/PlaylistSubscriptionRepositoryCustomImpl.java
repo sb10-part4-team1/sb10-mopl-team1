@@ -112,6 +112,16 @@ public class PlaylistSubscriptionRepositoryCustomImpl
     return new HashSet<>(results);
   }
 
+  // 특정 플레이리스트를 구독 중인 유저 id 목록 조회
+  @Override
+  public List<UUID> findSubscriberIdsByPlaylistId(UUID playlistId) {
+    return queryFactory
+        .select(playlistSubscription.subscriber.id)
+        .from(playlistSubscription)
+        .where(playlistSubscription.playlist.id.eq(playlistId))
+        .fetch();
+  }
+
   // 플레이리스트별 구독자 수 조회 결과
   private record PlaylistSubscriptionCount(UUID playlistId, Long subscriberCount)
       implements PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection {

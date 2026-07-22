@@ -55,6 +55,30 @@ public class NotificationService {
     return dto;
   }
 
+  // 여러 수신자에게 동일한 알림을 일괄 생성
+  public void createAll(
+      List<UUID> receiverIds, String title, String content, NotificationLevel level) {
+    List<User> receivers = userRepository.findAllById(receiverIds);
+
+    List<Notification> notifications =
+        receivers.stream()
+            .map(
+                receiver ->
+                    Notification.builder()
+                        .user(receiver)
+                        .title(title)
+                        .content(content)
+                        .level(level)
+                        .build())
+            .toList();
+
+    notificationRepository.saveAll(notifications);
+
+    List<NotificationDto> dtos = notifications.stream().map(notificationMapper::toDto).toList();
+
+    dtos.forEach(dto -> eventPublisher.publishEvent(new NotificationCreatedEvent(dto)));
+  }
+
   // 특정 사용자의 알림 목록 조회 (커서 페이지네이션)
   @Transactional(readOnly = true)
   public CursorPageResponse<NotificationDto> findByReceiver(

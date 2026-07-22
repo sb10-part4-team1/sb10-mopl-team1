@@ -13,6 +13,7 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistsubscription.entity.PlaylistSubscription;
+import com.sb10.mopl.playlistsubscription.event.PlaylistSubscribedEvent;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionErrorCode;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionException;
 import com.sb10.mopl.playlistsubscription.repository.PlaylistSubscriptionRepository;
@@ -29,6 +30,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PlaylistSubscriptionServiceImplTest {
@@ -38,6 +40,8 @@ class PlaylistSubscriptionServiceImplTest {
   @Mock private PlaylistRepository playlistRepository;
 
   @Mock private PlaylistSubscriptionRepository playlistSubscriptionRepository;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private PlaylistSubscriptionServiceImpl playlistSubscriptionService;
 
@@ -49,12 +53,18 @@ class PlaylistSubscriptionServiceImplTest {
     UUID playlistId = UUID.randomUUID();
     UUID ownerId = UUID.randomUUID();
 
+    String subscriberName = "구독요청자";
+    String playlistTitle = "플레이리스트 제목";
+
     User subscriber = mock(User.class);
     User owner = mock(User.class);
     Playlist playlist = mock(Playlist.class);
 
     when(owner.getId()).thenReturn(ownerId);
     when(playlist.getOwner()).thenReturn(owner);
+    when(playlist.getId()).thenReturn(playlistId);
+    when(playlist.getTitle()).thenReturn(playlistTitle);
+    when(subscriber.getName()).thenReturn(subscriberName);
     when(userRepository.findByIdAndIsDeletedFalse(subscriberId))
         .thenReturn(Optional.of(subscriber));
     when(playlistRepository.findByIdWithOwner(playlistId)).thenReturn(Optional.of(playlist));
@@ -74,6 +84,16 @@ class PlaylistSubscriptionServiceImplTest {
 
     assertThat(savedSubscription.getSubscriber()).isSameAs(subscriber);
     assertThat(savedSubscription.getPlaylist()).isSameAs(playlist);
+
+    ArgumentCaptor<PlaylistSubscribedEvent> eventCaptor =
+        ArgumentCaptor.forClass(PlaylistSubscribedEvent.class);
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    PlaylistSubscribedEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.ownerId()).isEqualTo(ownerId);
+    assertThat(publishedEvent.subscriberName()).isEqualTo(subscriberName);
+    assertThat(publishedEvent.playlistId()).isEqualTo(playlistId);
+    assertThat(publishedEvent.playlistTitle()).isEqualTo(playlistTitle);
   }
 
   @Test

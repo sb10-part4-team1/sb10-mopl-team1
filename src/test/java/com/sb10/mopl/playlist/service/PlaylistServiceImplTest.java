@@ -16,6 +16,7 @@ import com.sb10.mopl.playlist.dto.PlaylistDto;
 import com.sb10.mopl.playlist.dto.PlaylistOwnerDto;
 import com.sb10.mopl.playlist.dto.PlaylistUpdateRequest;
 import com.sb10.mopl.playlist.entity.Playlist;
+import com.sb10.mopl.playlist.event.PlaylistCreatedEvent;
 import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.mapper.PlaylistMapper;
@@ -33,9 +34,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -49,6 +52,8 @@ class PlaylistServiceImplTest {
   @Mock private PlaylistMapper playlistMapper;
 
   @Mock private PlaylistSubscriptionRepository playlistSubscriptionRepository;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private PlaylistServiceImpl playlistService;
 
@@ -101,6 +106,16 @@ class PlaylistServiceImplTest {
     // then
     assertThat(result).isEqualTo(playlistDto);
     verify(playlistRepository).save(playlist);
+
+    ArgumentCaptor<PlaylistCreatedEvent> eventCaptor =
+        ArgumentCaptor.forClass(PlaylistCreatedEvent.class);
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    PlaylistCreatedEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.ownerId()).isEqualTo(ownerId);
+    assertThat(publishedEvent.ownerName()).isEqualTo(owner.getName());
+    assertThat(publishedEvent.playlistTitle()).isEqualTo(playlist.getTitle());
+    assertThat(publishedEvent.playlistDescription()).isEqualTo(playlist.getDescription());
   }
 
   @Test

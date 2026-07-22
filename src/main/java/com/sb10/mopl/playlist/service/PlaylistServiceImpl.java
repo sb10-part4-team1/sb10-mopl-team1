@@ -6,6 +6,7 @@ import com.sb10.mopl.playlist.dto.PlaylistCreateRequest;
 import com.sb10.mopl.playlist.dto.PlaylistDto;
 import com.sb10.mopl.playlist.dto.PlaylistUpdateRequest;
 import com.sb10.mopl.playlist.entity.Playlist;
+import com.sb10.mopl.playlist.event.PlaylistCreatedEvent;
 import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.mapper.PlaylistMapper;
@@ -23,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,7 @@ public class PlaylistServiceImpl implements PlaylistService {
   private final UserRepository userRepository;
   private final PlaylistMapper playlistMapper;
   private final PlaylistSubscriptionRepository playlistSubscriptionRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   @Transactional
@@ -56,6 +59,14 @@ public class PlaylistServiceImpl implements PlaylistService {
 
     // 저장 후 응답 DTO로 변환
     Playlist savedPlaylist = playlistRepository.save(playlist);
+
+    // 신규 플레이리스트 등록 알림을 위한 이벤트 발행
+    eventPublisher.publishEvent(
+        new PlaylistCreatedEvent(
+            owner.getId(),
+            owner.getName(),
+            savedPlaylist.getTitle(),
+            savedPlaylist.getDescription()));
 
     return toPlaylistDto(savedPlaylist, null);
   }

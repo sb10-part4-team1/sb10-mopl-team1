@@ -9,12 +9,14 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistcontent.entity.PlaylistContent;
+import com.sb10.mopl.playlistcontent.event.PlaylistContentAddedEvent;
 import com.sb10.mopl.playlistcontent.exception.PlaylistContentErrorCode;
 import com.sb10.mopl.playlistcontent.exception.PlaylistContentException;
 import com.sb10.mopl.playlistcontent.repository.PlaylistContentRepository;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ public class PlaylistContentServiceImpl implements PlaylistContentService {
   private final PlaylistContentRepository playlistContentRepository;
   private final PlaylistRepository playlistRepository;
   private final ContentRepository contentRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   @Transactional
@@ -43,6 +46,9 @@ public class PlaylistContentServiceImpl implements PlaylistContentService {
 
     PlaylistContent playlistContent = new PlaylistContent(playlist, content);
     playlistContentRepository.save(playlistContent);
+
+    eventPublisher.publishEvent(
+        new PlaylistContentAddedEvent(playlist.getId(), playlist.getTitle(), content.getTitle()));
   }
 
   @Override

@@ -18,6 +18,7 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistcontent.entity.PlaylistContent;
+import com.sb10.mopl.playlistcontent.event.PlaylistContentAddedEvent;
 import com.sb10.mopl.playlistcontent.exception.PlaylistContentErrorCode;
 import com.sb10.mopl.playlistcontent.exception.PlaylistContentException;
 import com.sb10.mopl.playlistcontent.repository.PlaylistContentRepository;
@@ -32,6 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +44,8 @@ class PlaylistContentServiceImplTest {
   @Mock private PlaylistRepository playlistRepository;
 
   @Mock private ContentRepository contentRepository;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private PlaylistContentServiceImpl playlistContentService;
 
@@ -78,6 +82,7 @@ class PlaylistContentServiceImplTest {
   @DisplayName("플레이리스트 콘텐츠 추가 요청이 유효하면 콘텐츠를 추가한다")
   void add_success_whenRequestIsValid() {
     // given
+    when(content.getTitle()).thenReturn("콘텐츠 제목");
     when(playlistRepository.findByIdWithOwner(playlistId)).thenReturn(Optional.of(playlist));
     when(contentRepository.findById(contentId)).thenReturn(Optional.of(content));
     when(playlistContentRepository.existsByPlaylistIdAndContentId(playlistId, contentId))
@@ -93,6 +98,15 @@ class PlaylistContentServiceImplTest {
     PlaylistContent savedPlaylistContent = captor.getValue();
     assertSame(playlist, savedPlaylistContent.getPlaylist());
     assertSame(content, savedPlaylistContent.getContent());
+
+    ArgumentCaptor<PlaylistContentAddedEvent> eventCaptor =
+        ArgumentCaptor.forClass(PlaylistContentAddedEvent.class);
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    PlaylistContentAddedEvent publishedEvent = eventCaptor.getValue();
+    assertEquals(playlistId, publishedEvent.playlistId());
+    assertEquals(playlist.getTitle(), publishedEvent.playlistTitle());
+    assertEquals(content.getTitle(), publishedEvent.contentTitle());
   }
 
   @Test
