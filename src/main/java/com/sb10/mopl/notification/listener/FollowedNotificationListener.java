@@ -22,16 +22,13 @@ public class FollowedNotificationListener {
   public void sendFollowedNotification(FollowedEvent event) {
     try {
       notificationService.create(
-        event.followeeId(),
-        event.followerName() + "님이 나를 팔로우했어요.",
-        "",
-        NotificationLevel.INFO);
+          event.followeeId(), event.followerName() + "님이 나를 팔로우했어요.", "", NotificationLevel.INFO);
     } catch (RuntimeException exception) {
       log.error(
-        "팔로우 알림 생성 실패 - followeeId: {}, exceptionType: {}",
-        event.followeeId(),
-        exception.getClass().getSimpleName(),
-        exception);
+          "팔로우 알림 생성 실패 - followeeId: {}, exceptionType: {}",
+          event.followeeId(),
+          exception.getClass().getSimpleName(),
+          exception);
     }
   }
 }

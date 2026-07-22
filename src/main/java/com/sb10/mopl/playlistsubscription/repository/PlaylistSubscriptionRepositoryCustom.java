@@ -12,12 +12,12 @@ public interface PlaylistSubscriptionRepositoryCustom {
   boolean existsBySubscriberIdAndPlaylistId(UUID subscriberId, UUID playlistId);
 
   Optional<PlaylistSubscription> findBySubscriberIdAndPlaylistId(
-    UUID subscriberId, UUID playlistId);
+      UUID subscriberId, UUID playlistId);
 
   long countByPlaylistId(UUID playlistId);
 
   List<PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection> countByPlaylistIds(
-    Collection<UUID> playlistIds);
+      Collection<UUID> playlistIds);
 
   Set<UUID> findSubscribedPlaylistIds(UUID subscriberId, Collection<UUID> playlistIds);
 

@@ -70,20 +70,20 @@ public class FollowServiceImpl implements FollowService {
   private void validateFollowNotExists(UUID followerId, UUID followeeId) {
     if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
       throw new FollowException(
-        FollowErrorCode.FOLLOW_ALREADY_EXISTS,
-        Map.of("followerId", followerId, "followeeId", followeeId));
+          FollowErrorCode.FOLLOW_ALREADY_EXISTS,
+          Map.of("followerId", followerId, "followeeId", followeeId));
     }
   }
 
   // 팔로우 존재 여부와 요청자 권한을 함께 검증
   private Follow getFollowOwnedBy(UUID followId, UUID userId) {
     Follow follow =
-      followRepository
-        .findById(followId)
-        .orElseThrow(
-          () ->
-            new FollowException(
-              FollowErrorCode.FOLLOW_NOT_FOUND, Map.of("followId", followId)));
+        followRepository
+            .findById(followId)
+            .orElseThrow(
+                () ->
+                    new FollowException(
+                        FollowErrorCode.FOLLOW_NOT_FOUND, Map.of("followId", followId)));
 
     validateFollowOwner(follow, userId);
 
@@ -94,37 +94,37 @@ public class FollowServiceImpl implements FollowService {
   private void validateFollowOwner(Follow follow, UUID userId) {
     if (!follow.getFollowerId().equals(userId)) {
       throw new FollowException(
-        FollowErrorCode.UNAUTHORIZED_FOLLOW_ACCESS,
-        Map.of("followId", follow.getId(), "userId", userId));
+          FollowErrorCode.UNAUTHORIZED_FOLLOW_ACCESS,
+          Map.of("followId", follow.getId(), "userId", userId));
     }
   }
 
   // 팔로우 대상 유저 존재 여부 검증
   private void validateFolloweeExists(UUID followeeId) {
     userRepository
-      .findByIdAndIsDeletedFalse(followeeId)
-      .orElseThrow(
-        () ->
-          new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("followeeId", followeeId)));
+        .findByIdAndIsDeletedFalse(followeeId)
+        .orElseThrow(
+            () ->
+                new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("followeeId", followeeId)));
   }
 
   // 팔로우 요청자 객체 조회
   private User getFollower(UUID followerId) {
     return userRepository
-      .findByIdAndIsDeletedFalse(followerId)
-      .orElseThrow(
-        () ->
-          new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("followerId", followerId)));
+        .findByIdAndIsDeletedFalse(followerId)
+        .orElseThrow(
+            () ->
+                new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("followerId", followerId)));
   }
 
   // 팔로워와 팔로우 대상자로 팔로우 관계 조회
   private Follow getFollowByFollowerAndFollowee(UUID followerId, UUID followeeId) {
     return followRepository
-      .findByFollowerIdAndFolloweeId(followerId, followeeId)
-      .orElseThrow(
-        () ->
-          new FollowException(
-            FollowErrorCode.FOLLOW_NOT_FOUND,
-            Map.of("followerId", followerId, "followeeId", followeeId)));
+        .findByFollowerIdAndFolloweeId(followerId, followeeId)
+        .orElseThrow(
+            () ->
+                new FollowException(
+                    FollowErrorCode.FOLLOW_NOT_FOUND,
+                    Map.of("followerId", followerId, "followeeId", followeeId)));
   }
 }

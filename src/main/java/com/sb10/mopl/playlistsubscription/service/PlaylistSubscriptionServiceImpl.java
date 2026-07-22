@@ -5,9 +5,9 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistsubscription.entity.PlaylistSubscription;
+import com.sb10.mopl.playlistsubscription.event.PlaylistSubscribedEvent;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionErrorCode;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionException;
-import com.sb10.mopl.playlistsubscription.event.PlaylistSubscribedEvent;
 import com.sb10.mopl.playlistsubscription.repository.PlaylistSubscriptionRepository;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
@@ -43,7 +43,10 @@ public class PlaylistSubscriptionServiceImpl implements PlaylistSubscriptionServ
 
     eventPublisher.publishEvent(
         new PlaylistSubscribedEvent(
-            playlist.getOwner().getId(), subscriber.getName(), playlist.getId(), playlist.getTitle()));
+            playlist.getOwner().getId(),
+            subscriber.getName(),
+            playlist.getId(),
+            playlist.getTitle()));
   }
 
   @Override

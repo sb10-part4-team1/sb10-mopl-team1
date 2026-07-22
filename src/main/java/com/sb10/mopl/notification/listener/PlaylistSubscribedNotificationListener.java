@@ -22,17 +22,17 @@ public class PlaylistSubscribedNotificationListener {
   public void sendPlaylistSubscribedNotification(PlaylistSubscribedEvent event) {
     try {
       notificationService.create(
-        event.ownerId(),
-        event.subscriberName() + "님이 내 [" + event.playlistTitle() + "] 플레이리스트를 구독했어요.",
-        "",
-        NotificationLevel.INFO);
+          event.ownerId(),
+          event.subscriberName() + "님이 내 [" + event.playlistTitle() + "] 플레이리스트를 구독했어요.",
+          "",
+          NotificationLevel.INFO);
     } catch (RuntimeException exception) {
       log.error(
-        "플레이리스트 구독 알림 생성 실패 - ownerId: {}, playlistId: {}, exceptionType: {}",
-        event.ownerId(),
-        event.playlistId(),
-        exception.getClass().getSimpleName(),
-        exception);
+          "플레이리스트 구독 알림 생성 실패 - ownerId: {}, playlistId: {}, exceptionType: {}",
+          event.ownerId(),
+          event.playlistId(),
+          exception.getClass().getSimpleName(),
+          exception);
     }
   }
 }

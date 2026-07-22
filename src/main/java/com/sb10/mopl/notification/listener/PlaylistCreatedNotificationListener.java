@@ -29,17 +29,17 @@ public class PlaylistCreatedNotificationListener {
     for (UUID followerId : followerIds) {
       try {
         notificationService.create(
-          followerId,
-          event.ownerName() + "님이 플레이리스트를 만들었어요.",
-          "[" + event.playlistTitle() + "] " + event.playlistDescription(),
-          NotificationLevel.INFO);
+            followerId,
+            event.ownerName() + "님이 플레이리스트를 만들었어요.",
+            "[" + event.playlistTitle() + "] " + event.playlistDescription(),
+            NotificationLevel.INFO);
       } catch (RuntimeException exception) {
         log.error(
-          "플레이리스트 생성 알림 생성 실패 - followerId: {}, ownerId: {}, exceptionType: {}",
-          followerId,
-          event.ownerId(),
-          exception.getClass().getSimpleName(),
-          exception);
+            "플레이리스트 생성 알림 생성 실패 - followerId: {}, ownerId: {}, exceptionType: {}",
+            followerId,
+            event.ownerId(),
+            exception.getClass().getSimpleName(),
+            exception);
       }
     }
   }
