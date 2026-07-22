@@ -192,7 +192,7 @@ class PlaylistRepositoryTest {
     // when
     List<Playlist> result =
         findAllByCondition(
-            null, null, null, null, null, null, "subscriberCount", SortDirection.ASCENDING);
+            null, null, null, null, null, null, "subscribeCount", SortDirection.ASCENDING);
 
     // then
     assertThat(result)
@@ -209,7 +209,7 @@ class PlaylistRepositoryTest {
     // when
     List<Playlist> result =
         findAllByCondition(
-            null, null, null, null, null, null, "subscriberCount", SortDirection.DESCENDING);
+            null, null, null, null, null, null, "subscribeCount", SortDirection.DESCENDING);
 
     // then
     assertThat(result)
@@ -232,7 +232,7 @@ class PlaylistRepositoryTest {
             null,
             1L,
             secondPlaylist.getId(),
-            "subscriberCount",
+            "subscribeCount",
             SortDirection.ASCENDING);
 
     // then
@@ -273,7 +273,7 @@ class PlaylistRepositoryTest {
     // given
     List<Playlist> firstPage =
         findAllByCondition(
-            null, null, null, null, null, null, "subscriberCount", SortDirection.ASCENDING);
+            null, null, null, null, null, null, "subscribeCount", SortDirection.ASCENDING);
 
     Playlist cursorPlaylist = firstPage.get(0);
 
@@ -286,7 +286,7 @@ class PlaylistRepositoryTest {
             null,
             0L,
             cursorPlaylist.getId(),
-            "subscriberCount",
+            "subscribeCount",
             SortDirection.ASCENDING);
 
     // then

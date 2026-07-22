@@ -5,6 +5,7 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistsubscription.entity.PlaylistSubscription;
+import com.sb10.mopl.playlistsubscription.event.PlaylistSubscribedEvent;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionErrorCode;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionException;
 import com.sb10.mopl.playlistsubscription.repository.PlaylistSubscriptionRepository;
@@ -15,6 +16,7 @@ import com.sb10.mopl.user.repository.UserRepository;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +28,23 @@ public class PlaylistSubscriptionServiceImpl implements PlaylistSubscriptionServ
   private final UserRepository userRepository;
   private final PlaylistRepository playlistRepository;
   private final PlaylistSubscriptionRepository playlistSubscriptionRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   @Transactional
   public void subscribe(UUID subscriberId, UUID playlistId) {
     User subscriber = getSubscriber(subscriberId);
     Playlist playlist = getPlaylistWithOwner(playlistId);
+
     validateNotOwnPlaylist(subscriberId, playlist);
     validateSubscriptionNotExists(subscriberId, playlistId);
 
     PlaylistSubscription playlistSubscription = new PlaylistSubscription(subscriber, playlist);
+
     playlistSubscriptionRepository.save(playlistSubscription);
+
+    eventPublisher.publishEvent(
+        new PlaylistSubscribedEvent(subscriberId, playlistId, playlist.getOwner().getId()));
   }
 
   @Override

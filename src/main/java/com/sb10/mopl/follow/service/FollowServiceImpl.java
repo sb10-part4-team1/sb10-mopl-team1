@@ -3,6 +3,7 @@ package com.sb10.mopl.follow.service;
 import com.sb10.mopl.follow.dto.FollowDto;
 import com.sb10.mopl.follow.dto.FollowRequest;
 import com.sb10.mopl.follow.entity.Follow;
+import com.sb10.mopl.follow.event.FollowCreatedEvent;
 import com.sb10.mopl.follow.exception.FollowErrorCode;
 import com.sb10.mopl.follow.exception.FollowException;
 import com.sb10.mopl.follow.mapper.FollowMapper;
@@ -13,6 +14,7 @@ import com.sb10.mopl.user.repository.UserRepository;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,15 +26,20 @@ public class FollowServiceImpl implements FollowService {
   private final FollowRepository followRepository;
   private final FollowMapper followMapper;
   private final UserRepository userRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   @Transactional
   public FollowDto follow(UUID followerId, FollowRequest request) {
+    UUID followeeId = request.followeeId();
+
     validateFolloweeExists(request.followeeId());
     validateFollowNotExists(followerId, request.followeeId());
 
     Follow follow = followMapper.toEntity(followerId, request);
     Follow savedFollow = followRepository.save(follow);
+
+    eventPublisher.publishEvent(new FollowCreatedEvent(followerId, followeeId));
 
     return followMapper.toDto(savedFollow);
   }

@@ -29,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PlaylistSubscriptionServiceImplTest {
@@ -38,6 +39,8 @@ class PlaylistSubscriptionServiceImplTest {
   @Mock private PlaylistRepository playlistRepository;
 
   @Mock private PlaylistSubscriptionRepository playlistSubscriptionRepository;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private PlaylistSubscriptionServiceImpl playlistSubscriptionService;
 

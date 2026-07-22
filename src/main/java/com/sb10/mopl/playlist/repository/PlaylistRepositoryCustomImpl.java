@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 public class PlaylistRepositoryCustomImpl implements PlaylistRepositoryCustom {
 
   private static final String SORT_BY_UPDATED_AT = "updatedAt";
-  private static final String SORT_BY_SUBSCRIBER_COUNT = "subscriberCount";
+  private static final String SORT_BY_SUBSCRIBER_COUNT = "subscribeCount";
 
   private final JPAQueryFactory queryFactory;
 

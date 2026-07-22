@@ -20,4 +20,6 @@ public interface PlaylistSubscriptionRepositoryCustom {
       Collection<UUID> playlistIds);
 
   Set<UUID> findSubscribedPlaylistIds(UUID subscriberId, Collection<UUID> playlistIds);
+
+  List<UUID> findSubscriberIdsByPlaylistId(UUID playlistId);
 }

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.sb10.mopl.follow.dto.FollowDto;
 import com.sb10.mopl.follow.dto.FollowRequest;
 import com.sb10.mopl.follow.entity.Follow;
+import com.sb10.mopl.follow.event.FollowCreatedEvent;
 import com.sb10.mopl.follow.exception.FollowErrorCode;
 import com.sb10.mopl.follow.exception.FollowException;
 import com.sb10.mopl.follow.mapper.FollowMapper;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +40,8 @@ class FollowServiceImplTest {
   @Mock private FollowMapper followMapper;
 
   @Mock private UserRepository userRepository;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private FollowServiceImpl followService;
 
@@ -80,6 +84,7 @@ class FollowServiceImplTest {
     // then
     assertThat(result).isEqualTo(followDto);
     verify(followRepository).save(follow);
+    verify(eventPublisher).publishEvent(any(FollowCreatedEvent.class));
   }
 
   @Test

@@ -18,6 +18,7 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistcontent.entity.PlaylistContent;
+import com.sb10.mopl.playlistcontent.event.PlaylistContentAddedEvent;
 import com.sb10.mopl.playlistcontent.exception.PlaylistContentErrorCode;
 import com.sb10.mopl.playlistcontent.exception.PlaylistContentException;
 import com.sb10.mopl.playlistcontent.repository.PlaylistContentRepository;
@@ -32,6 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +44,8 @@ class PlaylistContentServiceImplTest {
   @Mock private PlaylistRepository playlistRepository;
 
   @Mock private ContentRepository contentRepository;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private PlaylistContentServiceImpl playlistContentService;
 
@@ -89,6 +93,7 @@ class PlaylistContentServiceImplTest {
     // then
     ArgumentCaptor<PlaylistContent> captor = ArgumentCaptor.forClass(PlaylistContent.class);
     verify(playlistContentRepository).save(captor.capture());
+    verify(eventPublisher).publishEvent(any(PlaylistContentAddedEvent.class));
 
     PlaylistContent savedPlaylistContent = captor.getValue();
     assertSame(playlist, savedPlaylistContent.getPlaylist());
