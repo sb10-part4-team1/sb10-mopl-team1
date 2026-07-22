@@ -37,10 +37,6 @@ public interface UserControllerApiDocs {
         description = "잘못된 요청",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
     @ApiResponse(
-        responseCode = "401",
-        description = "인증 오류",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-    @ApiResponse(
         responseCode = "409",
         description = "이메일 중복",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
@@ -234,6 +230,10 @@ public interface UserControllerApiDocs {
     @ApiResponse(
         responseCode = "401",
         description = "인증 오류",
+        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = "해당 리소스 없음",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
     @ApiResponse(
         responseCode = "500",
