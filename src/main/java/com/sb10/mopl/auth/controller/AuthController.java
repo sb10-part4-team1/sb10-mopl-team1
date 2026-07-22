@@ -1,5 +1,6 @@
 package com.sb10.mopl.auth.controller;
 
+import com.sb10.mopl.auth.controller.api.AuthControllerApiDocs;
 import com.sb10.mopl.auth.dto.request.ResetPasswordRequest;
 import com.sb10.mopl.auth.dto.response.JwtDto;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
@@ -24,13 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
-public class AuthController {
+public class AuthController implements AuthControllerApiDocs {
 
   private final AuthTokenService authTokenService;
   private final TemporaryPasswordService temporaryPasswordService;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
   private final JwtProvider jwtProvider;
 
+  @Override
   @PostMapping("/refresh")
   public JwtDto reissueToken(
       @CookieValue(name = "${mopl.jwt.refresh-token-cookie.name}", required = false)
@@ -59,6 +61,7 @@ public class AuthController {
         jwtProvider.createAccessToken(new MoplUserDetails(user), reissuedToken.sessionId()));
   }
 
+  @Override
   @PostMapping("/reset-password")
   public ResponseEntity<Void> resetPassword(
       @Valid @RequestBody ResetPasswordRequest resetPasswordRequest) {
