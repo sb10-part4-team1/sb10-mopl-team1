@@ -18,27 +18,43 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class PlaylistCreatedNotificationListener {
 
-  private final NotificationService notificationService;
+  private static final int BATCH_SIZE = 100;
+
   private final FollowRepository followRepository;
+  private final NotificationService notificationService;
 
   @Async("notificationExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  public void sendPlaylistCreatedNotification(PlaylistCreatedEvent event) {
-    List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(event.ownerId());
+  public void handle(PlaylistCreatedEvent event) {
+    UUID idAfter = null;
 
-    try {
-      notificationService.createAll(
-          followerIds,
-          event.ownerName() + "님이 플레이리스트를 만들었어요.",
-          "[" + event.playlistTitle() + "] " + event.playlistDescription(),
-          NotificationLevel.INFO);
-    } catch (RuntimeException exception) {
-      log.error(
-          "플레이리스트 생성 알림 생성 실패 - ownerId: {}, followerCount: {}, exceptionType: {}",
-          event.ownerId(),
-          followerIds.size(),
-          exception.getClass().getSimpleName(),
-          exception);
+    while (true) {
+      List<UUID> followerIds =
+          followRepository.findFollowerIdsByFolloweeId(event.ownerId(), idAfter, BATCH_SIZE);
+
+      if (followerIds.isEmpty()) {
+        break;
+      }
+
+      for (UUID followerId : followerIds) {
+        try {
+          notificationService.create(
+              followerId, "새로운 플레이리스트가 등록되었어요.", event.playlistTitle(), NotificationLevel.INFO);
+        } catch (RuntimeException exception) {
+          log.error(
+              "플레이리스트 생성 알림 생성 실패 - ownerId: {}, followerId: {}, playlistTitle: {}",
+              event.ownerId(),
+              followerId,
+              event.playlistTitle(),
+              exception);
+        }
+      }
+
+      if (followerIds.size() < BATCH_SIZE) {
+        break;
+      }
+
+      idAfter = followerIds.get(followerIds.size() - 1);
     }
   }
 }
