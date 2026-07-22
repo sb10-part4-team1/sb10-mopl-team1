@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.sb10.mopl.config.JpaAuditingConfig;
 import com.sb10.mopl.config.QuerydslConfig;
 import com.sb10.mopl.follow.entity.Follow;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -44,10 +45,12 @@ class FollowRepositoryTest {
     // given
     UUID followerId = UUID.randomUUID();
     UUID followeeId = UUID.randomUUID();
+
     followRepository.saveAndFlush(new Follow(followerId, followeeId));
 
     // when & then
     assertThat(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)).isTrue();
+
     assertThat(followRepository.existsByFollowerIdAndFolloweeId(UUID.randomUUID(), followeeId))
         .isFalse();
   }
@@ -58,6 +61,7 @@ class FollowRepositoryTest {
     // given
     UUID followerId = UUID.randomUUID();
     UUID followeeId = UUID.randomUUID();
+
     Follow savedFollow = followRepository.saveAndFlush(new Follow(followerId, followeeId));
 
     // when
@@ -74,9 +78,13 @@ class FollowRepositoryTest {
   void countByFolloweeId_success() {
     // given
     UUID followeeId = UUID.randomUUID();
+
     followRepository.save(new Follow(UUID.randomUUID(), followeeId));
+
     followRepository.save(new Follow(UUID.randomUUID(), followeeId));
+
     followRepository.save(new Follow(UUID.randomUUID(), UUID.randomUUID()));
+
     followRepository.flush();
 
     // when
@@ -87,11 +95,66 @@ class FollowRepositoryTest {
   }
 
   @Test
+  @DisplayName("팔로워 ID를 커서 기반으로 제한된 개수만큼 조회한다")
+  void findFollowerIdsByFolloweeId_success_withCursor() {
+    // given
+    UUID followeeId = UUID.fromString("10000000-0000-0000-0000-000000000000");
+
+    UUID otherFolloweeId = UUID.fromString("20000000-0000-0000-0000-000000000000");
+
+    UUID firstFollowerId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    UUID secondFollowerId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+
+    UUID thirdFollowerId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+
+    followRepository.save(new Follow(thirdFollowerId, followeeId));
+
+    followRepository.save(new Follow(firstFollowerId, followeeId));
+
+    followRepository.save(new Follow(secondFollowerId, followeeId));
+
+    followRepository.save(
+        new Follow(UUID.fromString("00000000-0000-0000-0000-000000000004"), otherFolloweeId));
+
+    followRepository.flush();
+
+    // when
+    List<UUID> firstBatch = followRepository.findFollowerIdsByFolloweeId(followeeId, null, 2);
+
+    List<UUID> secondBatch =
+        followRepository.findFollowerIdsByFolloweeId(followeeId, secondFollowerId, 2);
+
+    // then
+    assertThat(firstBatch).containsExactly(firstFollowerId, secondFollowerId);
+
+    assertThat(secondBatch).containsExactly(thirdFollowerId);
+  }
+
+  @Test
+  @DisplayName("마지막 커서 이후 팔로워가 없으면 빈 목록을 반환한다")
+  void findFollowerIdsByFolloweeId_returnsEmpty_whenNoFollowerExistsAfterCursor() {
+    // given
+    UUID followeeId = UUID.fromString("10000000-0000-0000-0000-000000000000");
+
+    UUID followerId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    followRepository.saveAndFlush(new Follow(followerId, followeeId));
+
+    // when
+    List<UUID> result = followRepository.findFollowerIdsByFolloweeId(followeeId, followerId, 100);
+
+    // then
+    assertThat(result).isEmpty();
+  }
+
+  @Test
   @DisplayName("동일한 팔로워와 팔로우 대상자를 중복 저장하면 예외가 발생한다")
   void save_fail_whenFollowAlreadyExists() {
     // given
     UUID followerId = UUID.randomUUID();
     UUID followeeId = UUID.randomUUID();
+
     followRepository.saveAndFlush(new Follow(followerId, followeeId));
 
     // when & then

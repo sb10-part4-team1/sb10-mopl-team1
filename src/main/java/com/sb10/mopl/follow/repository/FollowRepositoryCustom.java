@@ -5,5 +5,6 @@ import java.util.UUID;
 
 public interface FollowRepositoryCustom {
 
-  List<UUID> findFollowerIdsByFolloweeId(java.util.UUID followeeId);
+  // 특정 사용자를 팔로우하는 사용자 ID 목록을 커서 기반으로 조회
+  List<UUID> findFollowerIdsByFolloweeId(UUID followeeId, UUID idAfter, int limit);
 }

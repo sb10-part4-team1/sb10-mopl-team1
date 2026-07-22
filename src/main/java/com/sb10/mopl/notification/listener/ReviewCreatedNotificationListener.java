@@ -18,6 +18,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class ReviewCreatedNotificationListener {
 
+  private static final int BATCH_SIZE = 100;
+
   private static final String NOTIFICATION_TITLE = "팔로우한 사용자가 새로운 리뷰를 작성했어요.";
 
   private static final String NOTIFICATION_CONTENT = "팔로우한 사용자가 새로운 리뷰를 작성했어요.";
@@ -28,7 +30,27 @@ public class ReviewCreatedNotificationListener {
   @Async("notificationExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void sendReviewCreatedNotification(ReviewCreatedEvent event) {
-    List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(event.reviewerId());
+    UUID idAfter = null;
+
+    while (true) {
+      List<UUID> followerIds =
+          followRepository.findFollowerIdsByFolloweeId(event.reviewerId(), idAfter, BATCH_SIZE);
+
+      if (followerIds.isEmpty()) {
+        break;
+      }
+
+      createNotifications(event, followerIds);
+
+      if (followerIds.size() < BATCH_SIZE) {
+        break;
+      }
+
+      idAfter = followerIds.get(followerIds.size() - 1);
+    }
+  }
+
+  private void createNotifications(ReviewCreatedEvent event, List<UUID> followerIds) {
 
     for (UUID followerId : followerIds) {
       try {
