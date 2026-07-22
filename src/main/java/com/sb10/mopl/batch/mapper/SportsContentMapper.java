@@ -4,6 +4,7 @@ import com.sb10.mopl.batch.dto.SportsContentDto;
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentProvider;
 import com.sb10.mopl.content.entity.ContentType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -11,7 +12,9 @@ import org.springframework.util.StringUtils;
 @Component
 public class SportsContentMapper {
 
-  private static final String DEFAULT_THUMBNAIL_URL = "/uploads/default-thumbnail.png";
+  @Value("${mopl.default-image-url}")
+  private String defaultImageUrl;
+
   private static final String DEFAULT_DESCRIPTION = "설명이 없는 스포츠 경기 콘텐츠입니다.";
 
   /**
@@ -21,8 +24,7 @@ public class SportsContentMapper {
    * @return 가공 및 도메인 제약조건 검증이 완료된 Content 엔티티
    */
   public Content toEntity(SportsContentDto dto) {
-    String thumbnailUrl =
-        StringUtils.hasText(dto.strThumb()) ? dto.strThumb() : DEFAULT_THUMBNAIL_URL;
+    String thumbnailUrl = StringUtils.hasText(dto.strThumb()) ? dto.strThumb() : defaultImageUrl;
 
     String description =
         StringUtils.hasText(dto.strFilename()) ? dto.strFilename() : DEFAULT_DESCRIPTION;

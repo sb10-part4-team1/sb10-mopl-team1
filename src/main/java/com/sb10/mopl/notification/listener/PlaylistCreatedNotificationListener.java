@@ -26,21 +26,19 @@ public class PlaylistCreatedNotificationListener {
   public void sendPlaylistCreatedNotification(PlaylistCreatedEvent event) {
     List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(event.ownerId());
 
-    for (UUID followerId : followerIds) {
-      try {
-        notificationService.create(
-            followerId,
-            event.ownerName() + "님이 플레이리스트를 만들었어요.",
-            "[" + event.playlistTitle() + "] " + event.playlistDescription(),
-            NotificationLevel.INFO);
-      } catch (RuntimeException exception) {
-        log.error(
-            "플레이리스트 생성 알림 생성 실패 - followerId: {}, ownerId: {}, exceptionType: {}",
-            followerId,
-            event.ownerId(),
-            exception.getClass().getSimpleName(),
-            exception);
-      }
+    try {
+      notificationService.createAll(
+          followerIds,
+          event.ownerName() + "님이 플레이리스트를 만들었어요.",
+          "[" + event.playlistTitle() + "] " + event.playlistDescription(),
+          NotificationLevel.INFO);
+    } catch (RuntimeException exception) {
+      log.error(
+          "플레이리스트 생성 알림 생성 실패 - ownerId: {}, followerCount: {}, exceptionType: {}",
+          event.ownerId(),
+          followerIds.size(),
+          exception.getClass().getSimpleName(),
+          exception);
     }
   }
 }

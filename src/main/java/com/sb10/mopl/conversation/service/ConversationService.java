@@ -78,10 +78,10 @@ public class ConversationService {
                     new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", withUserId)));
 
     Conversation conversation = new Conversation();
-    conversationRepository.save(conversation);
-
     ConversationParticipant.create(conversation, me);
     ConversationParticipant.create(conversation, withUser);
+
+    conversationRepository.save(conversation);
 
     return toDto(conversation, requestUserId);
   }
