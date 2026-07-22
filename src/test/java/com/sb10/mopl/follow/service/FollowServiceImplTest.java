@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +39,8 @@ class FollowServiceImplTest {
   @Mock private FollowMapper followMapper;
 
   @Mock private UserRepository userRepository;
+
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private FollowServiceImpl followService;
 
@@ -72,6 +75,8 @@ class FollowServiceImplTest {
     given(followRepository.save(follow)).willReturn(follow);
     given(followMapper.toDto(follow)).willReturn(followDto);
     given(userRepository.findByIdAndIsDeletedFalse(followeeId))
+        .willReturn(Optional.of(mock(User.class)));
+    given(userRepository.findByIdAndIsDeletedFalse(followerId))
         .willReturn(Optional.of(mock(User.class)));
 
     // when
