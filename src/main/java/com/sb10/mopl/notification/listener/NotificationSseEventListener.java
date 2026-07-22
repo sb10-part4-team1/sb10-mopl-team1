@@ -29,11 +29,11 @@ public class NotificationSseEventListener {
       sseService.send(List.of(dto.receiverId()), NOTIFICATIONS_EVENT_NAME, dto);
     } catch (RuntimeException exception) {
       log.error(
-        "[SSE-NOTIFICATION] 알림 SSE 발송 실패 - receiverId: {}, notificationId: {}, exceptionType: {}",
-        dto.receiverId(),
-        dto.id(),
-        exception.getClass().getSimpleName(),
-        exception);
+          "[SSE-NOTIFICATION] 알림 SSE 발송 실패 - receiverId: {}, notificationId: {}, exceptionType: {}",
+          dto.receiverId(),
+          dto.id(),
+          exception.getClass().getSimpleName(),
+          exception);
     }
   }
 }
