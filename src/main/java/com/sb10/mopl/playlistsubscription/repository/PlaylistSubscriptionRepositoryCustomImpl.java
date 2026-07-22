@@ -3,6 +3,7 @@ package com.sb10.mopl.playlistsubscription.repository;
 import static com.sb10.mopl.playlistsubscription.entity.QPlaylistSubscription.playlistSubscription;
 
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sb10.mopl.playlistsubscription.entity.PlaylistSubscription;
@@ -112,13 +113,16 @@ public class PlaylistSubscriptionRepositoryCustomImpl
     return new HashSet<>(results);
   }
 
-  // 특정 플레이리스트를 구독 중인 유저 id 목록 조회
+  // 특정 플레이리스트를 구독하는 사용자 ID 목록 조회
   @Override
-  public List<UUID> findSubscriberIdsByPlaylistId(UUID playlistId) {
+  public List<UUID> findSubscriberIdsByPlaylistId(UUID playlistId, UUID idAfter, int limit) {
+
     return queryFactory
         .select(playlistSubscription.subscriber.id)
         .from(playlistSubscription)
-        .where(playlistSubscription.playlist.id.eq(playlistId))
+        .where(playlistSubscription.playlist.id.eq(playlistId), subscriberIdAfter(idAfter))
+        .orderBy(playlistSubscription.subscriber.id.asc())
+        .limit(limit)
         .fetch();
   }
 
@@ -135,5 +139,9 @@ public class PlaylistSubscriptionRepositoryCustomImpl
     public Long getSubscriberCount() {
       return subscriberCount;
     }
+  }
+
+  private BooleanExpression subscriberIdAfter(UUID idAfter) {
+    return idAfter != null ? playlistSubscription.subscriber.id.gt(idAfter) : null;
   }
 }

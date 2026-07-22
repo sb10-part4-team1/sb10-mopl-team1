@@ -406,7 +406,7 @@ class PlaylistServiceImplTest {
                 isNull(),
                 isNull(),
                 isNull(),
-                eq("subscriberCount"),
+                eq("subscribeCount"),
                 eq(SortDirection.DESCENDING),
                 any(Pageable.class)))
         .willReturn(List.of(playlist));
@@ -432,7 +432,7 @@ class PlaylistServiceImplTest {
             null,
             null,
             10,
-            "subscriberCount",
+            "subscribeCount",
             SortDirection.DESCENDING);
 
     // then
@@ -500,7 +500,7 @@ class PlaylistServiceImplTest {
                 isNull(),
                 isNull(),
                 isNull(),
-                eq("subscriberCount"),
+                eq("subscribeCount"),
                 eq(SortDirection.ASCENDING),
                 any(Pageable.class)))
         .willReturn(List.of(playlist));
@@ -526,7 +526,7 @@ class PlaylistServiceImplTest {
             null,
             null,
             10,
-            "subscriberCount",
+            "subscribeCount",
             SortDirection.ASCENDING);
 
     // then
@@ -676,7 +676,7 @@ class PlaylistServiceImplTest {
                     "invalid-cursor",
                     idAfter,
                     10,
-                    "subscriberCount",
+                    "subscribeCount",
                     SortDirection.DESCENDING))
         .isInstanceOf(PlaylistException.class)
         .extracting("errorCode")
@@ -700,7 +700,7 @@ class PlaylistServiceImplTest {
                     "-1",
                     idAfter,
                     10,
-                    "subscriberCount",
+                    "subscribeCount",
                     SortDirection.DESCENDING))
         .isInstanceOf(PlaylistException.class)
         .extracting("errorCode")

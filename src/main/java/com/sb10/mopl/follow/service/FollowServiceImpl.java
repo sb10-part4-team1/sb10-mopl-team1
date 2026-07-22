@@ -3,12 +3,11 @@ package com.sb10.mopl.follow.service;
 import com.sb10.mopl.follow.dto.FollowDto;
 import com.sb10.mopl.follow.dto.FollowRequest;
 import com.sb10.mopl.follow.entity.Follow;
-import com.sb10.mopl.follow.event.FollowedEvent;
+import com.sb10.mopl.follow.event.FollowCreatedEvent;
 import com.sb10.mopl.follow.exception.FollowErrorCode;
 import com.sb10.mopl.follow.exception.FollowException;
 import com.sb10.mopl.follow.mapper.FollowMapper;
 import com.sb10.mopl.follow.repository.FollowRepository;
-import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
@@ -32,14 +31,15 @@ public class FollowServiceImpl implements FollowService {
   @Override
   @Transactional
   public FollowDto follow(UUID followerId, FollowRequest request) {
+    UUID followeeId = request.followeeId();
+
     validateFolloweeExists(request.followeeId());
     validateFollowNotExists(followerId, request.followeeId());
 
     Follow follow = followMapper.toEntity(followerId, request);
     Follow savedFollow = followRepository.save(follow);
 
-    User follower = getFollower(followerId);
-    eventPublisher.publishEvent(new FollowedEvent(request.followeeId(), follower.getName()));
+    eventPublisher.publishEvent(new FollowCreatedEvent(followerId, followeeId));
 
     return followMapper.toDto(savedFollow);
   }
@@ -106,15 +106,6 @@ public class FollowServiceImpl implements FollowService {
         .orElseThrow(
             () ->
                 new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("followeeId", followeeId)));
-  }
-
-  // 팔로우 요청자 객체 조회
-  private User getFollower(UUID followerId) {
-    return userRepository
-        .findByIdAndIsDeletedFalse(followerId)
-        .orElseThrow(
-            () ->
-                new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("followerId", followerId)));
   }
 
   // 팔로워와 팔로우 대상자로 팔로우 관계 조회

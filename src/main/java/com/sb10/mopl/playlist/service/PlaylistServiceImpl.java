@@ -36,7 +36,7 @@ public class PlaylistServiceImpl implements PlaylistService {
 
   private static final int MAX_PLAYLIST_PAGE_LIMIT = 100;
   private static final String SORT_BY_UPDATED_AT = "updatedAt";
-  private static final String SORT_BY_SUBSCRIBER_COUNT = "subscriberCount";
+  private static final String SORT_BY_SUBSCRIBER_COUNT = "subscribeCount";
 
   private final PlaylistRepository playlistRepository;
   private final UserRepository userRepository;
@@ -257,15 +257,14 @@ public class PlaylistServiceImpl implements PlaylistService {
       long subscriberCountCursor = Long.parseLong(cursor);
 
       if (subscriberCountCursor < 0) {
-        throw new NumberFormatException(
-            "subscriberCount cursor must be greater than or equal to 0");
+        throw new NumberFormatException("subscribeCount cursor must be greater than or equal to 0");
       }
 
       return subscriberCountCursor;
     } catch (NumberFormatException e) {
       throw new PlaylistException(
           PlaylistErrorCode.INVALID_PLAYLIST_VALUE,
-          Map.of("cursor", "올바르지 않은 subscriberCount 커서 형식입니다."),
+          Map.of("cursor", "올바르지 않은 subscribeCount 커서 형식입니다."),
           e);
     }
   }

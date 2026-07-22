@@ -53,18 +53,12 @@ class PlaylistSubscriptionServiceImplTest {
     UUID playlistId = UUID.randomUUID();
     UUID ownerId = UUID.randomUUID();
 
-    String subscriberName = "구독요청자";
-    String playlistTitle = "플레이리스트 제목";
-
     User subscriber = mock(User.class);
     User owner = mock(User.class);
     Playlist playlist = mock(Playlist.class);
 
     when(owner.getId()).thenReturn(ownerId);
     when(playlist.getOwner()).thenReturn(owner);
-    when(playlist.getId()).thenReturn(playlistId);
-    when(playlist.getTitle()).thenReturn(playlistTitle);
-    when(subscriber.getName()).thenReturn(subscriberName);
     when(userRepository.findByIdAndIsDeletedFalse(subscriberId))
         .thenReturn(Optional.of(subscriber));
     when(playlistRepository.findByIdWithOwner(playlistId)).thenReturn(Optional.of(playlist));
@@ -75,25 +69,24 @@ class PlaylistSubscriptionServiceImplTest {
     playlistSubscriptionService.subscribe(subscriberId, playlistId);
 
     // then
-    ArgumentCaptor<PlaylistSubscription> captor =
+    ArgumentCaptor<PlaylistSubscription> subscriptionCaptor =
         ArgumentCaptor.forClass(PlaylistSubscription.class);
 
-    verify(playlistSubscriptionRepository).save(captor.capture());
+    verify(playlistSubscriptionRepository).save(subscriptionCaptor.capture());
 
-    PlaylistSubscription savedSubscription = captor.getValue();
-
+    PlaylistSubscription savedSubscription = subscriptionCaptor.getValue();
     assertThat(savedSubscription.getSubscriber()).isSameAs(subscriber);
     assertThat(savedSubscription.getPlaylist()).isSameAs(playlist);
 
     ArgumentCaptor<PlaylistSubscribedEvent> eventCaptor =
         ArgumentCaptor.forClass(PlaylistSubscribedEvent.class);
+
     verify(eventPublisher).publishEvent(eventCaptor.capture());
 
-    PlaylistSubscribedEvent publishedEvent = eventCaptor.getValue();
-    assertThat(publishedEvent.ownerId()).isEqualTo(ownerId);
-    assertThat(publishedEvent.subscriberName()).isEqualTo(subscriberName);
-    assertThat(publishedEvent.playlistId()).isEqualTo(playlistId);
-    assertThat(publishedEvent.playlistTitle()).isEqualTo(playlistTitle);
+    PlaylistSubscribedEvent event = eventCaptor.getValue();
+    assertThat(event.subscriberId()).isEqualTo(subscriberId);
+    assertThat(event.playlistId()).isEqualTo(playlistId);
+    assertThat(event.ownerId()).isEqualTo(ownerId);
   }
 
   @Test

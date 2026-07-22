@@ -10,6 +10,7 @@ import com.sb10.mopl.review.dto.ReviewCreateRequest;
 import com.sb10.mopl.review.dto.ReviewDto;
 import com.sb10.mopl.review.dto.ReviewUpdateRequest;
 import com.sb10.mopl.review.entity.Review;
+import com.sb10.mopl.review.event.ReviewCreatedEvent;
 import com.sb10.mopl.review.exception.ReviewErrorCode;
 import com.sb10.mopl.review.exception.ReviewException;
 import com.sb10.mopl.review.mapper.ReviewMapper;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,7 @@ public class ReviewServiceImpl implements ReviewService {
   private final ReviewMapper reviewMapper;
   private final ContentRepository contentRepository;
   private final UserRepository userRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   // 리뷰 목록 조회 최대 limit
   private static final int MAX_REVIEW_PAGE_LIMIT = 100;
@@ -44,10 +47,8 @@ public class ReviewServiceImpl implements ReviewService {
   @Override
   @Transactional
   public ReviewDto create(ReviewCreateRequest request, UUID userId) {
-    // 요청에서 리뷰 대상 콘텐츠 ID 추출
     UUID contentId = request.contentId();
 
-    // 리뷰 대상 콘텐츠 존재 여부 검증
     Content content =
         contentRepository
             .findById(contentId)
@@ -56,23 +57,22 @@ public class ReviewServiceImpl implements ReviewService {
                     new ContentException(
                         ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId)));
 
-    // 리뷰 작성자 존재 여부 검증
     User user =
         userRepository
             .findById(userId)
             .orElseThrow(
                 () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", userId)));
 
-    // 이미 해당 콘텐츠에 리뷰를 작성했는지 검증
     if (reviewRepository.existsByTargetContentIdAndUserId(contentId, userId)) {
       throw new ReviewException(
           ReviewErrorCode.REVIEW_ALREADY_EXISTS, Map.of("contentId", contentId, "userId", userId));
     }
 
-    // 요청 DTO를 Review 엔티티로 변환
     Review review = reviewMapper.toEntity(request, content, user);
-
     Review savedReview = reviewRepository.save(review);
+
+    eventPublisher.publishEvent(new ReviewCreatedEvent(savedReview.getId(), userId, contentId));
+
     return reviewMapper.toDto(savedReview);
   }
 

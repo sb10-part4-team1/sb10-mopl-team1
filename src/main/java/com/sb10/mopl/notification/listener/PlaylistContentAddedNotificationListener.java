@@ -18,29 +18,56 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class PlaylistContentAddedNotificationListener {
 
-  private final NotificationService notificationService;
-  private final PlaylistSubscriptionRepository playlistSubscriptionRepository;
+  private static final int BATCH_SIZE = 100;
 
-  // 콘텐츠가 추가된 시점(커밋 이후)의 구독자 전체에게 알림을 보낸다.
+  private static final String NOTIFICATION_TITLE = "구독 중인 플레이리스트에 콘텐츠가 추가됐어요.";
+
+  private final PlaylistSubscriptionRepository playlistSubscriptionRepository;
+  private final NotificationService notificationService;
+
   @Async("notificationExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void sendPlaylistContentAddedNotification(PlaylistContentAddedEvent event) {
-    List<UUID> subscriberIds =
-        playlistSubscriptionRepository.findSubscriberIdsByPlaylistId(event.playlistId());
 
-    try {
-      notificationService.createAll(
-          subscriberIds,
-          "구독 중인 플레이리스트에 콘텐츠가 추가됐어요.",
-          "[" + event.playlistTitle() + "]에 [" + event.contentTitle() + "]가 추가됐어요.",
-          NotificationLevel.INFO);
-    } catch (RuntimeException exception) {
-      log.error(
-          "플레이리스트 콘텐츠 추가 알림 생성 실패 - playlistId: {}, subscriberCount: {}, exceptionType: {}",
-          event.playlistId(),
-          subscriberIds.size(),
-          exception.getClass().getSimpleName(),
-          exception);
+    UUID idAfter = null;
+
+    while (true) {
+      List<UUID> subscriberIds =
+          playlistSubscriptionRepository.findSubscriberIdsByPlaylistId(
+              event.playlistId(), idAfter, BATCH_SIZE);
+
+      if (subscriberIds.isEmpty()) {
+        break;
+      }
+
+      createNotifications(event, subscriberIds);
+
+      if (subscriberIds.size() < BATCH_SIZE) {
+        break;
+      }
+
+      idAfter = subscriberIds.get(subscriberIds.size() - 1);
+    }
+  }
+
+  private void createNotifications(PlaylistContentAddedEvent event, List<UUID> subscriberIds) {
+
+    String content = "[" + event.playlistTitle() + "] 플레이리스트에 새로운 콘텐츠가 추가되었어요.";
+
+    for (UUID subscriberId : subscriberIds) {
+      try {
+        notificationService.create(
+            subscriberId, NOTIFICATION_TITLE, content, NotificationLevel.INFO);
+      } catch (RuntimeException exception) {
+        log.error(
+            "플레이리스트 콘텐츠 추가 알림 생성 실패 - playlistId: {}, "
+                + "contentId: {}, subscriberId: {}, exceptionType: {}",
+            event.playlistId(),
+            event.contentId(),
+            subscriberId,
+            exception.getClass().getSimpleName(),
+            exception);
+      }
     }
   }
 }

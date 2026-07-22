@@ -35,18 +35,16 @@ public class PlaylistSubscriptionServiceImpl implements PlaylistSubscriptionServ
   public void subscribe(UUID subscriberId, UUID playlistId) {
     User subscriber = getSubscriber(subscriberId);
     Playlist playlist = getPlaylistWithOwner(playlistId);
+
     validateNotOwnPlaylist(subscriberId, playlist);
     validateSubscriptionNotExists(subscriberId, playlistId);
 
     PlaylistSubscription playlistSubscription = new PlaylistSubscription(subscriber, playlist);
+
     playlistSubscriptionRepository.save(playlistSubscription);
 
     eventPublisher.publishEvent(
-        new PlaylistSubscribedEvent(
-            playlist.getOwner().getId(),
-            subscriber.getName(),
-            playlist.getId(),
-            playlist.getTitle()));
+        new PlaylistSubscribedEvent(subscriberId, playlistId, playlist.getOwner().getId()));
   }
 
   @Override

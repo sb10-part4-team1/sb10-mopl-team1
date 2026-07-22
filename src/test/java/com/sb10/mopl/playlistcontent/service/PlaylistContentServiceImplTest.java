@@ -82,7 +82,6 @@ class PlaylistContentServiceImplTest {
   @DisplayName("플레이리스트 콘텐츠 추가 요청이 유효하면 콘텐츠를 추가한다")
   void add_success_whenRequestIsValid() {
     // given
-    when(content.getTitle()).thenReturn("콘텐츠 제목");
     when(playlistRepository.findByIdWithOwner(playlistId)).thenReturn(Optional.of(playlist));
     when(contentRepository.findById(contentId)).thenReturn(Optional.of(content));
     when(playlistContentRepository.existsByPlaylistIdAndContentId(playlistId, contentId))
@@ -92,21 +91,25 @@ class PlaylistContentServiceImplTest {
     assertDoesNotThrow(() -> playlistContentService.add(playlistId, contentId, ownerId));
 
     // then
-    ArgumentCaptor<PlaylistContent> captor = ArgumentCaptor.forClass(PlaylistContent.class);
-    verify(playlistContentRepository).save(captor.capture());
+    ArgumentCaptor<PlaylistContent> playlistContentCaptor =
+        ArgumentCaptor.forClass(PlaylistContent.class);
 
-    PlaylistContent savedPlaylistContent = captor.getValue();
+    verify(playlistContentRepository).save(playlistContentCaptor.capture());
+
+    PlaylistContent savedPlaylistContent = playlistContentCaptor.getValue();
     assertSame(playlist, savedPlaylistContent.getPlaylist());
     assertSame(content, savedPlaylistContent.getContent());
 
     ArgumentCaptor<PlaylistContentAddedEvent> eventCaptor =
         ArgumentCaptor.forClass(PlaylistContentAddedEvent.class);
+
     verify(eventPublisher).publishEvent(eventCaptor.capture());
 
-    PlaylistContentAddedEvent publishedEvent = eventCaptor.getValue();
-    assertEquals(playlistId, publishedEvent.playlistId());
-    assertEquals(playlist.getTitle(), publishedEvent.playlistTitle());
-    assertEquals(content.getTitle(), publishedEvent.contentTitle());
+    PlaylistContentAddedEvent event = eventCaptor.getValue();
+    assertEquals(playlistId, event.playlistId());
+    assertEquals("플레이리스트 제목", event.playlistTitle());
+    assertEquals(contentId, event.contentId());
+    assertEquals(ownerId, event.ownerId());
   }
 
   @Test

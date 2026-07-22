@@ -15,6 +15,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class PlaylistSubscribedNotificationListener {
 
+  private static final String NOTIFICATION_TITLE = "플레이리스트에 새로운 구독자가 생겼어요.";
+
+  private static final String NOTIFICATION_CONTENT = "사용자가 회원님의 플레이리스트를 구독했어요.";
+
   private final NotificationService notificationService;
 
   @Async("notificationExecutor")
@@ -22,15 +26,14 @@ public class PlaylistSubscribedNotificationListener {
   public void sendPlaylistSubscribedNotification(PlaylistSubscribedEvent event) {
     try {
       notificationService.create(
-          event.ownerId(),
-          event.subscriberName() + "님이 내 [" + event.playlistTitle() + "] 플레이리스트를 구독했어요.",
-          "",
-          NotificationLevel.INFO);
+          event.ownerId(), NOTIFICATION_TITLE, NOTIFICATION_CONTENT, NotificationLevel.INFO);
     } catch (RuntimeException exception) {
       log.error(
-          "플레이리스트 구독 알림 생성 실패 - ownerId: {}, playlistId: {}, exceptionType: {}",
-          event.ownerId(),
+          "플레이리스트 구독 알림 생성 실패 - "
+              + "subscriberId: {}, playlistId: {}, ownerId: {}, exceptionType: {}",
+          event.subscriberId(),
           event.playlistId(),
+          event.ownerId(),
           exception.getClass().getSimpleName(),
           exception);
     }

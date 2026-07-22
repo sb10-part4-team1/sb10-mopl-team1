@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.sb10.mopl.follow.dto.FollowDto;
 import com.sb10.mopl.follow.dto.FollowRequest;
 import com.sb10.mopl.follow.entity.Follow;
-import com.sb10.mopl.follow.event.FollowedEvent;
+import com.sb10.mopl.follow.event.FollowCreatedEvent;
 import com.sb10.mopl.follow.exception.FollowErrorCode;
 import com.sb10.mopl.follow.exception.FollowException;
 import com.sb10.mopl.follow.mapper.FollowMapper;
@@ -71,10 +71,6 @@ class FollowServiceImplTest {
   @DisplayName("팔로우 - 생성 성공")
   void follow_success() {
     // given
-    String followerName = "팔로우요청자";
-    User followerMock = mock(User.class);
-    given(followerMock.getName()).willReturn(followerName);
-
     given(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId))
         .willReturn(false);
     given(followMapper.toEntity(followerId, request)).willReturn(follow);
@@ -82,8 +78,6 @@ class FollowServiceImplTest {
     given(followMapper.toDto(follow)).willReturn(followDto);
     given(userRepository.findByIdAndIsDeletedFalse(followeeId))
         .willReturn(Optional.of(mock(User.class)));
-    given(userRepository.findByIdAndIsDeletedFalse(followerId))
-        .willReturn(Optional.of(followerMock));
 
     // when
     FollowDto result = followService.follow(followerId, request);
@@ -92,12 +86,14 @@ class FollowServiceImplTest {
     assertThat(result).isEqualTo(followDto);
     verify(followRepository).save(follow);
 
-    ArgumentCaptor<FollowedEvent> eventCaptor = ArgumentCaptor.forClass(FollowedEvent.class);
+    ArgumentCaptor<FollowCreatedEvent> eventCaptor =
+        ArgumentCaptor.forClass(FollowCreatedEvent.class);
+
     verify(eventPublisher).publishEvent(eventCaptor.capture());
 
-    FollowedEvent publishedEvent = eventCaptor.getValue();
-    assertThat(publishedEvent.followeeId()).isEqualTo(followeeId);
-    assertThat(publishedEvent.followerName()).isEqualTo(followerName);
+    FollowCreatedEvent event = eventCaptor.getValue();
+    assertThat(event.followerId()).isEqualTo(followerId);
+    assertThat(event.followeeId()).isEqualTo(followeeId);
   }
 
   @Test
