@@ -1,6 +1,9 @@
 ### 포트 번호 및 프로파일 설정 ###
 server:
   port: ${PORT:8080}
+  tomcat:
+    mbeanregistry:
+      enabled: true
 
 spring:
   application:
@@ -96,6 +99,7 @@ spring:
 
   ### 프로젝트 환경 변수 설정
 mopl:
+  default-image-url: ${MOPL_DEFAULT_IMAGE_URL:/uploads/default-thumbnail.png}
   upload-dir: ${MOPL_UPLOAD_DIR:src/main/resources/static/uploads/}
   jwt:
     secret: ${MOPL_JWT_SECRET}

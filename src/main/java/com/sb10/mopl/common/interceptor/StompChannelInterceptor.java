@@ -9,7 +9,6 @@ import com.sb10.mopl.common.exception.MoplException;
 import com.sb10.mopl.content.exception.ContentErrorCode;
 import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.repository.ContentRepository;
-import com.sb10.mopl.conversation.entity.ConversationParticipantId;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
 import com.sb10.mopl.conversation.exception.ConversationException;
 import com.sb10.mopl.conversation.repository.ConversationParticipantRepository;
@@ -43,6 +42,9 @@ public class StompChannelInterceptor implements ChannelInterceptor {
   private static final String AUTHORIZATION_HEADER = "Authorization";
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String PUBLISH_PREFIX = "/pub";
+
+  // Spring 기본 사용자 목적지 프리픽스
+  private static final String USER_DESTINATION_PREFIX = "/user/";
 
   private static final String UUID_PATTERN =
       "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
@@ -112,6 +114,10 @@ public class StompChannelInterceptor implements ChannelInterceptor {
       return;
     }
 
+    if (destination.startsWith(USER_DESTINATION_PREFIX)) {
+      return;
+    }
+
     Matcher directMessageMatcher = DIRECT_MESSAGE_TOPIC_PATTERN.matcher(destination);
     if (directMessageMatcher.matches()) {
       authorizeDirectMessageSubscription(directMessageMatcher, accessor);
@@ -133,8 +139,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     UUID userId = resolveUserId(accessor.getUser());
 
     boolean isParticipant =
-        conversationParticipantRepository.existsById(
-            new ConversationParticipantId(conversationId, userId));
+        conversationParticipantRepository.existsByConversationIdAndUserId(conversationId, userId);
     if (!isParticipant) {
       throw new ConversationException(
           ConversationErrorCode.DIRECT_MESSAGE_TOPIC_ACCESS_DENIED,

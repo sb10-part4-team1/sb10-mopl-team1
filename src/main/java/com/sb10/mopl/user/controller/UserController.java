@@ -19,6 +19,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -69,6 +70,7 @@ public class UserController {
     return ResponseEntity.noContent().build();
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @PatchMapping("/{userId}/role")
   public ResponseEntity<Void> updateRole(
       @PathVariable UUID userId,
@@ -78,6 +80,7 @@ public class UserController {
     return ResponseEntity.noContent().build();
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @PatchMapping("/{userId}/locked")
   public ResponseEntity<Void> updateLocked(
       @PathVariable UUID userId, @Valid @RequestBody UserLockUpdateRequest request) {
@@ -85,6 +88,7 @@ public class UserController {
     return ResponseEntity.noContent().build();
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @GetMapping
   public ResponseEntity<CursorPageResponse<UserDto>> findUsers(
       @ModelAttribute @Valid UserSearchRequest request) {

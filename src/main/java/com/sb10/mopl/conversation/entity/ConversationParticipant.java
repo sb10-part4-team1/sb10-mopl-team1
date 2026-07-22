@@ -1,51 +1,46 @@
 package com.sb10.mopl.conversation.entity;
 
+import com.sb10.mopl.common.entity.BaseEntity;
 import com.sb10.mopl.user.entity.User;
-import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
-import java.time.Instant;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
 @Table(
     name = "conversation_participants",
-    indexes = {@Index(name = "IDX_CONV_PARTICIPANTS_USER", columnList = "user_id")})
-public class ConversationParticipant {
+    indexes = {@Index(name = "IDX_CONV_PARTICIPANTS_USER", columnList = "user_id")},
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "UQ_CONVERSATION_PARTICIPANTS_CONVERSATION_USER",
+          columnNames = {"conversation_id", "user_id"})
+    })
+public class ConversationParticipant extends BaseEntity {
 
-  @EmbeddedId private ConversationParticipantId id;
-
-  @MapsId("conversationId")
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "conversation_id")
+  @JoinColumn(name = "conversation_id", nullable = false)
   private Conversation conversation;
 
-  @MapsId("userId")
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id")
+  @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @CreatedDate
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
-  public ConversationParticipant(Conversation conversation, User user) {
+  private ConversationParticipant(Conversation conversation, User user) {
     this.conversation = conversation;
     this.user = user;
-    this.id = new ConversationParticipantId(conversation.getId(), user.getId());
+    conversation.getParticipants().add(this);
+  }
+
+  public static ConversationParticipant create(Conversation conversation, User user) {
+    return new ConversationParticipant(conversation, user);
   }
 }

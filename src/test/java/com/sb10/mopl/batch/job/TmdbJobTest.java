@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 @SpringBootTest(properties = "mopl.tmdb.batch.max-pages=2")
 @ActiveProfiles("test")
@@ -51,7 +53,7 @@ class TmdbJobTest {
 
   @MockitoBean private TmdbApiClient tmdbApiClient;
 
-  @MockitoBean private TmdbContentMapper tmdbContentMapper;
+  @MockitoSpyBean private TmdbContentMapper tmdbContentMapper;
 
   @BeforeEach
   void setUp() {
@@ -121,9 +123,6 @@ class TmdbJobTest {
     when(tmdbApiClient.fetch("/tv/popular", 2, TmdbApiResponse.class))
         .thenReturn(TmdbApiResponse.empty());
 
-    // 매퍼는 실제 자바 코드 동작을 수행하도록 모킹
-    when(tmdbContentMapper.toEntity(any())).thenCallRealMethod();
-
     // when
     JobExecution jobExecution =
         jobLauncher.run(
@@ -181,7 +180,7 @@ class TmdbJobTest {
         .thenReturn(mockMovieResponse);
 
     // 매퍼에서 RuntimeException을 던지도록 모킹하여 에러 발생 시뮬레이션
-    when(tmdbContentMapper.toEntity(any())).thenThrow(new RuntimeException("테스트용 변환 실패 예외"));
+    doThrow(new RuntimeException("테스트용 변환 실패 예외")).when(tmdbContentMapper).toEntity(any());
 
     // when
     JobExecution jobExecution =
@@ -222,9 +221,6 @@ class TmdbJobTest {
     // TV는 비어있음
     when(tmdbApiClient.fetch("/tv/popular", 1, TmdbApiResponse.class))
         .thenReturn(TmdbApiResponse.empty());
-
-    // 매퍼는 실제 호출 사용
-    when(tmdbContentMapper.toEntity(any())).thenCallRealMethod();
 
     // 1차 기동
     JobExecution firstRun =

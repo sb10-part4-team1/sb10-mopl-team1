@@ -43,10 +43,8 @@ public class ConversationRepositoryCustomImpl implements ConversationRepositoryC
     return queryFactory
         .selectDistinct(conversation)
         .from(conversation)
-        .join(meP)
-        .on(meP.conversation.eq(conversation))
-        .join(otherP)
-        .on(otherP.conversation.eq(conversation))
+        .join(conversation.participants, meP)
+        .join(conversation.participants, otherP)
         .join(otherP.user, otherUser)
         .where(where)
         .orderBy(orderSpecifiers(request.sortDirection()))
@@ -64,10 +62,8 @@ public class ConversationRepositoryCustomImpl implements ConversationRepositoryC
         queryFactory
             .select(conversation.countDistinct())
             .from(conversation)
-            .join(meP)
-            .on(meP.conversation.eq(conversation))
-            .join(otherP)
-            .on(otherP.conversation.eq(conversation))
+            .join(conversation.participants, meP)
+            .join(conversation.participants, otherP)
             .join(otherP.user, otherUser)
             .where(
                 meP.user.id.eq(myUserId),

@@ -175,13 +175,14 @@ CREATE TABLE IF NOT EXISTS "playlist_subscriptions" (
         FOREIGN KEY ("subscriber_id") REFERENCES "users" ("id") ON DELETE CASCADE
 );
 
--- 대화방 참여자 테이블 (복합 PK이므로 컬럼 라인에서 분리 후 정렬)
+-- 대화방 참여자 테이블
 CREATE TABLE IF NOT EXISTS "conversation_participants" (
+    "id"                 UUID                        NOT NULL PRIMARY KEY,
     "conversation_id"    UUID                        NOT NULL,
     "user_id"            UUID                        NOT NULL,
     "created_at"         TIMESTAMP WITH TIME ZONE    NOT NULL,
-    CONSTRAINT "PK_CONVERSATION_PARTICIPANTS"
-        PRIMARY KEY ("conversation_id", "user_id"),
+    CONSTRAINT "UQ_CONVERSATION_PARTICIPANTS_CONVERSATION_USER"
+        UNIQUE ("conversation_id", "user_id"),
     CONSTRAINT "FK_CONVERSATIONS_TO_CONV_PARTICIPANTS"
         FOREIGN KEY ("conversation_id") REFERENCES "conversations" ("id") ON DELETE CASCADE,
     CONSTRAINT "FK_USERS_TO_CONV_PARTICIPANTS"

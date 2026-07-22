@@ -37,10 +37,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ContentServiceTest {
 
+  private static final String DEFAULT_IMAGE_URL = "/uploads/default-thumbnail.png";
   private final ContentMapper contentMapper = Mappers.getMapper(ContentMapper.class);
   private ContentService contentService;
   @Mock private ContentRepository contentRepository;
@@ -51,6 +53,7 @@ class ContentServiceTest {
   void setUp() {
     contentService =
         new ContentService(contentRepository, tagRepository, contentMapper, imageStorageService);
+    ReflectionTestUtils.setField(contentService, "defaultImageUrl", DEFAULT_IMAGE_URL);
   }
 
   @Test

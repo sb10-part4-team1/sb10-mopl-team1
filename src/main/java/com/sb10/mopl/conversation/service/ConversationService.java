@@ -9,7 +9,6 @@ import com.sb10.mopl.conversation.dto.DirectMessageSearchRequest;
 import com.sb10.mopl.conversation.dto.DirectMessageSendRequest;
 import com.sb10.mopl.conversation.entity.Conversation;
 import com.sb10.mopl.conversation.entity.ConversationParticipant;
-import com.sb10.mopl.conversation.entity.ConversationParticipantId;
 import com.sb10.mopl.conversation.entity.DirectMessage;
 import com.sb10.mopl.conversation.event.DirectMessageSentEvent;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
@@ -79,10 +78,10 @@ public class ConversationService {
                     new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", withUserId)));
 
     Conversation conversation = new Conversation();
-    conversationRepository.save(conversation);
+    ConversationParticipant.create(conversation, me);
+    ConversationParticipant.create(conversation, withUser);
 
-    conversationParticipantRepository.save(new ConversationParticipant(conversation, me));
-    conversationParticipantRepository.save(new ConversationParticipant(conversation, withUser));
+    conversationRepository.save(conversation);
 
     return toDto(conversation, requestUserId);
   }
@@ -251,20 +250,15 @@ public class ConversationService {
                         ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
                         Map.of("directMessageId", directMessageId)));
 
-    if (!directMessage.getReceiver().getId().equals(myUserId)) {
-      // 수신자가 아니면 존재 여부 노출 방지를 위해 404로 통일
-      throw new ConversationException(
-          ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
-          Map.of("directMessageId", directMessageId));
+    // 수신자 본인의 요청일 때만 읽음 처리한다
+    if (directMessage.getReceiver().getId().equals(myUserId)) {
+      directMessage.updateIsRead(true);
     }
-
-    directMessage.updateIsRead(true);
   }
 
   private void requireParticipant(UUID myUserId, UUID conversationId) {
     boolean isParticipant =
-        conversationParticipantRepository.existsById(
-            new ConversationParticipantId(conversationId, myUserId));
+        conversationParticipantRepository.existsByConversationIdAndUserId(conversationId, myUserId);
     if (!isParticipant) {
       // 참여자가 아니면 존재 여부 노출 방지를 위해 404로 통일
       throw new ConversationException(
