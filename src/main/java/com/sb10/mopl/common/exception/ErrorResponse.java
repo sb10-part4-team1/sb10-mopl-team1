@@ -1,5 +1,6 @@
 package com.sb10.mopl.common.exception;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Map;
 
 /**
@@ -9,4 +10,7 @@ import java.util.Map;
  * @param message 에러에 관한 대략적인 원인 메시지 (예: "콘텐츠를 찾을 수 없습니다.")
  * @param details 디버깅 및 사용자 안내를 돕기 위한 상세 컨텍스트 데이터
  */
-public record ErrorResponse(String code, String message, Map<String, Object> details) {}
+public record ErrorResponse(
+    @Schema(description = "에러 코드") String code,
+    @Schema(description = "오류 메시지") String message,
+    @Schema(description = "오류 부가 정보") Map<String, Object> details) {}
