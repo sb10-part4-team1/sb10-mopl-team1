@@ -250,14 +250,10 @@ public class ConversationService {
                         ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
                         Map.of("directMessageId", directMessageId)));
 
-    if (!directMessage.getReceiver().getId().equals(myUserId)) {
-      // 수신자가 아니면 존재 여부 노출 방지를 위해 404로 통일
-      throw new ConversationException(
-          ConversationErrorCode.DIRECT_MESSAGE_NOT_FOUND,
-          Map.of("directMessageId", directMessageId));
+    // 수신자 본인의 요청일 때만 읽음 처리한다
+    if (directMessage.getReceiver().getId().equals(myUserId)) {
+      directMessage.updateIsRead(true);
     }
-
-    directMessage.updateIsRead(true);
   }
 
   private void requireParticipant(UUID myUserId, UUID conversationId) {
