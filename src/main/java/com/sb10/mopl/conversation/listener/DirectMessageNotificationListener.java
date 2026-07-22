@@ -30,7 +30,8 @@ public class DirectMessageNotificationListener {
           NotificationLevel.INFO);
     } catch (RuntimeException exception) {
       log.error(
-          "[SSE-NOTIFICATION] DM 수신 알림 생성 실패 - receiverId: {}, conversationId: {}, exceptionType: {}",
+          "[SSE-NOTIFICATION] DM 수신 알림 생성 실패 -"
+              + "receiverId: {}, conversationId: {}, exceptionType: {}",
           event.receiverId(),
           directMessage.conversationId(),
           exception.getClass().getSimpleName(),
