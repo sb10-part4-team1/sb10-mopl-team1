@@ -4,6 +4,7 @@ import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.security.user.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
+import com.sb10.mopl.playlist.controller.api.PlaylistControllerApiDocs;
 import com.sb10.mopl.playlist.dto.PlaylistCreateRequest;
 import com.sb10.mopl.playlist.dto.PlaylistDto;
 import com.sb10.mopl.playlist.dto.PlaylistUpdateRequest;
@@ -26,10 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/playlists")
 @RequiredArgsConstructor
-public class PlaylistController {
+public class PlaylistController implements PlaylistControllerApiDocs {
 
   private final PlaylistService playlistService;
 
+  @Override
   @PostMapping
   public ResponseEntity<PlaylistDto> create(
       @Valid @RequestBody PlaylistCreateRequest request,
@@ -39,6 +41,7 @@ public class PlaylistController {
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
 
+  @Override
   @GetMapping
   public ResponseEntity<CursorPageResponse<PlaylistDto>> findAll(
       @RequestParam(required = false) String keywordLike,
@@ -66,6 +69,7 @@ public class PlaylistController {
     return ResponseEntity.ok(response);
   }
 
+  @Override
   @GetMapping("/{playlistId}")
   public ResponseEntity<PlaylistDto> findById(
       @PathVariable UUID playlistId, @CurrentUser AuthenticatedUser currentUser) {
@@ -74,6 +78,7 @@ public class PlaylistController {
     return ResponseEntity.ok(response);
   }
 
+  @Override
   @PatchMapping("/{playlistId}")
   public ResponseEntity<PlaylistDto> update(
       @PathVariable UUID playlistId,
@@ -85,6 +90,7 @@ public class PlaylistController {
     return ResponseEntity.ok(response);
   }
 
+  @Override
   @DeleteMapping("/{playlistId}")
   public ResponseEntity<Void> delete(
       @PathVariable UUID playlistId, @CurrentUser AuthenticatedUser currentUser) {
