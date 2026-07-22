@@ -132,6 +132,7 @@ public class SwaggerConfig {
             new ApiResponses()
                 .addApiResponse("204", new ApiResponse().description("성공"))
                 .addApiResponse("400", errorResponse("잘못된 요청"))
+                .addApiResponse("401", errorResponse("인증 오류"))
                 .addApiResponse("500", errorResponse("서버 오류")));
   }
 
