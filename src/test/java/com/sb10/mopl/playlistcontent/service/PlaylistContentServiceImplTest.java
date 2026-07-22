@@ -91,13 +91,25 @@ class PlaylistContentServiceImplTest {
     assertDoesNotThrow(() -> playlistContentService.add(playlistId, contentId, ownerId));
 
     // then
-    ArgumentCaptor<PlaylistContent> captor = ArgumentCaptor.forClass(PlaylistContent.class);
-    verify(playlistContentRepository).save(captor.capture());
-    verify(eventPublisher).publishEvent(any(PlaylistContentAddedEvent.class));
+    ArgumentCaptor<PlaylistContent> playlistContentCaptor =
+        ArgumentCaptor.forClass(PlaylistContent.class);
 
-    PlaylistContent savedPlaylistContent = captor.getValue();
+    verify(playlistContentRepository).save(playlistContentCaptor.capture());
+
+    PlaylistContent savedPlaylistContent = playlistContentCaptor.getValue();
     assertSame(playlist, savedPlaylistContent.getPlaylist());
     assertSame(content, savedPlaylistContent.getContent());
+
+    ArgumentCaptor<PlaylistContentAddedEvent> eventCaptor =
+        ArgumentCaptor.forClass(PlaylistContentAddedEvent.class);
+
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    PlaylistContentAddedEvent event = eventCaptor.getValue();
+    assertEquals(playlistId, event.playlistId());
+    assertEquals("플레이리스트 제목", event.playlistTitle());
+    assertEquals(contentId, event.contentId());
+    assertEquals(ownerId, event.ownerId());
   }
 
   @Test

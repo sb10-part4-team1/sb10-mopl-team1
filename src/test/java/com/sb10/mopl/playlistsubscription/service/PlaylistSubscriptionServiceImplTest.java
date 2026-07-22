@@ -13,6 +13,7 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistsubscription.entity.PlaylistSubscription;
+import com.sb10.mopl.playlistsubscription.event.PlaylistSubscribedEvent;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionErrorCode;
 import com.sb10.mopl.playlistsubscription.exception.PlaylistSubscriptionException;
 import com.sb10.mopl.playlistsubscription.repository.PlaylistSubscriptionRepository;
@@ -68,15 +69,24 @@ class PlaylistSubscriptionServiceImplTest {
     playlistSubscriptionService.subscribe(subscriberId, playlistId);
 
     // then
-    ArgumentCaptor<PlaylistSubscription> captor =
+    ArgumentCaptor<PlaylistSubscription> subscriptionCaptor =
         ArgumentCaptor.forClass(PlaylistSubscription.class);
 
-    verify(playlistSubscriptionRepository).save(captor.capture());
+    verify(playlistSubscriptionRepository).save(subscriptionCaptor.capture());
 
-    PlaylistSubscription savedSubscription = captor.getValue();
-
+    PlaylistSubscription savedSubscription = subscriptionCaptor.getValue();
     assertThat(savedSubscription.getSubscriber()).isSameAs(subscriber);
     assertThat(savedSubscription.getPlaylist()).isSameAs(playlist);
+
+    ArgumentCaptor<PlaylistSubscribedEvent> eventCaptor =
+        ArgumentCaptor.forClass(PlaylistSubscribedEvent.class);
+
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    PlaylistSubscribedEvent event = eventCaptor.getValue();
+    assertThat(event.subscriberId()).isEqualTo(subscriberId);
+    assertThat(event.playlistId()).isEqualTo(playlistId);
+    assertThat(event.ownerId()).isEqualTo(ownerId);
   }
 
   @Test

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -84,7 +85,15 @@ class FollowServiceImplTest {
     // then
     assertThat(result).isEqualTo(followDto);
     verify(followRepository).save(follow);
-    verify(eventPublisher).publishEvent(any(FollowCreatedEvent.class));
+
+    ArgumentCaptor<FollowCreatedEvent> eventCaptor =
+        ArgumentCaptor.forClass(FollowCreatedEvent.class);
+
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    FollowCreatedEvent event = eventCaptor.getValue();
+    assertThat(event.followerId()).isEqualTo(followerId);
+    assertThat(event.followeeId()).isEqualTo(followeeId);
   }
 
   @Test
