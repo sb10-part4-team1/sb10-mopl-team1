@@ -28,21 +28,19 @@ public class PlaylistContentAddedNotificationListener {
     List<UUID> subscriberIds =
         playlistSubscriptionRepository.findSubscriberIdsByPlaylistId(event.playlistId());
 
-    for (UUID subscriberId : subscriberIds) {
-      try {
-        notificationService.create(
-            subscriberId,
-            "구독 중인 플레이리스트에 콘텐츠가 추가됐어요.",
-            "[" + event.playlistTitle() + "]에 [" + event.contentTitle() + "]가 추가됐어요.",
-            NotificationLevel.INFO);
-      } catch (RuntimeException exception) {
-        log.error(
-            "플레이리스트 콘텐츠 추가 알림 생성 실패 - subscriberId: {}, playlistId: {}, exceptionType: {}",
-            subscriberId,
-            event.playlistId(),
-            exception.getClass().getSimpleName(),
-            exception);
-      }
+    try {
+      notificationService.createAll(
+          subscriberIds,
+          "구독 중인 플레이리스트에 콘텐츠가 추가됐어요.",
+          "[" + event.playlistTitle() + "]에 [" + event.contentTitle() + "]가 추가됐어요.",
+          NotificationLevel.INFO);
+    } catch (RuntimeException exception) {
+      log.error(
+          "플레이리스트 콘텐츠 추가 알림 생성 실패 - playlistId: {}, subscriberCount: {}, exceptionType: {}",
+          event.playlistId(),
+          subscriberIds.size(),
+          exception.getClass().getSimpleName(),
+          exception);
     }
   }
 }
