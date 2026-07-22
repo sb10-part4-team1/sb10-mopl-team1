@@ -1,6 +1,7 @@
 package com.sb10.mopl.content.controller;
 
 import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.content.controller.api.ContentControllerApiDocs;
 import com.sb10.mopl.content.dto.ContentCreateRequest;
 import com.sb10.mopl.content.dto.ContentDto;
 import com.sb10.mopl.content.dto.ContentSearchRequest;
@@ -30,11 +31,12 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/contents")
 @RequiredArgsConstructor
-public class ContentController {
+public class ContentController implements ContentControllerApiDocs {
 
   private final ContentService contentService;
   private final WatchingSessionService watchingSessionService;
 
+  @Override
   @PreAuthorize("hasRole('ADMIN')")
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ContentDto> create(
@@ -45,29 +47,33 @@ public class ContentController {
     return ResponseEntity.created(location).body(contentDto);
   }
 
+  @Override
   @PreAuthorize("hasRole('ADMIN')")
-  @PatchMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PatchMapping(value = "/{contentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ContentDto> update(
-      @PathVariable UUID id,
+      @PathVariable UUID contentId,
       @RequestPart("request") @Valid ContentUpdateRequest request,
       @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail) {
-    ContentDto contentDto = contentService.update(id, request, thumbnail);
+    ContentDto contentDto = contentService.update(contentId, request, thumbnail);
     return ResponseEntity.ok(contentDto);
   }
 
+  @Override
   @PreAuthorize("hasRole('ADMIN')")
-  @DeleteMapping(value = "/{id}")
-  public ResponseEntity<Void> delete(@PathVariable UUID id) {
-    contentService.delete(id);
+  @DeleteMapping(value = "/{contentId}")
+  public ResponseEntity<Void> delete(@PathVariable UUID contentId) {
+    contentService.delete(contentId);
     return ResponseEntity.noContent().build();
   }
 
-  @GetMapping("/{id}")
-  public ResponseEntity<ContentDto> find(@PathVariable UUID id) {
-    ContentDto contentDto = contentService.find(id);
+  @Override
+  @GetMapping("/{contentId}")
+  public ResponseEntity<ContentDto> find(@PathVariable UUID contentId) {
+    ContentDto contentDto = contentService.find(contentId);
     return ResponseEntity.ok(contentDto);
   }
 
+  @Override
   @GetMapping
   public ResponseEntity<CursorPageResponse<ContentDto>> findAll(
       @ModelAttribute @Valid ContentSearchRequest request) {
@@ -76,6 +82,7 @@ public class ContentController {
   }
 
   // 특정 콘텐츠의 시청 세션(현재 시청자) 목록 조회
+  @Override
   @GetMapping("/{contentId}/watching-sessions")
   public ResponseEntity<CursorPageResponse<WatchingSessionDto>> findWatchingSessions(
       @PathVariable UUID contentId, @ModelAttribute @Valid WatchingSessionSearchRequest request) {
