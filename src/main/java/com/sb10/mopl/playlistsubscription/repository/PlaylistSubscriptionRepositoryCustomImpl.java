@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class PlaylistSubscriptionRepositoryCustomImpl
-    implements PlaylistSubscriptionRepositoryCustom {
+  implements PlaylistSubscriptionRepositoryCustom {
 
   private final JPAQueryFactory queryFactory;
 
@@ -25,13 +25,13 @@ public class PlaylistSubscriptionRepositoryCustomImpl
   public boolean existsBySubscriberIdAndPlaylistId(UUID subscriberId, UUID playlistId) {
 
     Integer result =
-        queryFactory
-            .selectOne()
-            .from(playlistSubscription)
-            .where(
-                playlistSubscription.subscriber.id.eq(subscriberId),
-                playlistSubscription.playlist.id.eq(playlistId))
-            .fetchFirst();
+      queryFactory
+        .selectOne()
+        .from(playlistSubscription)
+        .where(
+          playlistSubscription.subscriber.id.eq(subscriberId),
+          playlistSubscription.playlist.id.eq(playlistId))
+        .fetchFirst();
 
     return result != null;
   }
@@ -39,15 +39,15 @@ public class PlaylistSubscriptionRepositoryCustomImpl
   // 사용자와 플레이리스트 기준으로 구독 정보 조회
   @Override
   public Optional<PlaylistSubscription> findBySubscriberIdAndPlaylistId(
-      UUID subscriberId, UUID playlistId) {
+    UUID subscriberId, UUID playlistId) {
 
     PlaylistSubscription result =
-        queryFactory
-            .selectFrom(playlistSubscription)
-            .where(
-                playlistSubscription.subscriber.id.eq(subscriberId),
-                playlistSubscription.playlist.id.eq(playlistId))
-            .fetchOne();
+      queryFactory
+        .selectFrom(playlistSubscription)
+        .where(
+          playlistSubscription.subscriber.id.eq(subscriberId),
+          playlistSubscription.playlist.id.eq(playlistId))
+        .fetchOne();
 
     return Optional.ofNullable(result);
   }
@@ -56,11 +56,11 @@ public class PlaylistSubscriptionRepositoryCustomImpl
   @Override
   public long countByPlaylistId(UUID playlistId) {
     Long count =
-        queryFactory
-            .select(playlistSubscription.count())
-            .from(playlistSubscription)
-            .where(playlistSubscription.playlist.id.eq(playlistId))
-            .fetchOne();
+      queryFactory
+        .select(playlistSubscription.count())
+        .from(playlistSubscription)
+        .where(playlistSubscription.playlist.id.eq(playlistId))
+        .fetchOne();
 
     return count != null ? count : 0L;
   }
@@ -68,7 +68,7 @@ public class PlaylistSubscriptionRepositoryCustomImpl
   // playlistId 목록 기준으로 구독자 수를 한 번에 조회
   @Override
   public List<PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection>
-      countByPlaylistIds(Collection<UUID> playlistIds) {
+  countByPlaylistIds(Collection<UUID> playlistIds) {
 
     if (playlistIds == null || playlistIds.isEmpty()) {
       return List.of();
@@ -77,19 +77,19 @@ public class PlaylistSubscriptionRepositoryCustomImpl
     NumberExpression<Long> subscriberCount = playlistSubscription.count();
 
     List<Tuple> results =
-        queryFactory
-            .select(playlistSubscription.playlist.id, subscriberCount)
-            .from(playlistSubscription)
-            .where(playlistSubscription.playlist.id.in(playlistIds))
-            .groupBy(playlistSubscription.playlist.id)
-            .fetch();
+      queryFactory
+        .select(playlistSubscription.playlist.id, subscriberCount)
+        .from(playlistSubscription)
+        .where(playlistSubscription.playlist.id.in(playlistIds))
+        .groupBy(playlistSubscription.playlist.id)
+        .fetch();
 
     return results.stream()
-        .<PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection>map(
-            result ->
-                new PlaylistSubscriptionCount(
-                    result.get(playlistSubscription.playlist.id), result.get(subscriberCount)))
-        .toList();
+      .<PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection>map(
+        result ->
+          new PlaylistSubscriptionCount(
+            result.get(playlistSubscription.playlist.id), result.get(subscriberCount)))
+      .toList();
   }
 
   // 현재 사용자가 구독한 playlistId 목록을 한 번에 조회
@@ -101,20 +101,30 @@ public class PlaylistSubscriptionRepositoryCustomImpl
     }
 
     List<UUID> results =
-        queryFactory
-            .select(playlistSubscription.playlist.id)
-            .from(playlistSubscription)
-            .where(
-                playlistSubscription.subscriber.id.eq(subscriberId),
-                playlistSubscription.playlist.id.in(playlistIds))
-            .fetch();
+      queryFactory
+        .select(playlistSubscription.playlist.id)
+        .from(playlistSubscription)
+        .where(
+          playlistSubscription.subscriber.id.eq(subscriberId),
+          playlistSubscription.playlist.id.in(playlistIds))
+        .fetch();
 
     return new HashSet<>(results);
   }
 
+  // 특정 플레이리스트를 구독 중인 유저 id 목록 조회
+  @Override
+  public List<UUID> findSubscriberIdsByPlaylistId(UUID playlistId) {
+    return queryFactory
+      .select(playlistSubscription.subscriber.id)
+      .from(playlistSubscription)
+      .where(playlistSubscription.playlist.id.eq(playlistId))
+      .fetch();
+  }
+
   // 플레이리스트별 구독자 수 조회 결과
   private record PlaylistSubscriptionCount(UUID playlistId, Long subscriberCount)
-      implements PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection {
+    implements PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection {
 
     @Override
     public UUID getPlaylistId() {
