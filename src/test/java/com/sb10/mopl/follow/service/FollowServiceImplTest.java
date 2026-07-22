@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.sb10.mopl.follow.dto.FollowDto;
 import com.sb10.mopl.follow.dto.FollowRequest;
 import com.sb10.mopl.follow.entity.Follow;
+import com.sb10.mopl.follow.event.FollowedEvent;
 import com.sb10.mopl.follow.exception.FollowErrorCode;
 import com.sb10.mopl.follow.exception.FollowException;
 import com.sb10.mopl.follow.mapper.FollowMapper;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,15 +36,20 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class FollowServiceImplTest {
 
-  @Mock private FollowRepository followRepository;
+  @Mock
+  private FollowRepository followRepository;
 
-  @Mock private FollowMapper followMapper;
+  @Mock
+  private FollowMapper followMapper;
 
-  @Mock private UserRepository userRepository;
+  @Mock
+  private UserRepository userRepository;
 
-  @Mock private ApplicationEventPublisher eventPublisher;
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
-  @InjectMocks private FollowServiceImpl followService;
+  @InjectMocks
+  private FollowServiceImpl followService;
 
   private UUID followId;
   private UUID followerId;
@@ -69,15 +76,19 @@ class FollowServiceImplTest {
   @DisplayName("팔로우 - 생성 성공")
   void follow_success() {
     // given
+    String followerName = "팔로우요청자";
+    User followerMock = mock(User.class);
+    given(followerMock.getName()).willReturn(followerName);
+
     given(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId))
-        .willReturn(false);
+      .willReturn(false);
     given(followMapper.toEntity(followerId, request)).willReturn(follow);
     given(followRepository.save(follow)).willReturn(follow);
     given(followMapper.toDto(follow)).willReturn(followDto);
     given(userRepository.findByIdAndIsDeletedFalse(followeeId))
-        .willReturn(Optional.of(mock(User.class)));
+      .willReturn(Optional.of(mock(User.class)));
     given(userRepository.findByIdAndIsDeletedFalse(followerId))
-        .willReturn(Optional.of(mock(User.class)));
+      .willReturn(Optional.of(followerMock));
 
     // when
     FollowDto result = followService.follow(followerId, request);
@@ -85,6 +96,13 @@ class FollowServiceImplTest {
     // then
     assertThat(result).isEqualTo(followDto);
     verify(followRepository).save(follow);
+
+    ArgumentCaptor<FollowedEvent> eventCaptor = ArgumentCaptor.forClass(FollowedEvent.class);
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    FollowedEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.followeeId()).isEqualTo(followeeId);
+    assertThat(publishedEvent.followerName()).isEqualTo(followerName);
   }
 
   @Test
@@ -92,15 +110,15 @@ class FollowServiceImplTest {
   void follow_fail_alreadyExists() {
     // given
     given(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId))
-        .willReturn(true);
+      .willReturn(true);
     given(userRepository.findByIdAndIsDeletedFalse(followeeId))
-        .willReturn(Optional.of(mock(User.class)));
+      .willReturn(Optional.of(mock(User.class)));
 
     // when & then
     assertThatThrownBy(() -> followService.follow(followerId, request))
-        .isInstanceOf(FollowException.class)
-        .extracting("errorCode")
-        .isEqualTo(FollowErrorCode.FOLLOW_ALREADY_EXISTS);
+      .isInstanceOf(FollowException.class)
+      .extracting("errorCode")
+      .isEqualTo(FollowErrorCode.FOLLOW_ALREADY_EXISTS);
 
     verify(followRepository, never()).save(any());
   }
@@ -113,9 +131,9 @@ class FollowServiceImplTest {
 
     // when & then
     assertThatThrownBy(() -> followService.follow(followerId, request))
-        .isInstanceOf(UserException.class)
-        .extracting("errorCode")
-        .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+      .isInstanceOf(UserException.class)
+      .extracting("errorCode")
+      .isEqualTo(UserErrorCode.USER_NOT_FOUND);
 
     verify(followRepository, never()).existsByFollowerIdAndFolloweeId(any(), any());
     verify(followRepository, never()).save(any());
@@ -142,9 +160,9 @@ class FollowServiceImplTest {
 
     // when & then
     assertThatThrownBy(() -> followService.unfollow(followerId, followId))
-        .isInstanceOf(FollowException.class)
-        .extracting("errorCode")
-        .isEqualTo(FollowErrorCode.FOLLOW_NOT_FOUND);
+      .isInstanceOf(FollowException.class)
+      .extracting("errorCode")
+      .isEqualTo(FollowErrorCode.FOLLOW_NOT_FOUND);
 
     verify(followRepository, never()).delete(any());
   }
@@ -157,9 +175,9 @@ class FollowServiceImplTest {
 
     // when & then
     assertThatThrownBy(() -> followService.unfollow(otherUserId, followId))
-        .isInstanceOf(FollowException.class)
-        .extracting("errorCode")
-        .isEqualTo(FollowErrorCode.UNAUTHORIZED_FOLLOW_ACCESS);
+      .isInstanceOf(FollowException.class)
+      .extracting("errorCode")
+      .isEqualTo(FollowErrorCode.UNAUTHORIZED_FOLLOW_ACCESS);
 
     verify(followRepository, never()).delete(any());
   }
@@ -169,7 +187,7 @@ class FollowServiceImplTest {
   void findFollowedByMe_success() {
     // given
     given(followRepository.findByFollowerIdAndFolloweeId(followerId, followeeId))
-        .willReturn(Optional.of(follow));
+      .willReturn(Optional.of(follow));
     given(followMapper.toDto(follow)).willReturn(followDto);
 
     // when
@@ -184,13 +202,13 @@ class FollowServiceImplTest {
   void findFollowedByMe_fail_followNotFound() {
     // given
     given(followRepository.findByFollowerIdAndFolloweeId(followerId, followeeId))
-        .willReturn(Optional.empty());
+      .willReturn(Optional.empty());
 
     // when & then
     assertThatThrownBy(() -> followService.findFollowedByMe(followerId, followeeId))
-        .isInstanceOf(FollowException.class)
-        .extracting("errorCode")
-        .isEqualTo(FollowErrorCode.FOLLOW_NOT_FOUND);
+      .isInstanceOf(FollowException.class)
+      .extracting("errorCode")
+      .isEqualTo(FollowErrorCode.FOLLOW_NOT_FOUND);
   }
 
   @Test
