@@ -2,6 +2,7 @@ package com.sb10.mopl.playlistcontent.controller;
 
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.playlistcontent.controller.api.PlaylistContentControllerApiDocs;
 import com.sb10.mopl.playlistcontent.service.PlaylistContentService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/playlists/{playlistId}/contents")
 @RequiredArgsConstructor
-public class PlaylistContentController {
+public class PlaylistContentController implements PlaylistContentControllerApiDocs {
 
   private final PlaylistContentService playlistContentService;
 
+  @Override
   @PostMapping("/{contentId}")
   public ResponseEntity<Void> add(
       @PathVariable UUID playlistId,
@@ -28,6 +30,7 @@ public class PlaylistContentController {
     return ResponseEntity.noContent().build();
   }
 
+  @Override
   @DeleteMapping("/{contentId}")
   public ResponseEntity<Void> delete(
       @PathVariable UUID playlistId,
