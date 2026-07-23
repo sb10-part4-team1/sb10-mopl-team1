@@ -18,18 +18,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUserArgumentResolver;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUserArgumentResolver;
 import com.sb10.mopl.common.exception.GlobalExceptionHandler;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.config.WebMvcConfig;
-import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
-import com.sb10.mopl.user.dto.request.UserCreateRequest;
-import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
-import com.sb10.mopl.user.dto.request.UserSearchRequest;
-import com.sb10.mopl.user.dto.request.UserUpdateRequest;
-import com.sb10.mopl.user.dto.response.UserDto;
+import com.sb10.mopl.user.dto.ChangePasswordRequest;
+import com.sb10.mopl.user.dto.UserCreateRequest;
+import com.sb10.mopl.user.dto.UserDto;
+import com.sb10.mopl.user.dto.UserRoleUpdateRequest;
+import com.sb10.mopl.user.dto.UserSearchRequest;
+import com.sb10.mopl.user.dto.UserUpdateRequest;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;

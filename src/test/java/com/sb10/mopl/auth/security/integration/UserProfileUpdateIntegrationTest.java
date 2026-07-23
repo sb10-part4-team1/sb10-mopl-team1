@@ -12,7 +12,7 @@ import com.sb10.mopl.auth.repository.JwtSessionRepository;
 import com.sb10.mopl.auth.repository.RefreshTokenRepository;
 import com.sb10.mopl.auth.security.integration.AuthIntegrationTestSupport.SignInTokens;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
-import com.sb10.mopl.user.dto.request.UserUpdateRequest;
+import com.sb10.mopl.user.dto.UserUpdateRequest;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
 import java.nio.charset.StandardCharsets;

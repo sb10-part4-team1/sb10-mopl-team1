@@ -3,7 +3,7 @@ package com.sb10.mopl.common.interceptor;
 import com.sb10.mopl.auth.exception.AuthErrorCode;
 import com.sb10.mopl.auth.security.jwt.AuthenticatedUserFactory;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.common.exception.MoplException;
 import com.sb10.mopl.content.repository.ContentRepository;

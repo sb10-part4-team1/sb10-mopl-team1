@@ -1,6 +1,6 @@
 package com.sb10.mopl.auth.security.jwt;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.user.entity.UserRole;
 import io.jsonwebtoken.Claims;
 import java.util.UUID;

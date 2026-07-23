@@ -1,6 +1,6 @@
 package com.sb10.mopl.auth.service;
 
-import com.sb10.mopl.auth.security.user.MoplUserDetails;
+import com.sb10.mopl.auth.security.principal.MoplUserDetails;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

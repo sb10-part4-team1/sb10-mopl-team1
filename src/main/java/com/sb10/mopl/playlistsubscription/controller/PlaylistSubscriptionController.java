@@ -1,7 +1,7 @@
 package com.sb10.mopl.playlistsubscription.controller;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.playlistsubscription.controller.api.PlaylistSubscriptionControllerApiDocs;
 import com.sb10.mopl.playlistsubscription.service.PlaylistSubscriptionService;
 import java.util.UUID;

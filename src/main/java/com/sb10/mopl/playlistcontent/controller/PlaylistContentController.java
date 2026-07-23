@@ -1,7 +1,7 @@
 package com.sb10.mopl.playlistcontent.controller;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.playlistcontent.controller.api.PlaylistContentControllerApiDocs;
 import com.sb10.mopl.playlistcontent.service.PlaylistContentService;
 import java.util.UUID;
