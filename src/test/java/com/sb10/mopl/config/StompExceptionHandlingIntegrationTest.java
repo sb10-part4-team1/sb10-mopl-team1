@@ -109,8 +109,8 @@ class StompExceptionHandlingIntegrationTest {
   }
 
   @Test
-  @DisplayName("채널 인터셉터 단계의 예외를 STOMP ERROR 프레임으로 응답한다")
-  void subscribe_respondWithErrorFrame_whenContentDoesNotExist() throws Exception {
+  @DisplayName("존재하지 않는 콘텐츠 구독은 ERROR 프레임 없이 무시되고 연결을 유지한다")
+  void subscribe_ignoreSilently_whenContentDoesNotExist() throws Exception {
     String token = issueAccessToken("subscribe-user@example.com");
 
     BlockingQueue<byte[]> errorFrames = new LinkedBlockingQueue<>();
@@ -128,15 +128,37 @@ class StompExceptionHandlingIntegrationTest {
         };
     stompSession = connect(token, handler);
 
-    // 존재하지 않는 콘텐츠 구독 -> StompChannelInterceptor.preSend에서 ContentException 발생
+    // 존재하지 않는 콘텐츠 구독 -> StompChannelInterceptor.preSend가 해당 SUBSCRIBE 프레임만 조용히 폐기
     stompSession.subscribe(
         "/sub/contents/" + UUID.randomUUID() + "/chat", new StompSessionHandlerAdapter() {});
 
-    byte[] payload = errorFrames.poll(5, TimeUnit.SECONDS);
-    assertThat(payload).isNotNull();
+    byte[] payload = errorFrames.poll(2, TimeUnit.SECONDS);
+    assertThat(payload).isNull();
+    assertThat(stompSession.isConnected()).isTrue();
 
-    ErrorResponse errorResponse = objectMapper.readValue(payload, ErrorResponse.class);
-    assertThat(errorResponse.code()).isEqualTo("CT01");
+    // 연결이 유지되어 이후 정상 구독/전송도 계속 동작하는지 확인
+    BlockingQueue<ErrorResponse> validationErrors = new LinkedBlockingQueue<>();
+    stompSession.subscribe(
+        "/user/sub/queue/errors",
+        new StompFrameHandler() {
+          @Override
+          public Type getPayloadType(StompHeaders headers) {
+            return ErrorResponse.class;
+          }
+
+          @Override
+          public void handleFrame(StompHeaders headers, Object payload) {
+            validationErrors.add((ErrorResponse) payload);
+          }
+        });
+    Thread.sleep(300);
+
+    stompSession.send(
+        "/pub/contents/" + UUID.randomUUID() + "/chat", new ContentChatSendRequest(" "));
+
+    ErrorResponse errorResponse = validationErrors.poll(5, TimeUnit.SECONDS);
+    assertThat(errorResponse).isNotNull();
+    assertThat(errorResponse.code()).isEqualTo("SYS01");
   }
 
   @Test

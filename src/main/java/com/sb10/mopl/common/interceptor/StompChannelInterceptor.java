@@ -6,8 +6,6 @@ import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.common.exception.MoplException;
-import com.sb10.mopl.content.exception.ContentErrorCode;
-import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
 import com.sb10.mopl.conversation.exception.ConversationException;
@@ -84,9 +82,9 @@ public class StompChannelInterceptor implements ChannelInterceptor {
       authorizeSend(accessor);
     }
 
-    // subscribe 프레임 검증
-    if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-      authorizeSubscription(accessor);
+    // subscribe 프레임 검증 및 거부된 구독만 중단
+    if (StompCommand.SUBSCRIBE.equals(accessor.getCommand()) && !authorizeSubscription(accessor)) {
+      return null;
     }
 
     if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
@@ -106,31 +104,44 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     }
   }
 
-  // destination 패턴에 맞는 토픽별 구독 권한 검사로 위임하고, 알 수 없는 destination은 모두 거부합니다.
-  private void authorizeSubscription(StompHeaderAccessor accessor) {
+  // destination 패턴에 맞는 토픽별 구독 권한 검사로 위임합니다.
+  // false를 반환하면 해당 SUBSCRIBE 메시지만 무시합니다.
+  private boolean authorizeSubscription(StompHeaderAccessor accessor) {
     String destination = accessor.getDestination();
+
     if (destination == null) {
-      rejectSubscription(destination);
-      return;
+      rejectSubscription(null);
+      return false;
     }
 
+    // 사용자 전용 목적지는 기존과 동일하게 허용
     if (destination.startsWith(USER_DESTINATION_PREFIX)) {
-      return;
+      return true;
     }
 
+    // 대화방 구독은 기존과 동일하게 참여 여부를 검증
     Matcher directMessageMatcher = DIRECT_MESSAGE_TOPIC_PATTERN.matcher(destination);
     if (directMessageMatcher.matches()) {
       authorizeDirectMessageSubscription(directMessageMatcher, accessor);
-      return;
+      return true;
     }
 
+    // UUID 형식이 올바른 콘텐츠 구독
     Matcher contentTopicMatcher = CONTENT_TOPIC_PATTERN.matcher(destination);
     if (contentTopicMatcher.matches()) {
-      authorizeContentTopicSubscription(contentTopicMatcher);
-      return;
+      return authorizeContentTopicSubscription(contentTopicMatcher);
     }
 
+    // /sub/contents/로 시작하지만 UUID 형식 또는 목적지 형식이 잘못된 경우
+    // 연결을 끊지 않고 해당 SUBSCRIBE만 거부
+    if (destination.startsWith("/sub/contents/")) {
+      log.warn("[STOMP] 잘못된 콘텐츠 구독을 무시합니다. destination={}", destination);
+      return false;
+    }
+
+    // 콘텐츠 이외의 알 수 없는 목적지는 기존 정책대로 예외 처리
     rejectSubscription(destination);
+    return false;
   }
 
   // 대화 참여자가 아닌 사용자가 다른 대화의 DM 토픽을 구독하는 것을 방지
@@ -147,13 +158,17 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     }
   }
 
-  // 존재하지 않는 콘텐츠의 시청 세션/채팅 토픽을 구독하는 것을 방지 (참여자 제한은 없음 - 누구나 같이 볼 수 있음)
-  private void authorizeContentTopicSubscription(Matcher matcher) {
+  // 존재하는 콘텐츠의 시청 세션/채팅 토픽만 구독하도록 허용합니다.
+  // 존재하지 않으면 예외를 던지지 않고 해당 SUBSCRIBE만 거부합니다.
+  private boolean authorizeContentTopicSubscription(Matcher matcher) {
     UUID contentId = UUID.fromString(matcher.group(1));
+
     if (!contentRepository.existsById(contentId)) {
-      throw new ContentException(
-          ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId));
+      log.warn("[STOMP] 존재하지 않는 콘텐츠 구독을 무시합니다. contentId={}", contentId);
+      return false;
     }
+
+    return true;
   }
 
   private void rejectSubscription(String destination) {

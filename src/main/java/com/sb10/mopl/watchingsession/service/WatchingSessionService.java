@@ -97,14 +97,10 @@ public class WatchingSessionService {
   }
 
   // 특정 콘텐츠의 시청 세션 목록 조회 (커서 페이지네이션)
+  // 콘텐츠 존재 여부는 검사하지 않는다 (항상 200, 없으면 빈 목록을 반환).
   @Transactional(readOnly = true)
   public CursorPageResponse<WatchingSessionDto> findByContent(
       UUID contentId, WatchingSessionSearchRequest request) {
-    if (!contentRepository.existsById(contentId)) {
-      throw new ContentException(
-          ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId));
-    }
-
     List<WatchingSession> result = watchingSessionRepository.search(contentId, request);
 
     boolean hasNext = result.size() > request.limit();
