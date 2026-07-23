@@ -1,7 +1,7 @@
 package com.sb10.mopl.content.controller;
 
 import com.sb10.mopl.auth.exception.AuthErrorCode;
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.common.exception.MoplException;
 import com.sb10.mopl.content.dto.ContentChatDto;
 import com.sb10.mopl.content.dto.ContentChatSendRequest;

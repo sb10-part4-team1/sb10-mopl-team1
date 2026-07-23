@@ -1,6 +1,6 @@
 package com.sb10.mopl.config;
 
-import com.sb10.mopl.auth.security.user.CurrentUserArgumentResolver;
+import com.sb10.mopl.auth.security.principal.CurrentUserArgumentResolver;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

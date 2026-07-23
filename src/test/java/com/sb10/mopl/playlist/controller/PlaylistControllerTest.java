@@ -15,8 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.common.exception.GlobalExceptionHandler;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;

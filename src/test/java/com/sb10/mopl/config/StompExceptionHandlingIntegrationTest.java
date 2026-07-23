@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sb10.mopl.auth.repository.JwtSessionRepository;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
-import com.sb10.mopl.auth.security.user.MoplUserDetails;
+import com.sb10.mopl.auth.security.principal.MoplUserDetails;
 import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.common.exception.ErrorResponse;
 import com.sb10.mopl.content.dto.ContentChatSendRequest;

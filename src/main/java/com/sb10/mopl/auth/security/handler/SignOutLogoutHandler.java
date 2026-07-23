@@ -2,7 +2,7 @@ package com.sb10.mopl.auth.security.handler;
 
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieResolver;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.auth.service.AuthSessionService;
 import com.sb10.mopl.auth.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;

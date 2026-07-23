@@ -1,8 +1,9 @@
 package com.sb10.mopl.conversation.controller;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.conversation.controller.api.ConversationControllerApiDocs;
 import com.sb10.mopl.conversation.dto.ConversationCreateRequest;
 import com.sb10.mopl.conversation.dto.ConversationDto;
 import com.sb10.mopl.conversation.dto.ConversationSearchRequest;
@@ -25,11 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/conversations")
 @RequiredArgsConstructor
-public class ConversationController {
+public class ConversationController implements ConversationControllerApiDocs {
 
   private final ConversationService conversationService;
 
   // 대화 생성
+  @Override
   @PostMapping
   public ResponseEntity<ConversationDto> createConversation(
       @CurrentUser AuthenticatedUser currentUser,
@@ -39,6 +41,7 @@ public class ConversationController {
   }
 
   // 대화 목록 조회
+  @Override
   @GetMapping
   public ResponseEntity<CursorPageResponse<ConversationDto>> findConversations(
       @CurrentUser AuthenticatedUser currentUser,
@@ -49,6 +52,7 @@ public class ConversationController {
   }
 
   // 특정 사용자와의 대화 조회
+  @Override
   @GetMapping("/with")
   public ResponseEntity<ConversationDto> findConversationWithUser(
       @CurrentUser AuthenticatedUser currentUser, @RequestParam UUID userId) {
@@ -57,6 +61,7 @@ public class ConversationController {
   }
 
   // 특정 대화 조회
+  @Override
   @GetMapping("/{conversationId}")
   public ResponseEntity<ConversationDto> findConversation(
       @CurrentUser AuthenticatedUser currentUser, @PathVariable UUID conversationId) {
@@ -65,6 +70,7 @@ public class ConversationController {
   }
 
   // DM 목록 조회
+  @Override
   @GetMapping("/{conversationId}/direct-messages")
   public ResponseEntity<CursorPageResponse<DirectMessageDto>> findDirectMessages(
       @CurrentUser AuthenticatedUser currentUser,
@@ -76,6 +82,7 @@ public class ConversationController {
   }
 
   // DM 읽음 처리
+  @Override
   @PostMapping("/{conversationId}/direct-messages/{directMessageId}/read")
   public ResponseEntity<Void> readDirectMessage(
       @CurrentUser AuthenticatedUser currentUser,

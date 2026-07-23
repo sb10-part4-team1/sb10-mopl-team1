@@ -1,9 +1,10 @@
 package com.sb10.mopl.review.controller;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageRequest;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.review.controller.api.ReviewControllerApiDocs;
 import com.sb10.mopl.review.dto.ReviewCreateRequest;
 import com.sb10.mopl.review.dto.ReviewDto;
 import com.sb10.mopl.review.dto.ReviewUpdateRequest;
@@ -27,10 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/reviews")
-public class ReviewController {
+public class ReviewController implements ReviewControllerApiDocs {
 
   private final ReviewService reviewService;
 
+  @Override
   @PostMapping
   public ResponseEntity<ReviewDto> create(
       @CurrentUser AuthenticatedUser currentUser, @Valid @RequestBody ReviewCreateRequest request) {
@@ -40,6 +42,7 @@ public class ReviewController {
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
 
+  @Override
   @GetMapping
   public ResponseEntity<CursorPageResponse<ReviewDto>> findAll(
       @RequestParam(required = false) UUID contentId,
@@ -58,6 +61,7 @@ public class ReviewController {
     return ResponseEntity.ok(response);
   }
 
+  @Override
   @PatchMapping("/{reviewId}")
   public ResponseEntity<ReviewDto> update(
       @PathVariable UUID reviewId,
@@ -69,6 +73,7 @@ public class ReviewController {
     return ResponseEntity.ok(response);
   }
 
+  @Override
   @DeleteMapping("/{reviewId}")
   public ResponseEntity<Void> delete(
       @PathVariable UUID reviewId, @CurrentUser AuthenticatedUser currentUser) {

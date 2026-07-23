@@ -1,13 +1,13 @@
 package com.sb10.mopl.auth.security.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sb10.mopl.auth.dto.response.JwtDto;
+import com.sb10.mopl.auth.dto.JwtDto;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
-import com.sb10.mopl.auth.security.user.MoplUserDetails;
+import com.sb10.mopl.auth.security.principal.MoplUserDetails;
 import com.sb10.mopl.auth.service.AuthTokenService;
 import com.sb10.mopl.auth.service.AuthTokenService.IssuedToken;
-import com.sb10.mopl.user.dto.response.UserDto;
+import com.sb10.mopl.user.dto.UserDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;

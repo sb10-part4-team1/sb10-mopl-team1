@@ -1,6 +1,6 @@
 package com.sb10.mopl.auth.security.filter;
 
-import com.sb10.mopl.auth.dto.request.SignInRequest;
+import com.sb10.mopl.auth.dto.SignInRequest;
 import com.sb10.mopl.auth.exception.InvalidSignInRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
