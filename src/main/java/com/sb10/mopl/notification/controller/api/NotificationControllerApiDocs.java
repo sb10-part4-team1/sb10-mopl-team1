@@ -21,10 +21,7 @@ public interface NotificationControllerApiDocs {
 
   @Operation(summary = "알림 목록 조회 (커서 페이지네이션)", description = "API 요청자의 알림 목록만 조회할 수 있습니다.")
   @ApiResponses({
-    @ApiResponse(
-        responseCode = "200",
-        description = "성공",
-        content = @Content(schema = @Schema(implementation = CursorPageResponse.class))),
+    @ApiResponse(responseCode = "200", description = "성공"),
     @ApiResponse(
         responseCode = "400",
         description = "잘못된 요청",

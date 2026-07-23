@@ -50,10 +50,7 @@ public interface ConversationControllerApiDocs {
 
   @Operation(summary = "대화 목록 조회 (커서 페이지네이션)", description = "API 요청자 본인의 대화 목록만 조회할 수 있습니다.")
   @ApiResponses({
-    @ApiResponse(
-        responseCode = "200",
-        description = "성공",
-        content = @Content(schema = @Schema(implementation = CursorPageResponse.class))),
+    @ApiResponse(responseCode = "200", description = "성공"),
     @ApiResponse(
         responseCode = "400",
         description = "잘못된 요청",
@@ -129,10 +126,7 @@ public interface ConversationControllerApiDocs {
       summary = "DM 목록 조회 (커서 페이지네이션)",
       description = "특정 대화의 DM 목록을 조회합니다. API 요청자가 해당 대화의 참여자여야 합니다.")
   @ApiResponses({
-    @ApiResponse(
-        responseCode = "200",
-        description = "성공",
-        content = @Content(schema = @Schema(implementation = CursorPageResponse.class))),
+    @ApiResponse(responseCode = "200", description = "성공"),
     @ApiResponse(
         responseCode = "400",
         description = "잘못된 요청",
