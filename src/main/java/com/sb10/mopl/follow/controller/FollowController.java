@@ -1,7 +1,7 @@
 package com.sb10.mopl.follow.controller;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.follow.controller.api.FollowControllerApiDocs;
 import com.sb10.mopl.follow.dto.FollowDto;
 import com.sb10.mopl.follow.dto.FollowRequest;

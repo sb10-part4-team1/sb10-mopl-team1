@@ -1,7 +1,7 @@
 package com.sb10.mopl.config;
 
-import com.sb10.mopl.auth.dto.request.SignInRequest;
-import com.sb10.mopl.auth.dto.response.JwtDto;
+import com.sb10.mopl.auth.dto.JwtDto;
+import com.sb10.mopl.auth.dto.SignInRequest;
 import com.sb10.mopl.common.exception.ErrorResponse;
 import io.swagger.v3.core.converter.AnnotatedType;
 import io.swagger.v3.core.converter.ModelConverters;

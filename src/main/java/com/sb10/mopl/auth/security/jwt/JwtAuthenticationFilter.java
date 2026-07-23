@@ -2,7 +2,7 @@ package com.sb10.mopl.auth.security.jwt;
 
 import com.sb10.mopl.auth.exception.AuthErrorCode;
 import com.sb10.mopl.auth.security.handler.AuthErrorResponseWriter;
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.auth.service.JwtSessionService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;

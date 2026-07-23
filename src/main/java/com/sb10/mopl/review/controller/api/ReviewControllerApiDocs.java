@@ -1,6 +1,6 @@
 package com.sb10.mopl.review.controller.api;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.common.exception.ErrorResponse;
 import com.sb10.mopl.common.pagination.CursorPageRequest;
 import com.sb10.mopl.common.pagination.CursorPageResponse;

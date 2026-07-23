@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.sb10.mopl.common.exception.GlobalExceptionHandler;
 import com.sb10.mopl.content.dto.ContentSummary;
 import com.sb10.mopl.content.entity.ContentType;
-import com.sb10.mopl.user.dto.response.UserSummary;
+import com.sb10.mopl.user.dto.UserSummary;
 import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;
 import com.sb10.mopl.watchingsession.service.WatchingSessionService;
 import java.time.Instant;

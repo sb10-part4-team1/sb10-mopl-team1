@@ -1,9 +1,9 @@
 package com.sb10.mopl.auth.security.handler;
 
 import com.sb10.mopl.auth.entity.SocialProvider;
-import com.sb10.mopl.auth.oauth.Oauth2UserProfile;
-import com.sb10.mopl.auth.oauth.Oauth2UserProfileResolverComposite;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
+import com.sb10.mopl.auth.security.oauth.Oauth2UserProfile;
+import com.sb10.mopl.auth.security.oauth.Oauth2UserProfileResolverComposite;
 import com.sb10.mopl.auth.service.AuthTokenService;
 import com.sb10.mopl.auth.service.AuthTokenService.IssuedToken;
 import com.sb10.mopl.auth.service.SocialLoginService;

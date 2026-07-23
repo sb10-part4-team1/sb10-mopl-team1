@@ -1,6 +1,6 @@
 package com.sb10.mopl.watchingsession.listener;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.watchingsession.dto.ChangeType;
 import com.sb10.mopl.watchingsession.dto.WatchingSessionChange;
 import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;

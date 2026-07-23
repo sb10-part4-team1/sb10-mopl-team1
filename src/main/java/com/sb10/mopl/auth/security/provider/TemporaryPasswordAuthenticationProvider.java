@@ -2,7 +2,7 @@ package com.sb10.mopl.auth.security.provider;
 
 import com.sb10.mopl.auth.entity.TemporaryPassword;
 import com.sb10.mopl.auth.repository.TemporaryPasswordRepository;
-import com.sb10.mopl.auth.security.user.MoplUserDetails;
+import com.sb10.mopl.auth.security.principal.MoplUserDetails;
 import com.sb10.mopl.user.entity.User;
 import java.time.Clock;
 import java.time.Instant;

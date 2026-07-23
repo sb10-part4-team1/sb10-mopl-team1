@@ -2,8 +2,8 @@ package com.sb10.mopl.auth.service;
 
 import com.sb10.mopl.auth.entity.SocialAccount;
 import com.sb10.mopl.auth.exception.AuthErrorCode;
-import com.sb10.mopl.auth.oauth.Oauth2UserProfile;
 import com.sb10.mopl.auth.repository.SocialAccountRepository;
+import com.sb10.mopl.auth.security.oauth.Oauth2UserProfile;
 import com.sb10.mopl.common.exception.MoplException;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;

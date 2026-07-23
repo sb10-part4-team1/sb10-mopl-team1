@@ -1,6 +1,6 @@
 package com.sb10.mopl.conversation.dto;
 
-import com.sb10.mopl.user.dto.response.UserSummary;
+import com.sb10.mopl.user.dto.UserSummary;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 

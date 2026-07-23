@@ -161,10 +161,10 @@ class EmailPasswordAuthenticationFilterTest {
     return request;
   }
 
-  private ConstraintViolation<com.sb10.mopl.auth.dto.request.SignInRequest> violation(
+  private ConstraintViolation<com.sb10.mopl.auth.dto.SignInRequest> violation(
       String propertyName, String message) {
     @SuppressWarnings("unchecked")
-    ConstraintViolation<com.sb10.mopl.auth.dto.request.SignInRequest> violation =
+    ConstraintViolation<com.sb10.mopl.auth.dto.SignInRequest> violation =
         mock(ConstraintViolation.class);
     Path path = mock(Path.class);
     when(path.toString()).thenReturn(propertyName);

@@ -1,6 +1,6 @@
 package com.sb10.mopl.auth.security.jwt;
 
-import com.sb10.mopl.auth.security.user.MoplUserDetails;
+import com.sb10.mopl.auth.security.principal.MoplUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

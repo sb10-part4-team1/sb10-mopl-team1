@@ -1,7 +1,7 @@
 package com.sb10.mopl.notification.controller;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.notification.controller.api.NotificationControllerApiDocs;
 import com.sb10.mopl.notification.dto.NotificationDto;

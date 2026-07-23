@@ -1,7 +1,7 @@
 package com.sb10.mopl.auth.controller.api;
 
-import com.sb10.mopl.auth.dto.request.ResetPasswordRequest;
-import com.sb10.mopl.auth.dto.response.JwtDto;
+import com.sb10.mopl.auth.dto.JwtDto;
+import com.sb10.mopl.auth.dto.ResetPasswordRequest;
 import com.sb10.mopl.common.exception.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

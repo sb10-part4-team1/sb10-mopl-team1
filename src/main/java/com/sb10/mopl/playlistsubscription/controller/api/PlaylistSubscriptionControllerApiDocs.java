@@ -1,6 +1,6 @@
 package com.sb10.mopl.playlistsubscription.controller.api;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.common.exception.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

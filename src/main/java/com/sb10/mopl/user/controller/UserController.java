@@ -1,16 +1,16 @@
 package com.sb10.mopl.user.controller;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.user.controller.api.UserControllerApiDocs;
-import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
-import com.sb10.mopl.user.dto.request.UserCreateRequest;
-import com.sb10.mopl.user.dto.request.UserLockUpdateRequest;
-import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
-import com.sb10.mopl.user.dto.request.UserSearchRequest;
-import com.sb10.mopl.user.dto.request.UserUpdateRequest;
-import com.sb10.mopl.user.dto.response.UserDto;
+import com.sb10.mopl.user.dto.ChangePasswordRequest;
+import com.sb10.mopl.user.dto.UserCreateRequest;
+import com.sb10.mopl.user.dto.UserDto;
+import com.sb10.mopl.user.dto.UserLockUpdateRequest;
+import com.sb10.mopl.user.dto.UserRoleUpdateRequest;
+import com.sb10.mopl.user.dto.UserSearchRequest;
+import com.sb10.mopl.user.dto.UserUpdateRequest;
 import com.sb10.mopl.user.service.UserService;
 import jakarta.validation.Valid;
 import java.net.URI;

@@ -3,7 +3,7 @@ package com.sb10.mopl.user.mapper;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.sb10.mopl.user.dto.response.UserDto;
+import com.sb10.mopl.user.dto.UserDto;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import java.time.Instant;

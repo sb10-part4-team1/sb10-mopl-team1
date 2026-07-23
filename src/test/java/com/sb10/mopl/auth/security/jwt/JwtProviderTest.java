@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.sb10.mopl.auth.security.user.MoplUserDetails;
+import com.sb10.mopl.auth.security.principal.MoplUserDetails;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import io.jsonwebtoken.Claims;

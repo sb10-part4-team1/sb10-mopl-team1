@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.config.JpaAuditingConfig;
 import com.sb10.mopl.config.QuerydslConfig;
-import com.sb10.mopl.user.dto.request.UserSearchRequest;
+import com.sb10.mopl.user.dto.UserSearchRequest;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.exception.UserErrorCode;

@@ -1,7 +1,7 @@
 package com.sb10.mopl.playlist.controller;
 
-import com.sb10.mopl.auth.security.user.AuthenticatedUser;
-import com.sb10.mopl.auth.security.user.CurrentUser;
+import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
+import com.sb10.mopl.auth.security.principal.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.playlist.controller.api.PlaylistControllerApiDocs;
