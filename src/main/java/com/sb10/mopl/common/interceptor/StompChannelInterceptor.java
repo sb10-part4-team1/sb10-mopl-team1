@@ -6,8 +6,6 @@ import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.common.exception.MoplException;
-import com.sb10.mopl.content.exception.ContentErrorCode;
-import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.conversation.exception.ConversationErrorCode;
 import com.sb10.mopl.conversation.exception.ConversationException;
@@ -33,7 +31,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
-/** connect 프레임의 jwt 검증해 세션에 인증 정보를 부여하고 sub 프레임에서는 dm 토픽 구독자가 실제 대화 참여자인지 검사합니다. */
+/**
+ * connect 프레임의 jwt 검증해 세션에 인증 정보를 부여하고 sub 프레임에서는 dm 토픽 구독자가 실제 대화 참여자인지 검사합니다.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -47,15 +47,15 @@ public class StompChannelInterceptor implements ChannelInterceptor {
   private static final String USER_DESTINATION_PREFIX = "/user/";
 
   private static final String UUID_PATTERN =
-      "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+    "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 
   // UUID 형식만 들어올 수 있음
   private static final Pattern DIRECT_MESSAGE_TOPIC_PATTERN =
-      Pattern.compile("^/sub/conversations/(" + UUID_PATTERN + ")/direct-messages$");
+    Pattern.compile("^/sub/conversations/(" + UUID_PATTERN + ")/direct-messages$");
 
   // UUID 형식만 들어올 수 있음. 시청 세션(watch)과 실시간 채팅(chat)은 둘 다 콘텐츠 존재 여부만 검증하면 됩니다.
   private static final Pattern CONTENT_TOPIC_PATTERN =
-      Pattern.compile("^/sub/contents/(" + UUID_PATTERN + ")/(?:watch|chat)$");
+    Pattern.compile("^/sub/contents/(" + UUID_PATTERN + ")/(?:watch|chat)$");
 
   private final JwtProvider jwtProvider;
   private final JwtSessionService jwtSessionService;
@@ -67,7 +67,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
   @Override
   public Message<?> preSend(Message<?> message, MessageChannel channel) {
     StompHeaderAccessor accessor =
-        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+      MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
     if (accessor == null) {
       return message;
@@ -84,9 +84,9 @@ public class StompChannelInterceptor implements ChannelInterceptor {
       authorizeSend(accessor);
     }
 
-    // subscribe 프레임 검증
-    if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-      authorizeSubscription(accessor);
+    // subscribe 프레임 검증(+ 거부된 구독만 중간)
+    if (StompCommand.SUBSCRIBE.equals(accessor.getCommand()) && !authorizeSubscription(accessor)) {
+      return null;
     }
 
     if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
@@ -106,32 +106,46 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     }
   }
 
-  // destination 패턴에 맞는 토픽별 구독 권한 검사로 위임하고, 알 수 없는 destination은 모두 거부합니다.
-  private void authorizeSubscription(StompHeaderAccessor accessor) {
+  // destination 패턴에 맞는 토픽별 구독 권한 검사로 위임합니다.
+  // false를 반환하면 해당 SUBSCRIBE 메시지만 무시합니다.
+  private boolean authorizeSubscription(StompHeaderAccessor accessor) {
     String destination = accessor.getDestination();
+
     if (destination == null) {
-      rejectSubscription(destination);
-      return;
+      rejectSubscription(null);
+      return false;
     }
 
+    // 사용자 전용 목적지는 기존과 동일하게 허용
     if (destination.startsWith(USER_DESTINATION_PREFIX)) {
-      return;
+      return true;
     }
 
+    // 대화방 구독은 기존과 동일하게 참여 여부를 검증
     Matcher directMessageMatcher = DIRECT_MESSAGE_TOPIC_PATTERN.matcher(destination);
     if (directMessageMatcher.matches()) {
       authorizeDirectMessageSubscription(directMessageMatcher, accessor);
-      return;
+      return true;
     }
 
+    // UUID 형식이 올바른 콘텐츠 구독
     Matcher contentTopicMatcher = CONTENT_TOPIC_PATTERN.matcher(destination);
     if (contentTopicMatcher.matches()) {
-      authorizeContentTopicSubscription(contentTopicMatcher);
-      return;
+      return authorizeContentTopicSubscription(contentTopicMatcher);
     }
 
+    // /sub/contents/로 시작하지만 UUID 형식 또는 목적지 형식이 잘못된 경우
+    // 연결을 끊지 않고 해당 SUBSCRIBE만 거부
+    if (destination.startsWith("/sub/contents/")) {
+      log.warn("[STOMP] 잘못된 콘텐츠 구독을 무시합니다. destination={}", destination);
+      return false;
+    }
+
+    // 콘텐츠 이외의 알 수 없는 목적지는 기존 정책대로 예외 처리
     rejectSubscription(destination);
+    return false;
   }
+
 
   // 대화 참여자가 아닌 사용자가 다른 대화의 DM 토픽을 구독하는 것을 방지
   private void authorizeDirectMessageSubscription(Matcher matcher, StompHeaderAccessor accessor) {
@@ -139,21 +153,25 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     UUID userId = resolveUserId(accessor.getUser());
 
     boolean isParticipant =
-        conversationParticipantRepository.existsByConversationIdAndUserId(conversationId, userId);
+      conversationParticipantRepository.existsByConversationIdAndUserId(conversationId, userId);
     if (!isParticipant) {
       throw new ConversationException(
-          ConversationErrorCode.DIRECT_MESSAGE_TOPIC_ACCESS_DENIED,
-          Map.of("conversationId", conversationId, "userId", userId));
+        ConversationErrorCode.DIRECT_MESSAGE_TOPIC_ACCESS_DENIED,
+        Map.of("conversationId", conversationId, "userId", userId));
     }
   }
 
-  // 존재하지 않는 콘텐츠의 시청 세션/채팅 토픽을 구독하는 것을 방지 (참여자 제한은 없음 - 누구나 같이 볼 수 있음)
-  private void authorizeContentTopicSubscription(Matcher matcher) {
+  // 존재하는 콘텐츠의 시청 세션/채팅 토픽만 구독하도록 허용합니다.
+  // 존재하지 않으면 예외를 던지지 않고 해당 SUBSCRIBE만 거부합니다.
+  private boolean authorizeContentTopicSubscription(Matcher matcher) {
     UUID contentId = UUID.fromString(matcher.group(1));
+
     if (!contentRepository.existsById(contentId)) {
-      throw new ContentException(
-          ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId));
+      log.warn("[STOMP] 존재하지 않는 콘텐츠 구독을 무시합니다. contentId={}", contentId);
+      return false;
     }
+
+    return true;
   }
 
   private void rejectSubscription(String destination) {
@@ -164,7 +182,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
   // sub 프레임에 저장된 principal에서 인증된 사용자의 id를 구한다
   private UUID resolveUserId(Principal principal) {
     if (principal instanceof Authentication authentication
-        && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
+      && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
       return authenticatedUser.id();
     }
 
@@ -194,18 +212,18 @@ public class StompChannelInterceptor implements ChannelInterceptor {
       AuthenticatedUser authenticatedUser = authenticatedUserFactory.from(claims);
 
       UUID sessionId =
-          UUID.fromString(
-              authenticatedUserFactory.requiredClaim(claims, JwtProvider.SESSION_ID_CLAIM));
+        UUID.fromString(
+          authenticatedUserFactory.requiredClaim(claims, JwtProvider.SESSION_ID_CLAIM));
       if (!jwtSessionService.isActive(authenticatedUser.id(), sessionId)) {
         log.warn(
-            "[DM] JWT 세션이 유효하지 않습니다. userId={}, sessionId={}", authenticatedUser.id(), sessionId);
+          "[DM] JWT 세션이 유효하지 않습니다. userId={}, sessionId={}", authenticatedUser.id(), sessionId);
         throw new MoplException(AuthErrorCode.AUTHENTICATION_FAILED, Map.of());
       }
 
       return UsernamePasswordAuthenticationToken.authenticated(
-          authenticatedUser,
-          null,
-          List.of(new SimpleGrantedAuthority(authenticatedUser.authorityName())));
+        authenticatedUser,
+        null,
+        List.of(new SimpleGrantedAuthority(authenticatedUser.authorityName())));
     } catch (JwtException | IllegalArgumentException e) {
 
       log.warn("[DM] 유효하지 않은 WebSocket 인증 토큰입니다.", e);
