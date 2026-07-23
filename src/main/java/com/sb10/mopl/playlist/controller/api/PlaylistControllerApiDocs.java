@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +40,8 @@ public interface PlaylistControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<PlaylistDto> create(
       PlaylistCreateRequest request, @Parameter(hidden = true) AuthenticatedUser currentUser);
 
@@ -58,6 +61,7 @@ public interface PlaylistControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<CursorPageResponse<PlaylistDto>> findAll(
       @Parameter(description = "검색 키워드") String keywordLike,
       @Parameter(description = "소유자 ID") UUID ownerIdEqual,
@@ -92,6 +96,7 @@ public interface PlaylistControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<PlaylistDto> findById(
       @Parameter(description = "플레이리스트 ID") UUID playlistId,
       @Parameter(hidden = true) AuthenticatedUser currentUser);
@@ -123,6 +128,8 @@ public interface PlaylistControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<PlaylistDto> update(
       @Parameter(description = "플레이리스트 ID") UUID playlistId,
       PlaylistUpdateRequest request,
@@ -152,6 +159,8 @@ public interface PlaylistControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> delete(
       @Parameter(description = "플레이리스트 ID") UUID playlistId,
       @Parameter(hidden = true) AuthenticatedUser currentUser);

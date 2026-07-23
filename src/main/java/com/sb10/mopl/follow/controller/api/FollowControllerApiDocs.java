@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 
@@ -43,6 +44,8 @@ public interface FollowControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   FollowDto follow(@Parameter(hidden = true) AuthenticatedUser currentUser, FollowRequest request);
 
   @Operation(summary = "팔로우 취소", description = "API 요청자 본인의 팔로우만 취소할 수 있습니다.")
@@ -69,6 +72,8 @@ public interface FollowControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   void unfollow(
       @Parameter(hidden = true) AuthenticatedUser currentUser,
       @Parameter(description = "팔로우 ID") UUID followId);
@@ -98,6 +103,7 @@ public interface FollowControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   FollowDto findFollowedByMe(
       @Parameter(hidden = true) AuthenticatedUser currentUser,
       @Parameter(description = "팔로우 대상 사용자 ID") UUID followeeId);
@@ -118,5 +124,6 @@ public interface FollowControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   long countFollowers(@Parameter(description = "팔로우 대상 사용자 ID") UUID followeeId);
 }

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
@@ -35,6 +36,7 @@ public interface NotificationControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<CursorPageResponse<NotificationDto>> find(
       @Parameter(hidden = true) AuthenticatedUser currentUser,
       @ParameterObject NotificationSearchRequest request);
@@ -63,6 +65,8 @@ public interface NotificationControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> delete(
       @Parameter(description = "알림 ID") UUID notificationId,
       @Parameter(hidden = true) AuthenticatedUser currentUser);

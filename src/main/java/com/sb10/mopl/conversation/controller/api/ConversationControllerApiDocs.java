@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
@@ -45,6 +46,8 @@ public interface ConversationControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<ConversationDto> createConversation(
       @Parameter(hidden = true) AuthenticatedUser currentUser, ConversationCreateRequest request);
 
@@ -64,6 +67,7 @@ public interface ConversationControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<CursorPageResponse<ConversationDto>> findConversations(
       @Parameter(hidden = true) AuthenticatedUser currentUser,
       @ParameterObject ConversationSearchRequest request);
@@ -91,6 +95,7 @@ public interface ConversationControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<ConversationDto> findConversationWithUser(
       @Parameter(hidden = true) AuthenticatedUser currentUser,
       @Parameter(description = "대화 상대 사용자 ID") UUID userId);
@@ -118,6 +123,7 @@ public interface ConversationControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<ConversationDto> findConversation(
       @Parameter(hidden = true) AuthenticatedUser currentUser,
       @Parameter(description = "대화 ID") UUID conversationId);
@@ -144,6 +150,7 @@ public interface ConversationControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<CursorPageResponse<DirectMessageDto>> findDirectMessages(
       @Parameter(hidden = true) AuthenticatedUser currentUser,
       @Parameter(description = "대화 ID") UUID conversationId,
@@ -169,6 +176,8 @@ public interface ConversationControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> readDirectMessage(
       @Parameter(hidden = true) AuthenticatedUser currentUser,
       @Parameter(description = "대화 ID") UUID conversationId,

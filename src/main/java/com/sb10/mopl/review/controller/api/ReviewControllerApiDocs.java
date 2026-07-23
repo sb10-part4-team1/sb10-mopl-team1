@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
@@ -48,6 +49,8 @@ public interface ReviewControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<ReviewDto> create(
       @Parameter(hidden = true) AuthenticatedUser currentUser, ReviewCreateRequest request);
 
@@ -67,6 +70,7 @@ public interface ReviewControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<CursorPageResponse<ReviewDto>> findAll(
       @Parameter(description = "콘텐츠 ID") UUID contentId,
       @ParameterObject CursorPageRequest pageRequest);
@@ -98,6 +102,8 @@ public interface ReviewControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<ReviewDto> update(
       @Parameter(description = "리뷰 ID") UUID reviewId,
       ReviewUpdateRequest request,
@@ -127,6 +133,8 @@ public interface ReviewControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> delete(
       @Parameter(description = "리뷰 ID") UUID reviewId,
       @Parameter(hidden = true) AuthenticatedUser currentUser);

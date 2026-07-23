@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,8 @@ public interface PlaylistContentControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> add(
       @Parameter(description = "플레이리스트 ID") UUID playlistId,
       @Parameter(description = "콘텐츠 ID") UUID contentId,
@@ -72,6 +75,8 @@ public interface PlaylistContentControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> delete(
       @Parameter(description = "플레이리스트 ID") UUID playlistId,
       @Parameter(description = "콘텐츠 ID") UUID contentId,

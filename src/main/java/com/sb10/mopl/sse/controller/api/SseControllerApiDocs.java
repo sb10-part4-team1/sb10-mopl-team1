@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import java.util.UUID;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -20,5 +21,6 @@ public interface SseControllerApiDocs {
                 mediaType = "text/event-stream",
                 schema = @Schema(implementation = SseEmitter.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   SseEmitter subscribe(@Parameter(hidden = true) AuthenticatedUser currentUser, UUID lastEventId);
 }

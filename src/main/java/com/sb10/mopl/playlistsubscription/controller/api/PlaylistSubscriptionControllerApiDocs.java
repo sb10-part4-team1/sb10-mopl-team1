@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 
@@ -42,6 +43,8 @@ public interface PlaylistSubscriptionControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   void subscribePlaylist(
       @Parameter(description = "플레이리스트 ID") UUID playlistId,
       @Parameter(hidden = true) AuthenticatedUser currentUser);
@@ -66,6 +69,8 @@ public interface PlaylistSubscriptionControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   void unsubscribePlaylist(
       @Parameter(description = "플레이리스트 ID") UUID playlistId,
       @Parameter(hidden = true) AuthenticatedUser currentUser);

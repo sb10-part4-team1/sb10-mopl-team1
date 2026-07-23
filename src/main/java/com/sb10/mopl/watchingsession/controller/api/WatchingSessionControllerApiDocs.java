@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
@@ -37,6 +38,7 @@ public interface WatchingSessionControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<WatchingSessionDto> findWatchingSession(
       @Parameter(description = "시청자 ID") UUID watcherId);
 
@@ -60,6 +62,7 @@ public interface WatchingSessionControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<CursorPageResponse<WatchingSessionDto>> findWatchingSessions(
       @Parameter(description = "콘텐츠 ID") UUID contentId,
       @ParameterObject WatchingSessionSearchRequest request);

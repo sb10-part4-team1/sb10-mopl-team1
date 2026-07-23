@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
@@ -48,6 +49,8 @@ public interface ContentControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<ContentDto> create(ContentCreateRequest request, MultipartFile thumbnail);
 
   @Operation(summary = "[어드민] 콘텐츠 수정")
@@ -81,6 +84,8 @@ public interface ContentControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<ContentDto> update(
       @Parameter(description = "콘텐츠 ID") UUID id,
       ContentUpdateRequest request,
@@ -110,6 +115,8 @@ public interface ContentControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> delete(@Parameter(description = "콘텐츠 ID") UUID id);
 
   @Operation(summary = "콘텐츠 단건 조회")
@@ -135,6 +142,7 @@ public interface ContentControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<ContentDto> find(@Parameter(description = "콘텐츠 ID") UUID id);
 
   @Operation(summary = "콘텐츠 목록 조회 (커서 페이지네이션)")
@@ -153,6 +161,7 @@ public interface ContentControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<CursorPageResponse<ContentDto>> findAll(
       @ParameterObject ContentSearchRequest request);
 }

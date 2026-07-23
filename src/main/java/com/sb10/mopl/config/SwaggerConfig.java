@@ -57,8 +57,7 @@ public class SwaggerConfig {
                         .type(SecurityScheme.Type.APIKEY)
                         .description("CSRF 토큰 (GET /api/auth/csrf-token 호출 후 XSRF-TOKEN 쿠키 값)")
                         .name("X-XSRF-TOKEN")
-                        .in(SecurityScheme.In.HEADER)))
-        .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH).addList(CSRF_TOKEN));
+                        .in(SecurityScheme.In.HEADER)));
   }
 
   /**
@@ -114,6 +113,7 @@ public class SwaggerConfig {
                         .addMediaType(
                             "application/x-www-form-urlencoded",
                             new MediaType().schema(refSchema("SignInRequest")))))
+        .security(List.of(new SecurityRequirement().addList(CSRF_TOKEN)))
         .responses(
             new ApiResponses()
                 .addApiResponse("200", successResponse("성공", "JwtDto"))
@@ -128,6 +128,7 @@ public class SwaggerConfig {
         .summary("로그아웃")
         .description(SECURITY_FILTER_DESCRIPTION)
         .operationId("signOut")
+        .security(List.of(new SecurityRequirement().addList(BEARER_AUTH).addList(CSRF_TOKEN)))
         .responses(
             new ApiResponses()
                 .addApiResponse("204", new ApiResponse().description("성공"))

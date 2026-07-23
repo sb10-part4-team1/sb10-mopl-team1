@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
@@ -44,6 +45,7 @@ public interface UserControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<UserDto> signUp(UserCreateRequest userCreateRequest);
 
   @Operation(summary = "사용자 상세 조회")
@@ -69,6 +71,7 @@ public interface UserControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<UserDto> findUser(@Parameter(description = "사용자 ID") UUID userId);
 
   @Operation(summary = "프로필 변경", description = "본인의 프로필만 변경할 수 있습니다.")
@@ -98,6 +101,8 @@ public interface UserControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<UserDto> updateProfile(
       @Parameter(description = "사용자 ID") UUID userId,
       UserUpdateRequest request,
@@ -128,6 +133,8 @@ public interface UserControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> changePassword(
       @Parameter(description = "사용자 ID") UUID userId,
       ChangePasswordRequest request,
@@ -157,6 +164,8 @@ public interface UserControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> updateRole(
       @Parameter(description = "사용자 ID") UUID userId,
       UserRoleUpdateRequest request,
@@ -186,6 +195,8 @@ public interface UserControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "CsrfToken")
   ResponseEntity<Void> updateLocked(
       @Parameter(description = "사용자 ID") UUID userId, UserLockUpdateRequest request);
 
@@ -209,5 +220,6 @@ public interface UserControllerApiDocs {
         description = "서버 오류",
         content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   })
+  @SecurityRequirement(name = "BearerAuth")
   ResponseEntity<CursorPageResponse<UserDto>> findUsers(@ParameterObject UserSearchRequest request);
 }
