@@ -24,26 +24,20 @@ import com.sb10.mopl.common.exception.GlobalExceptionHandler;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
 import com.sb10.mopl.config.WebMvcConfig;
-import com.sb10.mopl.content.dto.ContentSummary;
-import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.user.dto.request.ChangePasswordRequest;
 import com.sb10.mopl.user.dto.request.UserCreateRequest;
 import com.sb10.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.sb10.mopl.user.dto.request.UserSearchRequest;
 import com.sb10.mopl.user.dto.request.UserUpdateRequest;
 import com.sb10.mopl.user.dto.response.UserDto;
-import com.sb10.mopl.user.dto.response.UserSummary;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.service.UserService;
-import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;
-import com.sb10.mopl.watchingsession.service.WatchingSessionService;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -71,8 +65,6 @@ class UserControllerTest {
   @Autowired private ObjectMapper objectMapper;
 
   @MockitoBean private UserService userService;
-
-  @MockitoBean private WatchingSessionService watchingSessionService;
 
   @AfterEach
   void tearDown() {
@@ -758,63 +750,6 @@ class UserControllerTest {
         .andExpect(jsonPath("$.code").value("SYS01"));
 
     verifyNoInteractions(userService);
-  }
-
-  @Test
-  @DisplayName("시청 중인 콘텐츠가 있으면 200 OK와 WatchingSessionDto를 반환한다")
-  void findWatchingSession_success_whenActiveSessionExists() throws Exception {
-    // given
-    UUID watcherId = UUID.randomUUID();
-    UUID sessionId = UUID.randomUUID();
-    UUID contentId = UUID.randomUUID();
-    WatchingSessionDto dto =
-        new WatchingSessionDto(
-            sessionId,
-            Instant.parse("2026-07-16T00:00:00Z"),
-            new UserSummary(watcherId, "test-watcher", null),
-            new ContentSummary(
-                contentId,
-                ContentType.MOVIE,
-                "test-content",
-                "설명",
-                "https://example.com/thumbnail.jpg",
-                List.of("action", "thriller"),
-                4.5,
-                10));
-
-    when(watchingSessionService.findLatestByWatcher(watcherId)).thenReturn(Optional.of(dto));
-
-    // when & then
-    mockMvc
-        .perform(get("/api/users/{watcherId}/watching-sessions", watcherId))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(sessionId.toString()))
-        .andExpect(jsonPath("$.createdAt").value("2026-07-16T00:00:00Z"))
-        .andExpect(jsonPath("$.watcher.userId").value(watcherId.toString()))
-        .andExpect(jsonPath("$.watcher.name").value("test-watcher"))
-        .andExpect(jsonPath("$.watcher.profileImageUrl").doesNotExist())
-        .andExpect(jsonPath("$.content.id").value(contentId.toString()))
-        .andExpect(jsonPath("$.content.type").value("movie"))
-        .andExpect(jsonPath("$.content.title").value("test-content"))
-        .andExpect(jsonPath("$.content.averageRating").value(4.5))
-        .andExpect(jsonPath("$.content.reviewCount").value(10));
-
-    verify(watchingSessionService).findLatestByWatcher(watcherId);
-  }
-
-  @Test
-  @DisplayName("시청 중인 콘텐츠가 없으면 404 Not Found를 반환한다")
-  void findWatchingSession_fail_whenNoActiveSession() throws Exception {
-    // given
-    UUID watcherId = UUID.randomUUID();
-    when(watchingSessionService.findLatestByWatcher(watcherId)).thenReturn(Optional.empty());
-
-    // when & then
-    mockMvc
-        .perform(get("/api/users/{watcherId}/watching-sessions", watcherId))
-        .andExpect(status().isNotFound());
-
-    verify(watchingSessionService).findLatestByWatcher(watcherId);
   }
 
   private void authenticate(UUID userId) {

@@ -3,6 +3,7 @@ package com.sb10.mopl.notification.controller;
 import com.sb10.mopl.auth.security.user.AuthenticatedUser;
 import com.sb10.mopl.auth.security.user.CurrentUser;
 import com.sb10.mopl.common.pagination.CursorPageResponse;
+import com.sb10.mopl.notification.controller.api.NotificationControllerApiDocs;
 import com.sb10.mopl.notification.dto.NotificationDto;
 import com.sb10.mopl.notification.dto.NotificationSearchRequest;
 import com.sb10.mopl.notification.service.NotificationService;
@@ -20,11 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
-public class NotificationController {
+public class NotificationController implements NotificationControllerApiDocs {
 
   private final NotificationService notificationService;
 
   // 내 알림 목록 조회
+  @Override
   @GetMapping
   public ResponseEntity<CursorPageResponse<NotificationDto>> find(
       @CurrentUser AuthenticatedUser currentUser,
@@ -35,6 +37,7 @@ public class NotificationController {
   }
 
   // 알림 읽음 처리
+  @Override
   @DeleteMapping("/{notificationId}")
   public ResponseEntity<Void> delete(
       @PathVariable UUID notificationId, @CurrentUser AuthenticatedUser currentUser) {
