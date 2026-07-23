@@ -19,16 +19,11 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-    name = "watching_session",
-    indexes = {
-      @Index(name = "IDX_WATCHING_SESSION_WATCHER", columnList = "watcher_id"),
-      @Index(name = "IDX_WATCHING_SESSION_CONTENT", columnList = "content_id")
-    },
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "UQ_WATCHING_SESSION_WATCHER_CONTENT",
-          columnNames = {"watcher_id", "content_id"})
-    })
+  name = "watching_session",
+  indexes = {@Index(name = "IDX_WATCHING_SESSION_CONTENT", columnList = "content_id")},
+  uniqueConstraints = {
+    @UniqueConstraint(name = "UQ_WATCHING_SESSION_WATCHER", columnNames = {"watcher_id"})
+  })
 public class WatchingSession extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)
@@ -42,6 +37,11 @@ public class WatchingSession extends BaseEntity {
   @Builder
   private WatchingSession(User watcher, Content content) {
     this.watcher = watcher;
+    this.content = content;
+  }
+
+  // 유저는 한번에 하나의 콘텐츠만 시청할 수 있으므로, 다른 콘텐츠 구독 시 세션을 이동시킨다.
+  public void updateContent(Content content) {
     this.content = content;
   }
 }
