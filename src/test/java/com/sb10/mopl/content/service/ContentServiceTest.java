@@ -22,6 +22,7 @@ import com.sb10.mopl.content.exception.ContentErrorCode;
 import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.mapper.ContentMapper;
 import com.sb10.mopl.content.repository.ContentRepository;
+import com.sb10.mopl.content.repository.ContentSearchRepository;
 import com.sb10.mopl.content.repository.TagRepository;
 import java.util.Collections;
 import java.util.List;
@@ -48,11 +49,13 @@ class ContentServiceTest {
   @Mock private ContentRepository contentRepository;
   @Mock private TagRepository tagRepository;
   @Mock private ImageStorageService imageStorageService;
+  @Mock private ContentSearchRepository contentSearchRepository;
 
   @BeforeEach
   void setUp() {
     contentService =
-        new ContentService(contentRepository, tagRepository, contentMapper, imageStorageService);
+        new ContentServiceImpl(
+            contentRepository, tagRepository, contentMapper, imageStorageService);
     ReflectionTestUtils.setField(contentService, "defaultImageUrl", DEFAULT_IMAGE_URL);
   }
 

@@ -22,16 +22,17 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update # 엔티티 변경 사항이 있으면 DB에 자동으로 칼럼 등을 추가해 줌
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
-# 개발 서버용 로깅 (과한 로그는 지우고 INFO 유지)
+# 부하 테스트 콘솔 I/O 병목 제거를 위한 로깅 최소화 (WARN 레벨)
 logging:
   level:
-    root: info
-    org.hibernate.SQL: info
+    root: warn
+    org.hibernate.SQL: off
+    com.sb10.mopl.common.log: warn
 
 mopl:
   datasource:

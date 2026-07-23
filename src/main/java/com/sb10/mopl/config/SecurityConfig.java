@@ -81,6 +81,8 @@ public class SecurityConfig {
     pathMatcher("/swagger-ui.html"),
     pathMatcher("/api/test/batch/**"), // FIXME: 나중에 지워야 할 부분,
     methodAndPathMatcher(HttpMethod.OPTIONS, "/**"),
+    methodAndPathMatcher(HttpMethod.GET, "/api/contents"),
+    methodAndPathMatcher(HttpMethod.GET, "/api/contents/**"),
     methodAndPathMatcher(HttpMethod.POST, "/api/users"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-in"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/reset-password"),

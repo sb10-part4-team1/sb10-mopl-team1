@@ -49,14 +49,14 @@ public class ContentController {
   @PatchMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ContentDto> update(
       @PathVariable UUID id,
-      @RequestPart("request") @Valid ContentUpdateRequest request,
+      @RequestPart(value = "request") @Valid ContentUpdateRequest request,
       @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail) {
     ContentDto contentDto = contentService.update(id, request, thumbnail);
     return ResponseEntity.ok(contentDto);
   }
 
   @PreAuthorize("hasRole('ADMIN')")
-  @DeleteMapping(value = "/{id}")
+  @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     contentService.delete(id);
     return ResponseEntity.noContent().build();

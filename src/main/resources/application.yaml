@@ -14,6 +14,9 @@ spring:
   config:
     import: optional:file:.env[.properties]
 
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+
   security:
     oauth2:
       client:
@@ -83,8 +86,8 @@ spring:
   jpa:
     properties:
       hibernate:
-        format_sql: true
-        highlight_sql: true
+        format_sql: false
+        highlight_sql: false
         default_batch_fetch_size: 100
         jdbc:
           batch_size: 100

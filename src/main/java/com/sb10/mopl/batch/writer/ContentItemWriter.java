@@ -2,6 +2,8 @@ package com.sb10.mopl.batch.writer;
 
 import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.entity.ContentProvider;
+import com.sb10.mopl.content.event.ContentEvent;
+import com.sb10.mopl.content.event.ContentEventPublisher;
 import com.sb10.mopl.content.repository.ContentRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -27,6 +29,7 @@ public class ContentItemWriter implements ItemWriter<Content> {
 
   private final ContentRepository contentRepository;
   private final MeterRegistry meterRegistry;
+  private final ContentEventPublisher contentEventPublisher;
 
   /*
    * 청크 단위 저장 시, 청크 내 자체 중복 제거와 N+1 쿼리 문제를 해결하는 메서드입니다.
@@ -79,9 +82,13 @@ public class ContentItemWriter implements ItemWriter<Content> {
     int savedCount = contentsToSave.size();
     int dbDuplicateCount = distinctContents.size() - savedCount;
 
-    // 4. [신규 콘텐츠 일괄 저장]
+    // 4. [신규 콘텐츠 일괄 저장 및 ES 동기화 이벤트 발행]
     if (!contentsToSave.isEmpty()) {
       contentRepository.saveAll(contentsToSave);
+      contentsToSave.forEach(
+          c ->
+              contentEventPublisher.publish(
+                  new ContentEvent(c.getId(), ContentEvent.ContentEventType.CREATED)));
     }
 
     // 5. [비즈니스 데이터 수집 메트릭 카운팅]

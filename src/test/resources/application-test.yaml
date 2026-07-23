@@ -70,6 +70,13 @@ spring:
     hibernate:
       ddl-auto: none # SQL 스크립트로 제어하므로 JPA 자동 생성은 끔
 
+  elasticsearch:
+    uris: http://localhost:9200
+
+app:
+  content:
+    default-image-url: /uploads/default-thumbnail.png
+
 mopl:
   default-image-url: /uploads/default-thumbnail.png
   jwt:
