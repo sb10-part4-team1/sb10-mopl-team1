@@ -2,6 +2,7 @@ package com.sb10.mopl.review.repository;
 
 import static com.sb10.mopl.review.entity.QReview.review;
 
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sb10.mopl.review.entity.Review;
@@ -70,6 +71,29 @@ public class ReviewRepositoryCustomImpl implements ReviewRepositoryCustom {
             .fetchOne();
 
     return count != null ? count : 0L;
+  }
+
+  // 특정 콘텐츠의 리뷰 개수와 평균 평점을 한 번의 집계 쿼리로 조회
+  @Override
+  public ReviewStatistics findStatisticsByTargetContentId(UUID contentId) {
+    Tuple result =
+      queryFactory
+        .select(review.count(), review.rating.avg())
+        .from(review)
+        .where(review.targetContent.id.eq(contentId))
+      .fetchOne();
+
+    if (result == null) {
+      return ReviewStatistics.empty();
+    }
+
+    Long reviewCount = result.get(review.count());
+    Double averageRating = result.get(review.rating.avg());
+
+    return new ReviewStatistics(
+      reviewCount != null ? reviewCount : 0L,
+      averageRating != null ? averageRating : 0.0
+    );
   }
 
   // 특정 콘텐츠의 리뷰만 조회하는 조건 생성

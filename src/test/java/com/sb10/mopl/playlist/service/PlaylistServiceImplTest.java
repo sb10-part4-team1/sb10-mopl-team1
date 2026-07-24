@@ -11,6 +11,9 @@ import static org.mockito.Mockito.verify;
 
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
+import com.sb10.mopl.content.entity.Content;
+import com.sb10.mopl.content.entity.ContentType;
+import com.sb10.mopl.playlist.dto.PlaylistContentSummaryDto;
 import com.sb10.mopl.playlist.dto.PlaylistCreateRequest;
 import com.sb10.mopl.playlist.dto.PlaylistDto;
 import com.sb10.mopl.playlist.dto.PlaylistOwnerDto;
@@ -21,6 +24,8 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.mapper.PlaylistMapper;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
+import com.sb10.mopl.playlistcontent.entity.PlaylistContent;
+import com.sb10.mopl.playlistcontent.repository.PlaylistContentRepository;
 import com.sb10.mopl.playlistsubscription.repository.PlaylistSubscriptionRepository;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserException;
@@ -54,6 +59,8 @@ class PlaylistServiceImplTest {
   @Mock private PlaylistSubscriptionRepository playlistSubscriptionRepository;
 
   @Mock private ApplicationEventPublisher eventPublisher;
+
+  @Mock private PlaylistContentRepository playlistContentRepository;
 
   @InjectMocks private PlaylistServiceImpl playlistService;
 
@@ -98,8 +105,7 @@ class PlaylistServiceImplTest {
     given(playlistMapper.toEntity(owner, createRequest)).willReturn(playlist);
     given(playlistRepository.save(playlist)).willReturn(playlist);
     given(playlistSubscriptionRepository.countByPlaylistId(playlistId)).willReturn(0L);
-    given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
-
+    given(playlistMapper.toDto(playlist, 0L, false, List.of())).willReturn(playlistDto);
     // when
     PlaylistDto result = playlistService.create(createRequest, ownerId);
 
@@ -132,22 +138,37 @@ class PlaylistServiceImplTest {
   }
 
   @Test
-  @DisplayName("플레이리스트 - 단건 조회 성공")
+  @DisplayName("플레이리스트 - 단건 조회 성공 - 저장된 콘텐츠를 포함한다")
   void findById_success() {
     // given
+    UUID contentId = UUID.randomUUID();
+    Content content = createContent(contentId, ContentType.TV_SERIES);
+    PlaylistContent playlistContent = new PlaylistContent(playlist, content);
+
+    PlaylistContentSummaryDto contentSummary = createContentSummaryDto(content);
+    PlaylistDto expectedDto = createPlaylistDto(playlist, 1L, true, List.of(contentSummary));
+
     given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.of(playlist));
     given(playlistSubscriptionRepository.countByPlaylistId(playlistId)).willReturn(1L);
     given(
             playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
                 currentUserId, playlistId))
         .willReturn(true);
-    given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
+    given(playlistContentRepository.findAllWithContentByPlaylistIds(List.of(playlistId)))
+        .willReturn(List.of(playlistContent));
+    given(playlistMapper.toContentSummaryDto(content)).willReturn(contentSummary);
+    given(playlistMapper.toDto(playlist, 1L, true, List.of(contentSummary)))
+        .willReturn(expectedDto);
 
     // when
     PlaylistDto result = playlistService.findById(playlistId, currentUserId);
 
     // then
-    assertThat(result).isEqualTo(subscribedPlaylistDto);
+    assertThat(result).isEqualTo(expectedDto);
+    assertThat(result.contents()).containsExactly(contentSummary);
+
+    verify(playlistContentRepository).findAllWithContentByPlaylistIds(List.of(playlistId));
+    verify(playlistMapper).toDto(playlist, 1L, true, List.of(contentSummary));
   }
 
   @Test
@@ -169,8 +190,7 @@ class PlaylistServiceImplTest {
     // given
     given(playlistRepository.findByIdWithOwner(playlistId)).willReturn(Optional.of(playlist));
     given(playlistSubscriptionRepository.countByPlaylistId(playlistId)).willReturn(0L);
-    given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
-
+    given(playlistMapper.toDto(playlist, 0L, false, List.of())).willReturn(playlistDto);
     // when
     PlaylistDto result = playlistService.update(playlistId, updateRequest, ownerId);
 
@@ -250,9 +270,16 @@ class PlaylistServiceImplTest {
   }
 
   @Test
-  @DisplayName("플레이리스트 - 목록 조회 성공")
+  @DisplayName("플레이리스트 - 목록 조회 성공 - 플레이리스트별 콘텐츠를 포함한다")
   void findAll_success() {
     // given
+    UUID contentId = UUID.randomUUID();
+    Content content = createContent(contentId, ContentType.MOVIE);
+    PlaylistContent playlistContent = new PlaylistContent(playlist, content);
+
+    PlaylistContentSummaryDto contentSummary = createContentSummaryDto(content);
+    PlaylistDto expectedDto = createPlaylistDto(playlist, 0L, false, List.of(contentSummary));
+
     given(
             playlistRepository.findAllByCondition(
                 isNull(),
@@ -268,13 +295,15 @@ class PlaylistServiceImplTest {
 
     given(playlistSubscriptionRepository.countByPlaylistIds(List.of(playlistId)))
         .willReturn(List.of(countProjection(playlistId, 0L)));
-
     given(
             playlistSubscriptionRepository.findSubscribedPlaylistIds(
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of());
-
-    given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
+    given(playlistContentRepository.findAllWithContentByPlaylistIds(List.of(playlistId)))
+        .willReturn(List.of(playlistContent));
+    given(playlistMapper.toContentSummaryDto(content)).willReturn(contentSummary);
+    given(playlistMapper.toDto(playlist, 0L, false, List.of(contentSummary)))
+        .willReturn(expectedDto);
     given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(1L);
 
     // when
@@ -291,9 +320,13 @@ class PlaylistServiceImplTest {
             SortDirection.DESCENDING);
 
     // then
-    assertThat(result.data()).containsExactly(playlistDto);
+    assertThat(result.data()).containsExactly(expectedDto);
+    assertThat(result.data().get(0).contents()).containsExactly(contentSummary);
     assertThat(result.hasNext()).isFalse();
     assertThat(result.totalCount()).isEqualTo(1L);
+
+    verify(playlistContentRepository).findAllWithContentByPlaylistIds(List.of(playlistId));
+    verify(playlistMapper).toDto(playlist, 0L, false, List.of(contentSummary));
   }
 
   @Test
@@ -323,7 +356,7 @@ class PlaylistServiceImplTest {
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of());
 
-    given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
+    given(playlistMapper.toDto(playlist, 0L, false, List.of())).willReturn(playlistDto);
     given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(2L);
 
     // when
@@ -372,7 +405,7 @@ class PlaylistServiceImplTest {
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of(playlistId));
 
-    given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
+    given(playlistMapper.toDto(playlist, 1L, true, List.of())).willReturn(subscribedPlaylistDto);
     given(playlistRepository.countByCondition(null, ownerId, subscriberId)).willReturn(1L);
 
     // when
@@ -419,7 +452,7 @@ class PlaylistServiceImplTest {
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of(playlistId));
 
-    given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
+    given(playlistMapper.toDto(playlist, 1L, true, List.of())).willReturn(subscribedPlaylistDto);
     given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(1L);
 
     // when
@@ -466,7 +499,7 @@ class PlaylistServiceImplTest {
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of());
 
-    given(playlistMapper.toDto(playlist, 0L, false)).willReturn(playlistDto);
+    given(playlistMapper.toDto(playlist, 0L, false, List.of())).willReturn(playlistDto);
     given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(1L);
 
     // when
@@ -513,7 +546,7 @@ class PlaylistServiceImplTest {
                 currentUserId, List.of(playlistId)))
         .willReturn(Set.of(playlistId));
 
-    given(playlistMapper.toDto(playlist, 1L, true)).willReturn(subscribedPlaylistDto);
+    given(playlistMapper.toDto(playlist, 1L, true, List.of())).willReturn(subscribedPlaylistDto);
     given(playlistRepository.countByCondition(null, ownerId, null)).willReturn(1L);
 
     // when
@@ -724,9 +757,45 @@ class PlaylistServiceImplTest {
     return playlist;
   }
 
+  // 테스트용 Content 생성 후 id 주입
+  private Content createContent(UUID contentId, ContentType contentType) {
+    Content content = Content.create("콘텐츠 제목", contentType, "콘텐츠 설명", "/uploads/content.jpg");
+    ReflectionTestUtils.setField(content, "id", contentId);
+    return content;
+  }
+
+  // 테스트용 플레이리스트 콘텐츠 요약 DTO 생성
+  private PlaylistContentSummaryDto createContentSummaryDto(Content content) {
+    String[] words = content.getType().name().toLowerCase().split("_");
+    StringBuilder type = new StringBuilder(words[0]);
+
+    for (int i = 1; i < words.length; i++) {
+      type.append(Character.toUpperCase(words[i].charAt(0))).append(words[i].substring(1));
+    }
+
+    return new PlaylistContentSummaryDto(
+        content.getId(),
+        type.toString(),
+        content.getTitle(),
+        content.getDescription(),
+        content.getThumbnailUrl(),
+        List.of(),
+        content.getAverageRating(),
+        content.getReviewCount());
+  }
+
   // 테스트 검증에 사용할 PlaylistDto 생성
   private PlaylistDto createPlaylistDto(
       Playlist playlist, long subscriberCount, boolean subscribedByMe) {
+    return createPlaylistDto(playlist, subscriberCount, subscribedByMe, List.of());
+  }
+
+  // 테스트 검증에 사용할 PlaylistDto 생성
+  private PlaylistDto createPlaylistDto(
+      Playlist playlist,
+      long subscriberCount,
+      boolean subscribedByMe,
+      List<PlaylistContentSummaryDto> contents) {
 
     PlaylistOwnerDto ownerDto = new PlaylistOwnerDto(playlist.getOwner().getId(), "테스트유저", null);
 
@@ -738,7 +807,7 @@ class PlaylistServiceImplTest {
         playlist.getUpdatedAt(),
         subscriberCount,
         subscribedByMe,
-        List.of());
+        contents);
   }
 
   private PlaylistSubscriptionRepository.PlaylistSubscriptionCountProjection countProjection(
