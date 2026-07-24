@@ -1,6 +1,7 @@
 package com.sb10.mopl.watchingsession.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sb10.mopl.auth.repository.JwtSessionRepository;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
@@ -15,6 +16,7 @@ import com.sb10.mopl.watchingsession.entity.WatchingSession;
 import com.sb10.mopl.watchingsession.repository.WatchingSessionRepository;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -145,6 +147,30 @@ class ContentWatchSessionEventListenerIntegrationTest {
     Thread.sleep(300);
 
     assertThat(findSessionByWatcherId(user.getId())).isEmpty();
+    assertThat(contentRepository.findById(content.getId()).orElseThrow().getWatcherCount())
+        .isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("인증되지 않은 연결은 콘텐츠 구독 자체가 거부되어 시청 세션이 생성되지 않는다")
+  void connect_neverCreateSession_whenNotAuthenticated() {
+    Content content = createContent("배트맨");
+
+    StompHeaders connectHeaders = new StompHeaders(); // Authorization 헤더 없음
+
+    assertThatThrownBy(
+            () ->
+                stompClient
+                    .connectAsync(
+                        "ws://localhost:{port}/ws/websocket",
+                        new WebSocketHttpHeaders(),
+                        connectHeaders,
+                        new StompSessionHandlerAdapter() {},
+                        port)
+                    .get(5, TimeUnit.SECONDS))
+        .isInstanceOf(ExecutionException.class);
+
+    assertThat(watchingSessionRepository.findAll()).isEmpty();
     assertThat(contentRepository.findById(content.getId()).orElseThrow().getWatcherCount())
         .isEqualTo(0);
   }
