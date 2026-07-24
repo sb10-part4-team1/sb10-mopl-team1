@@ -16,4 +16,6 @@ public interface ReviewRepositoryCustom {
   List<Review> findAllByCursorDesc(UUID contentId, Instant cursor, UUID idAfter, Pageable pageable);
 
   long countByTargetContentId(UUID contentId);
+
+  ReviewStatistics findStatisticsByTargetContentId(UUID contentId);
 }
