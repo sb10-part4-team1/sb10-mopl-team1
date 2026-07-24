@@ -31,12 +31,12 @@ import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
  * 브로드캐스트합니다.
  *
  * <p>구독 해제(UNSUBSCRIBE)와 연결 종료(DISCONNECT)에는 destination 정보가 없으므로, 구독 시점에 (sessionId,
- * subscriptionId)를 기준으로 어떤 콘텐츠를 보고 있었는지 메모리에 추적해 둡니다. subscriptionId는 하나의 STOMP 연결 내에서만
- * 유일하므로(예: 서로 다른 탭이 각각 "sub-0"을 부여할 수 있음) sessionId 없이는 다른 연결의 구독과 충돌할 수 있습니다.
+ * subscriptionId)를 기준으로 어떤 콘텐츠를 보고 있었는지 메모리에 추적해 둡니다. subscriptionId는 하나의 STOMP 연결 내에서만 유일하므로(예: 서로
+ * 다른 탭이 각각 "sub-0"을 부여할 수 있음) sessionId 없이는 다른 연결의 구독과 충돌할 수 있습니다.
  *
- * <p>유저는 동시에 하나의 콘텐츠만 시청할 수 있어(watching_session.watcher_id 유니크), 다른 콘텐츠를 구독하면 세션이
- * 이동하며 이전 콘텐츠 구독자에게도 LEAVE가 브로드캐스트됩니다. 같은 (watcherId, contentId)에 대해 남아있는 활성 구독 수를 세어,
- * 새로고침 등으로 옛 연결과 새 연결이 겹치는 구간에도 마지막 구독이 끊길 때만 실제로 시청 세션을 종료합니다.
+ * <p>유저는 동시에 하나의 콘텐츠만 시청할 수 있어(watching_session.watcher_id 유니크), 다른 콘텐츠를 구독하면 세션이 이동하며 이전 콘텐츠
+ * 구독자에게도 LEAVE가 브로드캐스트됩니다. 같은 (watcherId, contentId)에 대해 남아있는 활성 구독 수를 세어, 새로고침 등으로 옛 연결과 새 연결이 겹치는
+ * 구간에도 마지막 구독이 끊길 때만 실제로 시청 세션을 종료합니다.
  *
  * <p>단일 인스턴스 기준 구현이며, 다중 인스턴스로 확장 시 이 추적 상태는 Redis 등 공유 저장소로 옮겨야 합니다.
  */
@@ -56,7 +56,8 @@ public class ContentWatchSessionEventListener {
 
   // subscriptionId는 하나의 STOMP 세션(연결) 안에서만 유일하므로, 서로 다른 연결(탭)의 구독을 구분하기 위해
   // sessionId까지 포함한 복합 키로 관리한다.
-  private final Map<SubscriptionKey, WatchSubscription> subscriptionsByKey = new ConcurrentHashMap<>();
+  private final Map<SubscriptionKey, WatchSubscription> subscriptionsByKey =
+      new ConcurrentHashMap<>();
 
   // handleDisconnect에서 sessionId로 구독을 O(1)에 찾기 위한 보조 인덱스
   private final Map<String, Set<String>> subscriptionIdsBySessionId = new ConcurrentHashMap<>();
@@ -64,6 +65,11 @@ public class ContentWatchSessionEventListener {
   // 같은 (watcherId, contentId)를 보고 있는 활성 구독(탭/연결) 수. 새로고침 등으로 발생하는 겹침 구간에서
   // 마지막 구독이 끊길 때만 실제로 시청 세션을 종료하기 위해 둔다.
   private final Map<WatcherContentKey, AtomicInteger> subscriberCounts = new ConcurrentHashMap<>();
+
+  // (watcherId, contentId) 기준으로 추적 중인 구독 키 목록. 세션이 다른 콘텐츠로 이동하면 이전 콘텐츠에 대해
+  // 추적하던 구독/카운트가 전부 무효해지므로, 한 번에 정리하기 위한 역인덱스로 둔다.
+  private final Map<WatcherContentKey, Set<SubscriptionKey>> subscriptionKeysByWatcherContent =
+      new ConcurrentHashMap<>();
 
   @EventListener
   public void handleSubscribe(SessionSubscribeEvent event) {
@@ -93,8 +99,8 @@ public class ContentWatchSessionEventListener {
 
     if (result.previousSession() != null) {
       UUID previousContentId = result.previousSession().content().id();
-      log.info(
-          "[WATCH] 시청 이동: {} -> {}, watcherId={}", previousContentId, contentId, watcherId);
+      log.info("[WATCH] 시청 이동: {} -> {}, watcherId={}", previousContentId, contentId, watcherId);
+      purgeStaleTracking(watcherId, previousContentId);
       broadcast(previousContentId, ChangeType.LEAVE, result.previousSession());
     }
 
@@ -127,35 +133,75 @@ public class ContentWatchSessionEventListener {
     }
 
     for (String subscriptionId : subscriptionIds) {
-      WatchSubscription subscription =
-          subscriptionsByKey.remove(new SubscriptionKey(sessionId, subscriptionId));
+      SubscriptionKey key = new SubscriptionKey(sessionId, subscriptionId);
+      WatchSubscription subscription = subscriptionsByKey.remove(key);
       if (subscription != null) {
+        removeSubscriptionKey(subscription.watcherId(), subscription.contentId(), key);
         leave(subscription);
       }
     }
   }
 
-  // subscriptionsByKey와 subscriptionIdsBySessionId(보조 인덱스)를 함께 갱신합니다.
+  // subscriptionsByKey, subscriptionIdsBySessionId, subscriptionKeysByWatcherContent(역인덱스)를 함께
+  // 갱신합니다.
   private void track(String sessionId, String subscriptionId, WatchSubscription subscription) {
-    subscriptionsByKey.put(new SubscriptionKey(sessionId, subscriptionId), subscription);
+    SubscriptionKey key = new SubscriptionKey(sessionId, subscriptionId);
+    subscriptionsByKey.put(key, subscription);
     subscriptionIdsBySessionId
-        .computeIfAbsent(sessionId, key -> ConcurrentHashMap.newKeySet())
+        .computeIfAbsent(sessionId, k -> ConcurrentHashMap.newKeySet())
         .add(subscriptionId);
+    subscriptionKeysByWatcherContent
+        .computeIfAbsent(
+            new WatcherContentKey(subscription.watcherId(), subscription.contentId()),
+            k -> ConcurrentHashMap.newKeySet())
+        .add(key);
   }
 
-  // 보조 인덱스에서도 함께 제거하며, 세션의 마지막 구독이었다면 세션 항목 자체도 정리합니다.
+  // 세 인덱스에서도 함께 제거하며, 세션/콘텐츠의 마지막 구독이었다면 해당 항목 자체도 정리합니다.
   private WatchSubscription untrack(String sessionId, String subscriptionId) {
-    WatchSubscription subscription =
-        subscriptionsByKey.remove(new SubscriptionKey(sessionId, subscriptionId));
+    SubscriptionKey key = new SubscriptionKey(sessionId, subscriptionId);
+    WatchSubscription subscription = subscriptionsByKey.remove(key);
     if (subscription != null) {
       subscriptionIdsBySessionId.computeIfPresent(
           sessionId,
-          (key, subscriptionIds) -> {
+          (k, subscriptionIds) -> {
             subscriptionIds.remove(subscriptionId);
             return subscriptionIds.isEmpty() ? null : subscriptionIds;
           });
+      removeSubscriptionKey(subscription.watcherId(), subscription.contentId(), key);
     }
     return subscription;
+  }
+
+  private void removeSubscriptionKey(UUID watcherId, UUID contentId, SubscriptionKey key) {
+    subscriptionKeysByWatcherContent.computeIfPresent(
+        new WatcherContentKey(watcherId, contentId),
+        (k, keys) -> {
+          keys.remove(key);
+          return keys.isEmpty() ? null : keys;
+        });
+  }
+
+  // 세션이 다른 콘텐츠로 이동하면, 이전 콘텐츠에 대해 추적하던 구독/카운트는 더 이상 유효하지 않으므로 모두 정리한다.
+  // (이 유저의 다른 탭이 이전 콘텐츠를 계속 구독 중이었더라도, 실제 시청 세션은 이미 새 콘텐츠로 옮겨갔으므로 함께 정리 대상이다.)
+  private void purgeStaleTracking(UUID watcherId, UUID previousContentId) {
+    WatcherContentKey key = new WatcherContentKey(watcherId, previousContentId);
+    Set<SubscriptionKey> staleKeys = subscriptionKeysByWatcherContent.remove(key);
+    subscriberCounts.remove(key);
+
+    if (staleKeys == null) {
+      return;
+    }
+
+    for (SubscriptionKey staleKey : staleKeys) {
+      subscriptionsByKey.remove(staleKey);
+      subscriptionIdsBySessionId.computeIfPresent(
+          staleKey.sessionId(),
+          (sessionId, subscriptionIds) -> {
+            subscriptionIds.remove(staleKey.subscriptionId());
+            return subscriptionIds.isEmpty() ? null : subscriptionIds;
+          });
+    }
   }
 
   private void leave(WatchSubscription subscription) {
