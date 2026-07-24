@@ -14,9 +14,15 @@ import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
 import com.sb10.mopl.watchingsession.entity.WatchingSession;
 import com.sb10.mopl.watchingsession.repository.WatchingSessionRepository;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -173,6 +179,61 @@ class ContentWatchSessionEventListenerIntegrationTest {
     assertThat(watchingSessionRepository.findAll()).isEmpty();
     assertThat(contentRepository.findById(content.getId()).orElseThrow().getWatcherCount())
         .isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("같은 유저가 두 연결에서 동시에 처음 구독해도 시청 세션은 정확히 하나만 생성된다")
+  void subscribe_createExactlyOneSession_whenFirstSubscribingConcurrentlyFromTwoConnections()
+      throws Exception {
+    User user = createUser("concurrent@example.com");
+    Content content = createContent("어벤져스");
+    String token = issueAccessToken(user);
+
+    StompSession tab1 = connect(token);
+    StompSession tab2 = connect(token);
+
+    CountDownLatch ready = new CountDownLatch(2);
+    CountDownLatch start = new CountDownLatch(1);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      List<Future<?>> futures =
+          List.of(
+              executor.submit(subscribeTask(tab1, content.getId(), ready, start)),
+              executor.submit(subscribeTask(tab2, content.getId(), ready, start)));
+
+      // 두 요청이 최대한 같은 시점에 SUBSCRIBE를 보내도록 동기화한다.
+      ready.await(5, TimeUnit.SECONDS);
+      start.countDown();
+
+      for (Future<?> future : futures) {
+        future.get(5, TimeUnit.SECONDS);
+      }
+    } finally {
+      executor.shutdown();
+    }
+    Thread.sleep(300);
+
+    assertThat(
+            watchingSessionRepository.findAll().stream()
+                .filter(session -> session.getWatcher().getId().equals(user.getId()))
+                .count())
+        .isEqualTo(1);
+    assertThat(contentRepository.findById(content.getId()).orElseThrow().getWatcherCount())
+        .isEqualTo(1);
+
+    tab1.disconnect();
+    tab2.disconnect();
+  }
+
+  private Callable<Void> subscribeTask(
+      StompSession session, UUID contentId, CountDownLatch ready, CountDownLatch start) {
+    return () -> {
+      ready.countDown();
+      start.await();
+      session.subscribe(
+          "/sub/contents/" + contentId + "/watch", new StompSessionHandlerAdapter() {});
+      return null;
+    };
   }
 
   // watchingSessionRepository.findByWatcherId()는 PESSIMISTIC_WRITE 락을 걸어 쓰기 트랜잭션이
