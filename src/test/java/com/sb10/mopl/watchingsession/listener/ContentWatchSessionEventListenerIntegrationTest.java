@@ -13,6 +13,8 @@ import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
 import com.sb10.mopl.watchingsession.entity.WatchingSession;
 import com.sb10.mopl.watchingsession.repository.WatchingSessionRepository;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,7 +85,7 @@ class ContentWatchSessionEventListenerIntegrationTest {
         "/sub/contents/" + contentA.getId() + "/watch", new StompSessionHandlerAdapter() {});
     Thread.sleep(300);
 
-    assertThat(watchingSessionRepository.findByWatcherId(user.getId()))
+    assertThat(findSessionByWatcherId(user.getId()))
         .map(WatchingSession::getContent)
         .map(Content::getId)
         .contains(contentA.getId());
@@ -96,7 +98,7 @@ class ContentWatchSessionEventListenerIntegrationTest {
     Thread.sleep(300);
 
     // 유저당 시청 세션은 항상 1개: 이전 콘텐츠(A)에 남아있지 않고 새 콘텐츠(B)로 이동했다.
-    assertThat(watchingSessionRepository.findByWatcherId(user.getId()))
+    assertThat(findSessionByWatcherId(user.getId()))
         .map(WatchingSession::getContent)
         .map(Content::getId)
         .contains(contentB.getId());
@@ -126,13 +128,13 @@ class ContentWatchSessionEventListenerIntegrationTest {
         "/sub/contents/" + content.getId() + "/watch", new StompSessionHandlerAdapter() {});
     Thread.sleep(300);
 
-    assertThat(watchingSessionRepository.findByWatcherId(user.getId())).isPresent();
+    assertThat(findSessionByWatcherId(user.getId())).isPresent();
 
     // 새로고침 등으로 탭 하나(기존 연결)만 끊긴 상황
     tab1.disconnect();
     Thread.sleep(300);
 
-    assertThat(watchingSessionRepository.findByWatcherId(user.getId()))
+    assertThat(findSessionByWatcherId(user.getId()))
         .as("다른 탭(tab2)이 같은 콘텐츠를 계속 보고 있으므로 시청 세션이 유지되어야 한다")
         .isPresent();
     assertThat(contentRepository.findById(content.getId()).orElseThrow().getWatcherCount())
@@ -142,9 +144,17 @@ class ContentWatchSessionEventListenerIntegrationTest {
     tab2.disconnect();
     Thread.sleep(300);
 
-    assertThat(watchingSessionRepository.findByWatcherId(user.getId())).isEmpty();
+    assertThat(findSessionByWatcherId(user.getId())).isEmpty();
     assertThat(contentRepository.findById(content.getId()).orElseThrow().getWatcherCount())
         .isEqualTo(0);
+  }
+
+  // watchingSessionRepository.findByWatcherId()는 PESSIMISTIC_WRITE 락을 걸어 쓰기 트랜잭션이
+  // 필요하므로, 트랜잭션 없이 상태만 확인하는 테스트 어서션에서는 findAll() 기반으로 조회한다.
+  private Optional<WatchingSession> findSessionByWatcherId(UUID watcherId) {
+    return watchingSessionRepository.findAll().stream()
+        .filter(session -> session.getWatcher().getId().equals(watcherId))
+        .findFirst();
   }
 
   private User createUser(String email) {
