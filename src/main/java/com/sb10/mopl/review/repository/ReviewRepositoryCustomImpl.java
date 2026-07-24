@@ -77,11 +77,11 @@ public class ReviewRepositoryCustomImpl implements ReviewRepositoryCustom {
   @Override
   public ReviewStatistics findStatisticsByTargetContentId(UUID contentId) {
     Tuple result =
-      queryFactory
-        .select(review.count(), review.rating.avg())
-        .from(review)
-        .where(review.targetContent.id.eq(contentId))
-      .fetchOne();
+        queryFactory
+            .select(review.count(), review.rating.avg())
+            .from(review)
+            .where(review.targetContent.id.eq(contentId))
+            .fetchOne();
 
     if (result == null) {
       return ReviewStatistics.empty();
@@ -91,9 +91,7 @@ public class ReviewRepositoryCustomImpl implements ReviewRepositoryCustom {
     Double averageRating = result.get(review.rating.avg());
 
     return new ReviewStatistics(
-      reviewCount != null ? reviewCount : 0L,
-      averageRating != null ? averageRating : 0.0
-    );
+        reviewCount != null ? reviewCount : 0L, averageRating != null ? averageRating : 0.0);
   }
 
   // 특정 콘텐츠의 리뷰만 조회하는 조건 생성

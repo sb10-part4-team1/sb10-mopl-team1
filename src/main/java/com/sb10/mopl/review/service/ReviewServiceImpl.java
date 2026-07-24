@@ -194,12 +194,9 @@ public class ReviewServiceImpl implements ReviewService {
 
   private void updateContentStatistics(Content content) {
 
-    ReviewStatistics statistics =
-      reviewRepository.findStatisticsByTargetContentId(content.getId());
+    ReviewStatistics statistics = reviewRepository.findStatisticsByTargetContentId(content.getId());
 
-    content.updateStatistics(
-      statistics.averageRating(),
-      Math.toIntExact(statistics.reviewCount()));
+    content.updateStatistics(statistics.averageRating(), Math.toIntExact(statistics.reviewCount()));
   }
 
   private Instant parseCursor(String cursor) {
