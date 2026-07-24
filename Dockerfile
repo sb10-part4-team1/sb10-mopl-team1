@@ -1,6 +1,10 @@
 # ========== 1. Build stage ==========
-FROM amazoncorretto:17 AS builder
+FROM amazoncorretto:17.0.20 AS builder
 WORKDIR /app
+
+# AL2023 베이스 이미지 변경 대응을 위한 xargs(findutils) 설치
+RUN dnf install -y findutils
+
 COPY gradlew ./
 COPY gradle ./gradle
 COPY build.gradle settings.gradle ./
@@ -13,7 +17,7 @@ RUN ./gradlew bootJar --no-daemon
 RUN java -Djarmode=layertools -jar build/libs/*.jar extract
 
 # ========== 2. Runtime stage ==========
-FROM amazoncorretto:17-alpine3.21
+FROM amazoncorretto:17.0.20-alpine3.21
 WORKDIR /app
 
 RUN addgroup -S app \
