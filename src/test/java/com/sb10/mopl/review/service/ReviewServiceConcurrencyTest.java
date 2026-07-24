@@ -8,7 +8,6 @@ import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.review.dto.ReviewCreateRequest;
 import com.sb10.mopl.review.dto.ReviewDto;
 import com.sb10.mopl.review.dto.ReviewUpdateRequest;
-import com.sb10.mopl.review.entity.Review;
 import com.sb10.mopl.review.repository.ReviewRepository;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
@@ -88,12 +87,7 @@ class ReviewServiceConcurrencyTest {
   void tearDown() {
     transactionTemplate.executeWithoutResult(
         status -> {
-          List<Review> reviews =
-              reviewRepository.findAll().stream()
-                  .filter(review -> review.getTargetContent().getId().equals(contentId))
-                  .toList();
-
-          reviewRepository.deleteAll(reviews);
+          reviewRepository.deleteAllByTargetContentId(contentId);
 
           if (contentRepository.existsById(contentId)) {
             contentRepository.deleteById(contentId);
