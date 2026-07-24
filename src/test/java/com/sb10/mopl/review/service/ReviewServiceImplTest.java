@@ -29,6 +29,8 @@ import com.sb10.mopl.review.repository.ReviewStatistics;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -63,6 +65,8 @@ class ReviewServiceImplTest {
   @Mock private UserRepository userRepository;
 
   @Mock private ApplicationEventPublisher eventPublisher;
+
+  @Mock private EntityManager entityManager;
 
   @InjectMocks private ReviewServiceImpl reviewService;
 
@@ -126,6 +130,7 @@ class ReviewServiceImplTest {
     // then
     assertThat(result).isEqualTo(expectedResponse);
 
+    verify(entityManager).lock(content, LockModeType.PESSIMISTIC_WRITE);
     verify(reviewRepository).save(review);
     verify(reviewRepository).findStatisticsByTargetContentId(contentId);
     verify(content).updateStatistics(5.0, 1);
@@ -277,6 +282,7 @@ class ReviewServiceImplTest {
     assertThat(review.getText()).isEqualTo("수정된 리뷰");
     assertThat(review.getRating()).isEqualTo(5);
 
+    verify(entityManager).lock(content, LockModeType.PESSIMISTIC_WRITE);
     verify(reviewRepository).findStatisticsByTargetContentId(contentId);
     verify(content).updateStatistics(4.0, 2);
   }
@@ -329,6 +335,7 @@ class ReviewServiceImplTest {
     reviewService.delete(reviewId, userId);
 
     // then
+    verify(entityManager).lock(content, LockModeType.PESSIMISTIC_WRITE);
     verify(reviewRepository).delete(review);
     verify(reviewRepository).findStatisticsByTargetContentId(contentId);
     verify(content).updateStatistics(0.0, 0);

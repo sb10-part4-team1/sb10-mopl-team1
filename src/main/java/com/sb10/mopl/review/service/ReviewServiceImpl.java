@@ -20,6 +20,8 @@ import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -41,6 +43,7 @@ public class ReviewServiceImpl implements ReviewService {
   private final ContentRepository contentRepository;
   private final UserRepository userRepository;
   private final ApplicationEventPublisher eventPublisher;
+  private final EntityManager entityManager;
 
   // 리뷰 목록 조회 최대 limit
   private static final int MAX_REVIEW_PAGE_LIMIT = 100;
@@ -68,6 +71,8 @@ public class ReviewServiceImpl implements ReviewService {
       throw new ReviewException(
           ReviewErrorCode.REVIEW_ALREADY_EXISTS, Map.of("contentId", contentId, "userId", userId));
     }
+
+    entityManager.lock(content, LockModeType.PESSIMISTIC_WRITE);
 
     Review review = reviewMapper.toEntity(request, content, user);
     Review savedReview = reviewRepository.save(review);
@@ -123,10 +128,13 @@ public class ReviewServiceImpl implements ReviewService {
           Map.of("reviewId", reviewId, "userId", userId));
     }
 
+    Content content = review.getTargetContent();
+    entityManager.lock(content, LockModeType.PESSIMISTIC_WRITE);
+
     // 리뷰 업데이트
     review.update(request.text(), request.rating());
 
-    updateContentStatistics(review.getTargetContent());
+    updateContentStatistics(content);
 
     return reviewMapper.toDto(review);
   }
@@ -152,6 +160,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     // 삭제 이후 통계를 갱신하기 위해 콘텐츠를 먼저 참조
     Content content = review.getTargetContent();
+    entityManager.lock(content, LockModeType.PESSIMISTIC_WRITE);
 
     // 리뷰 삭제
     reviewRepository.delete(review);

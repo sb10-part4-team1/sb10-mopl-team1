@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.sb10.mopl.config.JpaAuditingConfig;
 import com.sb10.mopl.config.QuerydslConfig;
 import com.sb10.mopl.content.entity.Content;
+import com.sb10.mopl.content.entity.ContentTag;
 import com.sb10.mopl.content.entity.ContentType;
+import com.sb10.mopl.content.entity.Tag;
 import com.sb10.mopl.content.repository.ContentRepository;
+import com.sb10.mopl.content.repository.TagRepository;
 import com.sb10.mopl.playlist.entity.Playlist;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistcontent.entity.PlaylistContent;
@@ -35,6 +38,8 @@ class PlaylistContentRepositoryTest {
   @Autowired private PlaylistRepository playlistRepository;
 
   @Autowired private ContentRepository contentRepository;
+
+  @Autowired private TagRepository tagRepository;
 
   @Autowired private UserRepository userRepository;
 
@@ -146,9 +151,13 @@ class PlaylistContentRepositoryTest {
   }
 
   @Test
-  @DisplayName("플레이리스트 ID 목록에 속한 콘텐츠를 함께 조회한다")
-  void findAllWithContentByPlaylistIds_returnPlaylistContents_whenExists() {
+  @DisplayName("플레이리스트 ID 목록에 속한 콘텐츠와 태그를 함께 조회한다")
+  void findAllWithContentByPlaylistIds_returnPlaylistContentsWithTags_whenExists() {
     // given
+    Tag tag = tagRepository.save(Tag.create("액션"));
+    ContentTag contentTag = ContentTag.create(content, tag);
+    entityManager.persist(contentTag);
+
     final PlaylistContent firstPlaylistContent =
         playlistContentRepository.save(new PlaylistContent(playlist, content));
 
@@ -183,6 +192,16 @@ class PlaylistContentRepositoryTest {
     assertThat(result)
         .extracting(playlistContent -> playlistContent.getContent().getTitle())
         .containsExactlyInAnyOrder(content.getTitle(), otherContent.getTitle());
+
+    PlaylistContent contentWithTag =
+        result.stream()
+            .filter(playlistContent -> playlistContent.getContent().getId().equals(content.getId()))
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(contentWithTag.getContent().getContentTags())
+        .extracting(contentTagItem -> contentTagItem.getTag().getName())
+        .containsExactly("액션");
   }
 
   @Test
