@@ -1,6 +1,14 @@
 <div align="center">
-  <h1>🎓 모두의 플리 (MOPL) - 글로벌 컨텐츠 큐레이션 플랫폼</h1>
-  <p>Spring Boot 기반 콘텐츠 큐레이션 플랫폼 백엔드 API 서비스</p>
+  <h1>모두의 플리 (MOPL) - 글로벌 컨텐츠 큐레이션 플랫폼</h1>
+  <p><strong>코드잇 스프린트 백엔드 10기 Part 4 Team 1</strong></p>
+  <p>Spring Boot 기반 대용량 트래픽 대비 글로벌 콘텐츠 큐레이션 백엔드 API 서비스</p>
+</div>
+
+<br/>
+
+<div align="center">
+
+[![codecov](https://codecov.io/gh/sb10-part4-team1/sb10-mopl-team1/graph/badge.svg?token=CDBA4Q7J54)](https://codecov.io/gh/sb10-part4-team1/sb10-mopl-team1)
 </div>
 
 <br/>
@@ -25,6 +33,7 @@
 
 ## ✍️ 프로젝트 소개
 
+- **소속:** 코드잇 스프린트 백엔드 10기 Part 4 Team 1
 - **프로젝트명:** 모두의 플리(MOPL) - 글로벌 컨텐츠 큐레이션 플랫폼 Spring 백엔드 시스템 구축
 - **프로젝트 기간:** 2026.06.19 ~ 2026.07.29
 - **구현 홈페이지:** [모두의 플리](https://mopl-sb10.click/)
