@@ -5,11 +5,8 @@ import com.sb10.mopl.content.entity.Content;
 import com.sb10.mopl.content.exception.ContentErrorCode;
 import com.sb10.mopl.content.exception.ContentException;
 import com.sb10.mopl.content.repository.ContentRepository;
-import com.sb10.mopl.user.entity.User;
-import com.sb10.mopl.user.exception.UserErrorCode;
-import com.sb10.mopl.user.exception.UserException;
-import com.sb10.mopl.user.repository.UserRepository;
 import com.sb10.mopl.watchingsession.dto.WatchingSessionDto;
+import com.sb10.mopl.watchingsession.dto.WatchingSessionJoinResult;
 import com.sb10.mopl.watchingsession.dto.WatchingSessionSearchRequest;
 import com.sb10.mopl.watchingsession.entity.WatchingSession;
 import com.sb10.mopl.watchingsession.mapper.WatchingSessionMapper;
@@ -19,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,39 +26,62 @@ import org.springframework.transaction.annotation.Transactional;
 public class WatchingSessionService {
 
   private final WatchingSessionRepository watchingSessionRepository;
-  private final UserRepository userRepository;
   private final ContentRepository contentRepository;
   private final WatchingSessionMapper watchingSessionMapper;
+  private final WatchingSessionCreator watchingSessionCreator;
 
-  // 콘텐츠 시청 참여 (SUBSCRIBE /sub/contents/{contentId}/watch 시 호출)
-  // 이미 참여 중이면 기존 세션을 그대로 반환합니다 (다중 탭/재구독에 대한 멱등성 보장).
-  public WatchingSessionDto join(UUID watcherId, UUID contentId) {
-    Optional<WatchingSession> existing =
-        watchingSessionRepository.findByWatcherIdAndContentId(watcherId, contentId);
+  /**
+   * 콘텐츠 시청 참여 (SUBSCRIBE /sub/contents/{contentId}/watch 시 호출)
+   *
+   * <p>유저는 동시에 하나의 콘텐츠만 시청할 수 있다.
+   */
+  public WatchingSessionJoinResult join(UUID watcherId, UUID contentId) {
+    Optional<WatchingSession> existing = watchingSessionRepository.findByWatcherId(watcherId);
     if (existing.isPresent()) {
-      return watchingSessionMapper.toDto(existing.get());
+      return moveTo(existing.get(), contentId);
     }
 
-    User watcher =
-        userRepository
-            .findById(watcherId)
-            .orElseThrow(
-                () -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("userId", watcherId)));
+    // 같은 유저가 동시에 두 탭에서 처음 구독하면 둘 다 여기서 "세션 없음"을 볼 수 있다. 생성은 별도
+    // 트랜잭션(WatchingSessionCreator)에 격리해, 유니크 제약을 위반해도 이 트랜잭션은 영향받지 않고
+    // 승자의 행을 다시 조회해 이동 로직으로 이어갈 수 있게 한다.
+    try {
+      WatchingSessionDto created = watchingSessionCreator.create(watcherId, contentId);
+      return new WatchingSessionJoinResult(created, null);
+    } catch (DataIntegrityViolationException e) {
+      WatchingSession winner =
+          watchingSessionRepository.findByWatcherId(watcherId).orElseThrow(() -> e);
+      return moveTo(winner, contentId);
+    }
+  }
 
-    Content content =
-        contentRepository
-            .findById(contentId)
-            .orElseThrow(
-                () ->
-                    new ContentException(
-                        ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId)));
+  // 같은 콘텐츠에 이미 참여 중이면 기존 세션을 그대로 반환하고, 다른 콘텐츠를 보고 있었다면 세션을 이동시킨다.
+  private WatchingSessionJoinResult moveTo(WatchingSession watchingSession, UUID contentId) {
+    UUID previousContentId = watchingSession.getContent().getId();
 
-    WatchingSession watchingSession =
-        WatchingSession.builder().watcher(watcher).content(content).build();
-    watchingSessionRepository.save(watchingSession);
+    if (previousContentId.equals(contentId)) {
+      return new WatchingSessionJoinResult(watchingSessionMapper.toDto(watchingSession), null);
+    }
+
+    WatchingSessionDto previousDto = watchingSessionMapper.toDto(watchingSession);
+    moveToContent(watchingSession, previousContentId, contentId);
+
+    return new WatchingSessionJoinResult(watchingSessionMapper.toDto(watchingSession), previousDto);
+  }
+
+  private void moveToContent(
+      WatchingSession watchingSession, UUID previousContentId, UUID contentId) {
+    watchingSession.updateContent(findContentOrThrow(contentId));
+    contentRepository.decrementWatcherCount(previousContentId);
     contentRepository.incrementWatcherCount(contentId);
+  }
 
-    return watchingSessionMapper.toDto(watchingSession);
+  private Content findContentOrThrow(UUID contentId) {
+    return contentRepository
+        .findById(contentId)
+        .orElseThrow(
+            () ->
+                new ContentException(
+                    ContentErrorCode.CONTENT_NOT_FOUND, Map.of("contentId", contentId)));
   }
 
   // 콘텐츠 시청 이탈 (UNSUBSCRIBE 또는 연결 종료 시 호출). 세션이 없으면 아무 것도 하지 않습니다.
