@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,10 +17,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sb10.mopl.auth.repository.RefreshTokenRepository;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
+import com.sb10.mopl.auth.security.oauth.HttpCookieOauth2AuthorizationRequestRepository;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.entity.UserRole;
 import com.sb10.mopl.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -100,6 +103,70 @@ class EmailPasswordAuthenticationFilterIntegrationTest {
         () -> assertNotNull(claims.getIssuedAt()),
         () -> assertNotNull(claims.getExpiration()),
         () -> assertTrue(claims.getExpiration().after(claims.getIssuedAt())));
+  }
+
+  @Test
+  @DisplayName("구글 로그인 시도 이탈 후 일반 로그인에 성공하면 남은 OAUTH2_AUTH_REQUEST 쿠키를 정리한다")
+  void signIn_success_removesLeftoverOauth2AuthRequestCookie() throws Exception {
+    User user = saveUser();
+    String cookieName =
+        HttpCookieOauth2AuthorizationRequestRepository.AUTHORIZATION_REQUEST_COOKIE_NAME;
+
+    MvcResult authorizationResult =
+        mockMvc
+            .perform(get("/oauth2/authorization/google"))
+            .andExpect(status().is3xxRedirection())
+            .andReturn();
+    Cookie leftoverCookie = authorizationResult.getResponse().getCookie(cookieName);
+    assertNotNull(leftoverCookie);
+
+    MvcResult signInResult =
+        mockMvc
+            .perform(
+                post("/api/auth/sign-in")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .param("username", EMAIL)
+                    .param("password", PASSWORD)
+                    .cookie(leftoverCookie)
+                    .with(csrf()))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    Cookie expiredCookie = signInResult.getResponse().getCookie(cookieName);
+    assertNotNull(expiredCookie);
+    assertEquals(0, expiredCookie.getMaxAge());
+  }
+
+  @Test
+  @DisplayName("구글 로그인 시도 이탈 후 일반 로그인에 실패해도 남은 OAUTH2_AUTH_REQUEST 쿠키를 정리한다")
+  void signIn_fail_removesLeftoverOauth2AuthRequestCookie() throws Exception {
+    saveUser();
+    String cookieName =
+        HttpCookieOauth2AuthorizationRequestRepository.AUTHORIZATION_REQUEST_COOKIE_NAME;
+
+    MvcResult authorizationResult =
+        mockMvc
+            .perform(get("/oauth2/authorization/google"))
+            .andExpect(status().is3xxRedirection())
+            .andReturn();
+    Cookie leftoverCookie = authorizationResult.getResponse().getCookie(cookieName);
+    assertNotNull(leftoverCookie);
+
+    MvcResult signInResult =
+        mockMvc
+            .perform(
+                post("/api/auth/sign-in")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .param("username", EMAIL)
+                    .param("password", "wrong-password")
+                    .cookie(leftoverCookie)
+                    .with(csrf()))
+            .andExpect(status().isUnauthorized())
+            .andReturn();
+
+    Cookie expiredCookie = signInResult.getResponse().getCookie(cookieName);
+    assertNotNull(expiredCookie);
+    assertEquals(0, expiredCookie.getMaxAge());
   }
 
   @Test
