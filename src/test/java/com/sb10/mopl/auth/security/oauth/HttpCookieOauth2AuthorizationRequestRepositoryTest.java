@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import jakarta.servlet.http.Cookie;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +47,43 @@ class HttpCookieOauth2AuthorizationRequestRepositoryTest {
     assertEquals(authorizationRequest.getClientId(), loaded.getClientId());
     assertEquals(authorizationRequest.getRedirectUri(), loaded.getRedirectUri());
     assertNull(saveRequest.getSession(false), "HttpSession이 생성되지 않아야 한다");
+  }
+
+  @Test
+  @DisplayName("쿠키 값이 변조되면 서명 검증에 실패하여 인가 요청 로드를 거부한다")
+  void loadAuthorizationRequest_returnsNull_whenCookieTampered() {
+    // given
+    OAuth2AuthorizationRequest authorizationRequest = googleAuthorizationRequest();
+    MockHttpServletRequest saveRequest = new MockHttpServletRequest();
+    MockHttpServletResponse saveResponse = new MockHttpServletResponse();
+    repository.saveAuthorizationRequest(authorizationRequest, saveRequest, saveResponse);
+    Cookie savedCookie =
+        saveResponse.getCookie(
+            HttpCookieOauth2AuthorizationRequestRepository.AUTHORIZATION_REQUEST_COOKIE_NAME);
+
+    int delimiterIndex = savedCookie.getValue().indexOf('.');
+    String payload = savedCookie.getValue().substring(0, delimiterIndex);
+    String signature = savedCookie.getValue().substring(delimiterIndex + 1);
+    String decodedPayload =
+        new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
+    String tamperedPayload =
+        Base64.getUrlEncoder()
+            .encodeToString(
+                decodedPayload
+                    .replace("test-state", "tampered-state")
+                    .getBytes(StandardCharsets.UTF_8));
+    Cookie tamperedCookie =
+        new Cookie(
+            HttpCookieOauth2AuthorizationRequestRepository.AUTHORIZATION_REQUEST_COOKIE_NAME,
+            tamperedPayload + "." + signature);
+    MockHttpServletRequest loadRequest = new MockHttpServletRequest();
+    loadRequest.setCookies(tamperedCookie);
+
+    // when
+    OAuth2AuthorizationRequest loaded = repository.loadAuthorizationRequest(loadRequest);
+
+    // then
+    assertNull(loaded, "서명이 일치하지 않는 변조된 쿠키는 거부되어야 한다");
   }
 
   @Test

@@ -8,10 +8,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -30,6 +35,8 @@ public class HttpCookieOauth2AuthorizationRequestRepository
   private static final Duration COOKIE_MAX_AGE = Duration.ofMinutes(3);
   private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
   private static final String SAME_SITE = "Lax";
+  private static final String HMAC_ALGORITHM = "HmacSHA256";
+  private static final String COOKIE_VALUE_DELIMITER = ".";
 
   private final JwtProperties jwtProperties;
 
@@ -43,9 +50,7 @@ public class HttpCookieOauth2AuthorizationRequestRepository
 
   @Override
   public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
-    return findCookie(request)
-        .map(HttpCookieOauth2AuthorizationRequestRepository::deserialize)
-        .orElse(null);
+    return findCookie(request).map(this::deserialize).orElse(null);
   }
 
   @Override
@@ -96,21 +101,47 @@ public class HttpCookieOauth2AuthorizationRequestRepository
         .findFirst();
   }
 
-  private static String serialize(OAuth2AuthorizationRequest authorizationRequest) {
+  private String serialize(OAuth2AuthorizationRequest authorizationRequest) {
     try {
       String json = OBJECT_MAPPER.writeValueAsString(authorizationRequest);
-      return Base64.getUrlEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+      String payload = Base64.getUrlEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+      return payload + COOKIE_VALUE_DELIMITER + sign(payload);
     } catch (JsonProcessingException e) {
       throw new IllegalStateException("OAuth2AuthorizationRequest 직렬화에 실패했습니다.", e);
     }
   }
 
-  private static OAuth2AuthorizationRequest deserialize(Cookie cookie) {
+  private OAuth2AuthorizationRequest deserialize(Cookie cookie) {
     try {
-      byte[] json = Base64.getUrlDecoder().decode(cookie.getValue());
+      String value = cookie.getValue();
+      int delimiterIndex = value.indexOf(COOKIE_VALUE_DELIMITER);
+      if (delimiterIndex < 0) {
+        return null;
+      }
+      String payload = value.substring(0, delimiterIndex);
+      String signature = value.substring(delimiterIndex + 1);
+      byte[] expectedSignature = sign(payload).getBytes(StandardCharsets.UTF_8);
+      byte[] actualSignature = signature.getBytes(StandardCharsets.UTF_8);
+      if (!MessageDigest.isEqual(expectedSignature, actualSignature)) {
+        return null;
+      }
+      byte[] json = Base64.getUrlDecoder().decode(payload);
       return OBJECT_MAPPER.readValue(json, OAuth2AuthorizationRequest.class);
     } catch (IOException | IllegalArgumentException e) {
       return null;
+    }
+  }
+
+  private String sign(String payload) {
+    try {
+      Mac mac = Mac.getInstance(HMAC_ALGORITHM);
+      mac.init(
+          new SecretKeySpec(
+              jwtProperties.secret().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
+      byte[] signatureBytes = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+      return Base64.getUrlEncoder().encodeToString(signatureBytes);
+    } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+      throw new IllegalStateException("OAuth2AuthorizationRequest 쿠키 서명 생성에 실패했습니다.", e);
     }
   }
 }
