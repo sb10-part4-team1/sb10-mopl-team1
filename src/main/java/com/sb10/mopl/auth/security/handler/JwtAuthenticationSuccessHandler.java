@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sb10.mopl.auth.dto.JwtDto;
 import com.sb10.mopl.auth.security.cookie.RefreshTokenCookieWriter;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
+import com.sb10.mopl.auth.security.oauth.HttpCookieOauth2AuthorizationRequestRepository;
 import com.sb10.mopl.auth.security.principal.MoplUserDetails;
 import com.sb10.mopl.auth.service.AuthTokenService;
 import com.sb10.mopl.auth.service.AuthTokenService.IssuedToken;
@@ -26,12 +27,15 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
   private final JwtProvider jwtProvider;
   private final AuthTokenService authTokenService;
   private final RefreshTokenCookieWriter refreshTokenCookieWriter;
+  private final HttpCookieOauth2AuthorizationRequestRepository authorizationRequestRepository;
   private final ObjectMapper objectMapper;
 
   @Override
   public void onAuthenticationSuccess(
       HttpServletRequest request, HttpServletResponse response, Authentication authentication)
       throws IOException {
+    authorizationRequestRepository.removeAuthorizationRequest(request, response);
+
     MoplUserDetails userDetails = (MoplUserDetails) authentication.getPrincipal();
     response.setStatus(HttpServletResponse.SC_OK);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
