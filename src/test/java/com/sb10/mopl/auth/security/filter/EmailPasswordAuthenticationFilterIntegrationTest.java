@@ -108,7 +108,7 @@ class EmailPasswordAuthenticationFilterIntegrationTest {
   @Test
   @DisplayName("구글 로그인 시도 이탈 후 일반 로그인에 성공하면 남은 OAUTH2_AUTH_REQUEST 쿠키를 정리한다")
   void signIn_success_removesLeftoverOauth2AuthRequestCookie() throws Exception {
-    User user = saveUser();
+    saveUser();
     String cookieName =
         HttpCookieOauth2AuthorizationRequestRepository.AUTHORIZATION_REQUEST_COOKIE_NAME;
 
