@@ -7,7 +7,7 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/* 10분마다 컨텐츠의 실시간 시청자 수(watcher_count) 정합성을 보정하는 정기 스케줄러입니다. */
+/* 컨텐츠의 실시간 시청자 수(watcher_count) 정합성을 보정하는 정기 스케줄러입니다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
