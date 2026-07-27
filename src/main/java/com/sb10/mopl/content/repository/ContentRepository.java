@@ -60,17 +60,32 @@ public interface ContentRepository extends JpaRepository<Content, UUID>, Content
       value =
           """
           UPDATE contents c
-          SET watcher_count = COALESCE(agg.cnt, 0)
-          FROM contents c2
-          LEFT JOIN (
+          SET watcher_count = agg.cnt
+          FROM (
               SELECT ws.content_id,
                      COUNT(ws.id) AS cnt
               FROM watching_session ws
               GROUP BY ws.content_id
-          ) agg ON c2.id = agg.content_id
-          WHERE c.id = c2.id
-            AND c.watcher_count <> COALESCE(agg.cnt, 0)
+          ) agg
+          WHERE c.id = agg.content_id
+            AND c.watcher_count <> agg.cnt
           """,
       nativeQuery = true)
-  int syncWatcherCount();
+  int syncActiveWatcherCount();
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      value =
+          """
+          UPDATE contents c
+          SET watcher_count = 0
+          WHERE c.watcher_count > 0
+            AND NOT EXISTS (
+                SELECT 1
+                FROM watching_session ws
+                WHERE ws.content_id = c.id
+            )
+          """,
+      nativeQuery = true)
+  int cleanupGhostWatcherCount();
 }

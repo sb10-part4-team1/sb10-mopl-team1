@@ -241,6 +241,8 @@ public class ContentService {
 
   @Transactional
   public int syncWatcherCount() {
-    return contentRepository.syncWatcherCount();
+    int updatedActive = contentRepository.syncActiveWatcherCount();
+    int updatedGhost = contentRepository.cleanupGhostWatcherCount();
+    return updatedActive + updatedGhost;
   }
 }
