@@ -23,7 +23,10 @@ public class WatchingSessionController implements WatchingSessionControllerApiDo
   @Override
   @GetMapping("/api/users/{watcherId}/watching-sessions")
   public ResponseEntity<WatchingSessionDto> findWatchingSession(@PathVariable UUID watcherId) {
-    return ResponseEntity.of(watchingSessionService.findLatestByWatcher(watcherId));
+    return watchingSessionService
+        .findLatestByWatcher(watcherId)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.noContent().build());
   }
 
   @Override
