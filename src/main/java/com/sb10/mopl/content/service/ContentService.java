@@ -233,4 +233,16 @@ public class ContentService {
         .map(String::trim)
         .collect(Collectors.toCollection(LinkedHashSet::new));
   }
+
+  @Transactional
+  public int syncReviewStatistics() {
+    return contentRepository.syncReviewStatistics();
+  }
+
+  @Transactional
+  public int syncWatcherCount() {
+    int updatedActive = contentRepository.syncActiveWatcherCount();
+    int updatedGhost = contentRepository.cleanupGhostWatcherCount();
+    return updatedActive + updatedGhost;
+  }
 }
