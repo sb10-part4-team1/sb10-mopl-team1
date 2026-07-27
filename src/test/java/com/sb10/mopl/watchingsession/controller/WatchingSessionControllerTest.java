@@ -84,8 +84,8 @@ class WatchingSessionControllerTest {
   }
 
   @Test
-  @DisplayName("시청 중인 콘텐츠가 없으면 404 Not Found를 반환한다")
-  void findWatchingSession_fail_whenNoActiveSession() throws Exception {
+  @DisplayName("시청 중인 콘텐츠가 없으면 204 No Content를 반환한다")
+  void findWatchingSession_success_whenNoActiveSession() throws Exception {
     // given
     UUID watcherId = UUID.randomUUID();
     when(watchingSessionService.findLatestByWatcher(watcherId)).thenReturn(Optional.empty());
@@ -93,7 +93,7 @@ class WatchingSessionControllerTest {
     // when & then
     mockMvc
         .perform(get("/api/users/{watcherId}/watching-sessions", watcherId))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isNoContent());
 
     verify(watchingSessionService).findLatestByWatcher(watcherId);
   }
