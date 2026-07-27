@@ -1,11 +1,13 @@
-### 포트 번호 및 프로파일 설정 ###
 server:
   port: ${PORT:8080}
+  shutdown: graceful
   tomcat:
     mbeanregistry:
       enabled: true
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   application:
     name: mopl
   profiles:

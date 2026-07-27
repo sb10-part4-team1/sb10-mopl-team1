@@ -32,4 +32,60 @@ public interface ContentRepository extends JpaRepository<Content, UUID>, Content
       WHERE c.id = :contentId AND c.watcherCount > 0
       """)
   void decrementWatcherCount(@Param("contentId") UUID contentId);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      value =
+          """
+          UPDATE contents c
+          SET review_count = COALESCE(agg.cnt, 0),
+              average_rating = COALESCE(agg.avg_rating, 0.0)
+          FROM contents c2
+          LEFT JOIN (
+              SELECT cr.content_id,
+                     COUNT(cr.id) AS cnt,
+                     ROUND(AVG(cr.rating), 1) AS avg_rating
+              FROM content_reviews cr
+              GROUP BY cr.content_id
+          ) agg ON c2.id = agg.content_id
+          WHERE c.id = c2.id
+            AND (c.review_count <> COALESCE(agg.cnt, 0)
+                OR c.average_rating <> COALESCE(agg.avg_rating, 0.0))
+          """,
+      nativeQuery = true)
+  int syncReviewStatistics();
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      value =
+          """
+          UPDATE contents c
+          SET watcher_count = agg.cnt
+          FROM (
+              SELECT ws.content_id,
+                     COUNT(ws.id) AS cnt
+              FROM watching_session ws
+              GROUP BY ws.content_id
+          ) agg
+          WHERE c.id = agg.content_id
+            AND c.watcher_count <> agg.cnt
+          """,
+      nativeQuery = true)
+  int syncActiveWatcherCount();
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      value =
+          """
+          UPDATE contents c
+          SET watcher_count = 0
+          WHERE c.watcher_count > 0
+            AND NOT EXISTS (
+                SELECT 1
+                FROM watching_session ws
+                WHERE ws.content_id = c.id
+            )
+          """,
+      nativeQuery = true)
+  int cleanupGhostWatcherCount();
 }

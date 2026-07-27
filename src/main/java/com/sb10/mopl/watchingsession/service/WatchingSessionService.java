@@ -11,6 +11,8 @@ import com.sb10.mopl.watchingsession.dto.WatchingSessionSearchRequest;
 import com.sb10.mopl.watchingsession.entity.WatchingSession;
 import com.sb10.mopl.watchingsession.mapper.WatchingSessionMapper;
 import com.sb10.mopl.watchingsession.repository.WatchingSessionRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -147,5 +149,11 @@ public class WatchingSessionService {
         totalCount,
         request.sortBy().name(),
         request.sortDirection());
+  }
+
+  // 24시간 이상 지나 만료된 좀비 시청 세션을 삭제합니다.
+  public int deleteExpiredSessions() {
+    Instant cutoffTime = Instant.now().minus(Duration.ofHours(24));
+    return watchingSessionRepository.deleteExpiredSessions(cutoffTime);
   }
 }
