@@ -25,6 +25,7 @@ public interface WatchingSessionControllerApiDocs {
         responseCode = "200",
         description = "성공",
         content = @Content(schema = @Schema(implementation = WatchingSessionDto.class))),
+    @ApiResponse(responseCode = "204", description = "시청 세션 없음", content = @Content),
     @ApiResponse(
         responseCode = "400",
         description = "잘못된 요청",
