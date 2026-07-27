@@ -37,13 +37,6 @@ spring:
       hibernate:
         format_sql: false
 
-# 보안을 위해 운영 환경에서는 외부 노출 축소
-springdoc:
-  api-docs:
-    enabled: false # 운영에서는 스웨거 문서 숨김 (필요시 true 후 인증 보안 걸기)
-  swagger-ui:
-    enabled: false
-
 mopl:
   jwt:
     refresh-token-cookie:
