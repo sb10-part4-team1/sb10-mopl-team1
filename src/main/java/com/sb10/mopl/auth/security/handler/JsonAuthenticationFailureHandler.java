@@ -2,6 +2,7 @@ package com.sb10.mopl.auth.security.handler;
 
 import com.sb10.mopl.auth.exception.AuthErrorCode;
 import com.sb10.mopl.auth.exception.InvalidSignInRequestException;
+import com.sb10.mopl.auth.security.oauth.HttpCookieOauth2AuthorizationRequestRepository;
 import com.sb10.mopl.common.exception.SystemErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,11 +18,14 @@ import org.springframework.stereotype.Component;
 public class JsonAuthenticationFailureHandler implements AuthenticationFailureHandler {
 
   private final AuthErrorResponseWriter responseWriter;
+  private final HttpCookieOauth2AuthorizationRequestRepository authorizationRequestRepository;
 
   @Override
   public void onAuthenticationFailure(
       HttpServletRequest request, HttpServletResponse response, AuthenticationException exception)
       throws IOException {
+    authorizationRequestRepository.removeAuthorizationRequest(request, response);
+
     if (exception instanceof InvalidSignInRequestException invalidRequestException) {
       responseWriter.write(
           response, SystemErrorCode.INVALID_INPUT_VALUE, invalidRequestException.getDetails());
