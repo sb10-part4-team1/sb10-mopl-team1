@@ -9,6 +9,7 @@ import com.sb10.mopl.auth.security.jwt.AuthenticatedUserFactory;
 import com.sb10.mopl.auth.security.jwt.JwtAuthenticationFilter;
 import com.sb10.mopl.auth.security.jwt.JwtProperties;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
+import com.sb10.mopl.auth.security.oauth.HttpCookieOauth2AuthorizationRequestRepository;
 import com.sb10.mopl.auth.security.provider.TemporaryPasswordAuthenticationProvider;
 import com.sb10.mopl.auth.service.JwtSessionService;
 import com.sb10.mopl.user.entity.UserRole;
@@ -16,7 +17,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Validator;
 import java.time.Clock;
 import java.util.List;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -35,7 +35,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -127,12 +126,10 @@ public class SecurityConfig {
       AccessDeniedHandler accessDeniedHandler,
       LogoutHandler signOutLogoutHandler,
       LogoutSuccessHandler logoutSuccessHandler,
-      ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository,
       Oauth2LoginSuccessHandler oauth2LoginSuccessHandler,
-      Oauth2LoginFailureHandler oauth2LoginFailureHandler)
+      Oauth2LoginFailureHandler oauth2LoginFailureHandler,
+      HttpCookieOauth2AuthorizationRequestRepository authorizationRequestRepository)
       throws Exception {
-    boolean oauth2LoginEnabled = clientRegistrationRepository.getIfAvailable() != null;
-
     http.csrf(
             csrf ->
                 csrf.ignoringRequestMatchers("/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
@@ -140,11 +137,7 @@ public class SecurityConfig {
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
         .sessionManagement(
-            session ->
-                session.sessionCreationPolicy(
-                    oauth2LoginEnabled
-                        ? SessionCreationPolicy.IF_REQUIRED
-                        : SessionCreationPolicy.STATELESS))
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
         .logout(
@@ -153,8 +146,7 @@ public class SecurityConfig {
                     .logoutUrl("/api/auth/sign-out")
                     .addLogoutHandler(signOutLogoutHandler)
                     .logoutSuccessHandler(logoutSuccessHandler)
-                    .clearAuthentication(true)
-                    .invalidateHttpSession(false))
+                    .clearAuthentication(true))
         .authorizeHttpRequests(
             auth ->
                 auth
@@ -177,15 +169,15 @@ public class SecurityConfig {
                     // 인증은 되었지만 필요한 권한이 부족한 요청은 403 응답으로 처리
                     .accessDeniedHandler(accessDeniedHandler))
         .addFilterBefore(jwtAuthenticationFilter, LogoutFilter.class)
-        .addFilterAt(emailPasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-    if (oauth2LoginEnabled) {
-      http.oauth2Login(
-          oauth2 ->
-              oauth2
-                  .successHandler(oauth2LoginSuccessHandler)
-                  .failureHandler(oauth2LoginFailureHandler));
-    }
+        .addFilterAt(emailPasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .oauth2Login(
+            oauth2 ->
+                oauth2
+                    .authorizationEndpoint(
+                        endpoint ->
+                            endpoint.authorizationRequestRepository(authorizationRequestRepository))
+                    .successHandler(oauth2LoginSuccessHandler)
+                    .failureHandler(oauth2LoginFailureHandler));
 
     return http.build();
   }

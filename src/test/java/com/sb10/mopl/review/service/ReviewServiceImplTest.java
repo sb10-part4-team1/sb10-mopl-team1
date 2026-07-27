@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -24,9 +25,12 @@ import com.sb10.mopl.review.exception.ReviewErrorCode;
 import com.sb10.mopl.review.exception.ReviewException;
 import com.sb10.mopl.review.mapper.ReviewMapper;
 import com.sb10.mopl.review.repository.ReviewRepository;
+import com.sb10.mopl.review.repository.ReviewStatistics;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -62,6 +66,8 @@ class ReviewServiceImplTest {
 
   @Mock private ApplicationEventPublisher eventPublisher;
 
+  @Mock private EntityManager entityManager;
+
   @InjectMocks private ReviewServiceImpl reviewService;
 
   private static ValidatorFactory validatorFactory;
@@ -92,6 +98,10 @@ class ReviewServiceImplTest {
     reviewId = UUID.randomUUID();
 
     content = mock(Content.class);
+
+    // 수정 및 삭제 시 Review가 보유한 Content ID를 조회할 수 있도록 설정
+    lenient().when(content.getId()).thenReturn(contentId);
+
     user = createUser(userId);
     review = createReview(reviewId, content, user);
   }
@@ -101,13 +111,17 @@ class ReviewServiceImplTest {
   void create_success() {
     // given
     ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋은 콘텐츠입니다.", 5);
-    ReviewDto expectedResponse = createReviewDto(reviewId, contentId, userId, request.text(), 5);
+    ReviewDto expectedResponse =
+        createReviewDto(reviewId, contentId, userId, request.text(), request.rating());
+
+    ReviewStatistics statistics = new ReviewStatistics(1L, 5.0);
 
     given(contentRepository.findById(contentId)).willReturn(Optional.of(content));
     given(userRepository.findById(userId)).willReturn(Optional.of(user));
     given(reviewRepository.existsByTargetContentIdAndUserId(contentId, userId)).willReturn(false);
     given(reviewMapper.toEntity(request, content, user)).willReturn(review);
     given(reviewRepository.save(review)).willReturn(review);
+    given(reviewRepository.findStatisticsByTargetContentId(contentId)).willReturn(statistics);
     given(reviewMapper.toDto(review)).willReturn(expectedResponse);
 
     // when
@@ -115,7 +129,11 @@ class ReviewServiceImplTest {
 
     // then
     assertThat(result).isEqualTo(expectedResponse);
+
+    verify(entityManager).lock(content, LockModeType.PESSIMISTIC_WRITE);
     verify(reviewRepository).save(review);
+    verify(reviewRepository).findStatisticsByTargetContentId(contentId);
+    verify(content).updateStatistics(5.0, 1);
   }
 
   @Test
@@ -132,6 +150,7 @@ class ReviewServiceImplTest {
 
     verify(userRepository, never()).findById(any());
     verify(reviewRepository, never()).save(any());
+    verify(reviewRepository, never()).findStatisticsByTargetContentId(any());
   }
 
   @Test
@@ -148,6 +167,7 @@ class ReviewServiceImplTest {
         .isInstanceOf(UserException.class);
 
     verify(reviewRepository, never()).save(any());
+    verify(reviewRepository, never()).findStatisticsByTargetContentId(any());
   }
 
   @Test
@@ -167,6 +187,7 @@ class ReviewServiceImplTest {
         .isEqualTo(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
 
     verify(reviewRepository, never()).save(any());
+    verify(reviewRepository, never()).findStatisticsByTargetContentId(any());
   }
 
   @Test
@@ -244,9 +265,13 @@ class ReviewServiceImplTest {
   void update_success() {
     // given
     ReviewUpdateRequest request = new ReviewUpdateRequest("수정된 리뷰", 5);
-    ReviewDto expectedResponse = createReviewDto(reviewId, contentId, userId, request.text(), 5);
+    ReviewDto expectedResponse =
+        createReviewDto(reviewId, contentId, userId, request.text(), request.rating());
+
+    ReviewStatistics statistics = new ReviewStatistics(2L, 4.0);
 
     given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+    given(reviewRepository.findStatisticsByTargetContentId(contentId)).willReturn(statistics);
     given(reviewMapper.toDto(review)).willReturn(expectedResponse);
 
     // when
@@ -256,6 +281,10 @@ class ReviewServiceImplTest {
     assertThat(result).isEqualTo(expectedResponse);
     assertThat(review.getText()).isEqualTo("수정된 리뷰");
     assertThat(review.getRating()).isEqualTo(5);
+
+    verify(entityManager).lock(content, LockModeType.PESSIMISTIC_WRITE);
+    verify(reviewRepository).findStatisticsByTargetContentId(contentId);
+    verify(content).updateStatistics(4.0, 2);
   }
 
   @Test
@@ -271,6 +300,8 @@ class ReviewServiceImplTest {
         .isInstanceOf(ReviewException.class)
         .extracting("errorCode")
         .isEqualTo(ReviewErrorCode.REVIEW_NOT_FOUND);
+
+    verify(reviewRepository, never()).findStatisticsByTargetContentId(any());
   }
 
   @Test
@@ -287,19 +318,27 @@ class ReviewServiceImplTest {
         .isInstanceOf(ReviewException.class)
         .extracting("errorCode")
         .isEqualTo(ReviewErrorCode.UNAUTHORIZED_REVIEW_ACCESS);
+
+    verify(reviewRepository, never()).findStatisticsByTargetContentId(any());
   }
 
   @Test
   @DisplayName("리뷰 - 삭제 성공")
   void delete_success() {
     // given
+    ReviewStatistics statistics = new ReviewStatistics(0L, 0.0);
+
     given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+    given(reviewRepository.findStatisticsByTargetContentId(contentId)).willReturn(statistics);
 
     // when
     reviewService.delete(reviewId, userId);
 
     // then
+    verify(entityManager).lock(content, LockModeType.PESSIMISTIC_WRITE);
     verify(reviewRepository).delete(review);
+    verify(reviewRepository).findStatisticsByTargetContentId(contentId);
+    verify(content).updateStatistics(0.0, 0);
   }
 
   @Test
@@ -315,6 +354,7 @@ class ReviewServiceImplTest {
         .isEqualTo(ReviewErrorCode.REVIEW_NOT_FOUND);
 
     verify(reviewRepository, never()).delete(any());
+    verify(reviewRepository, never()).findStatisticsByTargetContentId(any());
   }
 
   @Test
@@ -332,6 +372,7 @@ class ReviewServiceImplTest {
         .isEqualTo(ReviewErrorCode.UNAUTHORIZED_REVIEW_ACCESS);
 
     verify(reviewRepository, never()).delete(any());
+    verify(reviewRepository, never()).findStatisticsByTargetContentId(any());
   }
 
   @Test

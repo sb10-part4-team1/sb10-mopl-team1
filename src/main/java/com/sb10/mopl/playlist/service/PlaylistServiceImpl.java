@@ -2,6 +2,8 @@ package com.sb10.mopl.playlist.service;
 
 import com.sb10.mopl.common.pagination.CursorPageResponse;
 import com.sb10.mopl.common.pagination.SortDirection;
+import com.sb10.mopl.content.service.ContentService;
+import com.sb10.mopl.playlist.dto.PlaylistContentSummaryDto;
 import com.sb10.mopl.playlist.dto.PlaylistCreateRequest;
 import com.sb10.mopl.playlist.dto.PlaylistDto;
 import com.sb10.mopl.playlist.dto.PlaylistUpdateRequest;
@@ -11,6 +13,7 @@ import com.sb10.mopl.playlist.exception.PlaylistErrorCode;
 import com.sb10.mopl.playlist.exception.PlaylistException;
 import com.sb10.mopl.playlist.mapper.PlaylistMapper;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
+import com.sb10.mopl.playlistcontent.repository.PlaylistContentRepository;
 import com.sb10.mopl.playlistsubscription.repository.PlaylistSubscriptionRepository;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
@@ -43,6 +46,8 @@ public class PlaylistServiceImpl implements PlaylistService {
   private final PlaylistMapper playlistMapper;
   private final PlaylistSubscriptionRepository playlistSubscriptionRepository;
   private final ApplicationEventPublisher eventPublisher;
+  private final ContentService contentService;
+  private final PlaylistContentRepository playlistContentRepository;
 
   @Override
   @Transactional
@@ -291,6 +296,10 @@ public class PlaylistServiceImpl implements PlaylistService {
 
     Set<UUID> subscribedPlaylistIds = getSubscribedPlaylistIds(pagePlaylists, currentUserId);
 
+    // 플레이리스트별 콘텐츠 목록을 bulk 조회
+    Map<UUID, List<PlaylistContentSummaryDto>> contentsByPlaylistId =
+        getPlaylistContents(getPlaylistIds(pagePlaylists));
+
     // Playlist 엔티티 목록을 응답 DTO 목록으로 변환
     List<PlaylistDto> data =
         pagePlaylists.stream()
@@ -299,7 +308,8 @@ public class PlaylistServiceImpl implements PlaylistService {
                     playlistMapper.toDto(
                         playlist,
                         subscriberCountByPlaylistId.getOrDefault(playlist.getId(), 0L),
-                        subscribedPlaylistIds.contains(playlist.getId())))
+                        subscribedPlaylistIds.contains(playlist.getId()),
+                        contentsByPlaylistId.getOrDefault(playlist.getId(), List.of())))
             .toList();
 
     // 다음 커서 생성을 위한 마지막 플레이리스트 추출
@@ -329,7 +339,10 @@ public class PlaylistServiceImpl implements PlaylistService {
             && playlistSubscriptionRepository.existsBySubscriberIdAndPlaylistId(
                 currentUserId, playlist.getId());
 
-    return playlistMapper.toDto(playlist, subscriberCount, subscribedByMe);
+    List<PlaylistContentSummaryDto> contents =
+        getPlaylistContents(List.of(playlist.getId())).getOrDefault(playlist.getId(), List.of());
+
+    return playlistMapper.toDto(playlist, subscriberCount, subscribedByMe, contents);
   }
 
   // 목록 응답용 구독자 수를 playlistId 기준으로 bulk 조회
@@ -391,5 +404,21 @@ public class PlaylistServiceImpl implements PlaylistService {
   private UUID getNextIdAfter(Playlist lastPlaylist) {
     // 마지막 플레이리스트가 없으면 다음 보조 커서를 생성하지 않음
     return lastPlaylist == null ? null : lastPlaylist.getId();
+  }
+
+  private Map<UUID, List<PlaylistContentSummaryDto>> getPlaylistContents(List<UUID> playlistIds) {
+
+    if (playlistIds == null || playlistIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return playlistContentRepository.findAllWithContentByPlaylistIds(playlistIds).stream()
+        .collect(
+            Collectors.groupingBy(
+                playlistContent -> playlistContent.getPlaylist().getId(),
+                Collectors.mapping(
+                    playlistContent ->
+                        playlistMapper.toContentSummaryDto(playlistContent.getContent()),
+                    Collectors.toList())));
   }
 }

@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.sb10.mopl.config.JpaAuditingConfig;
 import com.sb10.mopl.config.QuerydslConfig;
 import com.sb10.mopl.content.entity.Content;
+import com.sb10.mopl.content.entity.ContentTag;
 import com.sb10.mopl.content.entity.ContentType;
+import com.sb10.mopl.content.entity.Tag;
 import com.sb10.mopl.content.repository.ContentRepository;
+import com.sb10.mopl.content.repository.TagRepository;
 import com.sb10.mopl.playlist.entity.Playlist;
 import com.sb10.mopl.playlist.repository.PlaylistRepository;
 import com.sb10.mopl.playlistcontent.entity.PlaylistContent;
@@ -36,6 +39,8 @@ class PlaylistContentRepositoryTest {
 
   @Autowired private ContentRepository contentRepository;
 
+  @Autowired private TagRepository tagRepository;
+
   @Autowired private UserRepository userRepository;
 
   @Autowired private EntityManager entityManager;
@@ -61,7 +66,7 @@ class PlaylistContentRepositoryTest {
     otherContent =
         contentRepository.save(
             Content.create(
-                "다른 콘텐츠 제목", ContentType.MOVIE, "다른 콘텐츠 설명", "/uploads/other-content.jpg"));
+                "다른 콘텐츠 제목", ContentType.TV_SERIES, "다른 콘텐츠 설명", "/uploads/other-content.jpg"));
 
     entityManager.flush();
     entityManager.clear();
@@ -140,6 +145,137 @@ class PlaylistContentRepositoryTest {
     // when
     Optional<PlaylistContent> result =
         playlistContentRepository.findByPlaylistIdAndContentId(playlist.getId(), content.getId());
+
+    // then
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  @DisplayName("플레이리스트 ID 목록에 속한 콘텐츠와 태그를 함께 조회한다")
+  void findAllWithContentByPlaylistIds_returnPlaylistContentsWithTags_whenExists() {
+    // given
+    Tag tag = tagRepository.save(Tag.create("액션"));
+    ContentTag contentTag = ContentTag.create(content, tag);
+    entityManager.persist(contentTag);
+
+    final PlaylistContent firstPlaylistContent =
+        playlistContentRepository.save(new PlaylistContent(playlist, content));
+
+    final PlaylistContent secondPlaylistContent =
+        playlistContentRepository.save(new PlaylistContent(playlist, otherContent));
+
+    playlistContentRepository.save(new PlaylistContent(otherPlaylist, content));
+
+    entityManager.flush();
+    entityManager.clear();
+
+    // when
+    List<PlaylistContent> result =
+        playlistContentRepository.findAllWithContentByPlaylistIds(List.of(playlist.getId()));
+
+    // then
+    assertThat(result).hasSize(2);
+
+    assertThat(result)
+        .extracting(PlaylistContent::getId)
+        .containsExactlyInAnyOrder(firstPlaylistContent.getId(), secondPlaylistContent.getId());
+
+    assertThat(result)
+        .allSatisfy(
+            playlistContent ->
+                assertThat(playlistContent.getPlaylist().getId()).isEqualTo(playlist.getId()));
+
+    assertThat(result)
+        .extracting(playlistContent -> playlistContent.getContent().getId())
+        .containsExactlyInAnyOrder(content.getId(), otherContent.getId());
+
+    assertThat(result)
+        .extracting(playlistContent -> playlistContent.getContent().getTitle())
+        .containsExactlyInAnyOrder(content.getTitle(), otherContent.getTitle());
+
+    PlaylistContent contentWithTag =
+        result.stream()
+            .filter(playlistContent -> playlistContent.getContent().getId().equals(content.getId()))
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(contentWithTag.getContent().getContentTags())
+        .extracting(contentTagItem -> contentTagItem.getTag().getName())
+        .containsExactly("액션");
+  }
+
+  @Test
+  @DisplayName("여러 플레이리스트 ID에 속한 콘텐츠를 함께 조회한다")
+  void findAllWithContentByPlaylistIds_returnContentsForMultiplePlaylists() {
+    // given
+    PlaylistContent playlistContent =
+        playlistContentRepository.save(new PlaylistContent(playlist, content));
+
+    PlaylistContent otherPlaylistContent =
+        playlistContentRepository.save(new PlaylistContent(otherPlaylist, otherContent));
+
+    entityManager.flush();
+    entityManager.clear();
+
+    // when
+    List<PlaylistContent> result =
+        playlistContentRepository.findAllWithContentByPlaylistIds(
+            List.of(playlist.getId(), otherPlaylist.getId()));
+
+    // then
+    assertThat(result)
+        .extracting(PlaylistContent::getId)
+        .containsExactlyInAnyOrder(playlistContent.getId(), otherPlaylistContent.getId());
+
+    assertThat(result)
+        .extracting(resultItem -> resultItem.getPlaylist().getId())
+        .containsExactlyInAnyOrder(playlist.getId(), otherPlaylist.getId());
+
+    assertThat(result)
+        .extracting(resultItem -> resultItem.getContent().getId())
+        .containsExactlyInAnyOrder(content.getId(), otherContent.getId());
+  }
+
+  @Test
+  @DisplayName("조회 대상에 포함되지 않은 플레이리스트의 콘텐츠는 반환하지 않는다")
+  void findAllWithContentByPlaylistIds_excludeUnrequestedPlaylistContents() {
+    // given
+    playlistContentRepository.save(new PlaylistContent(playlist, content));
+
+    playlistContentRepository.save(new PlaylistContent(otherPlaylist, otherContent));
+
+    entityManager.flush();
+    entityManager.clear();
+
+    // when
+    List<PlaylistContent> result =
+        playlistContentRepository.findAllWithContentByPlaylistIds(List.of(playlist.getId()));
+
+    // then
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).getPlaylist().getId()).isEqualTo(playlist.getId());
+    assertThat(result.get(0).getContent().getId()).isEqualTo(content.getId());
+
+    assertThat(result)
+        .noneMatch(resultItem -> resultItem.getPlaylist().getId().equals(otherPlaylist.getId()));
+  }
+
+  @Test
+  @DisplayName("플레이리스트 ID 목록이 비어 있으면 빈 목록을 반환한다")
+  void findAllWithContentByPlaylistIds_returnEmpty_whenPlaylistIdsEmpty() {
+    // when
+    List<PlaylistContent> result =
+        playlistContentRepository.findAllWithContentByPlaylistIds(List.of());
+
+    // then
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  @DisplayName("플레이리스트 ID 목록이 null이면 빈 목록을 반환한다")
+  void findAllWithContentByPlaylistIds_returnEmpty_whenPlaylistIdsNull() {
+    // when
+    List<PlaylistContent> result = playlistContentRepository.findAllWithContentByPlaylistIds(null);
 
     // then
     assertThat(result).isEmpty();

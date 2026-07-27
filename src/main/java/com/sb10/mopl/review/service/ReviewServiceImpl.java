@@ -15,10 +15,13 @@ import com.sb10.mopl.review.exception.ReviewErrorCode;
 import com.sb10.mopl.review.exception.ReviewException;
 import com.sb10.mopl.review.mapper.ReviewMapper;
 import com.sb10.mopl.review.repository.ReviewRepository;
+import com.sb10.mopl.review.repository.ReviewStatistics;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.exception.UserErrorCode;
 import com.sb10.mopl.user.exception.UserException;
 import com.sb10.mopl.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -40,6 +43,7 @@ public class ReviewServiceImpl implements ReviewService {
   private final ContentRepository contentRepository;
   private final UserRepository userRepository;
   private final ApplicationEventPublisher eventPublisher;
+  private final EntityManager entityManager;
 
   // 리뷰 목록 조회 최대 limit
   private static final int MAX_REVIEW_PAGE_LIMIT = 100;
@@ -68,8 +72,12 @@ public class ReviewServiceImpl implements ReviewService {
           ReviewErrorCode.REVIEW_ALREADY_EXISTS, Map.of("contentId", contentId, "userId", userId));
     }
 
+    entityManager.lock(content, LockModeType.PESSIMISTIC_WRITE);
+
     Review review = reviewMapper.toEntity(request, content, user);
     Review savedReview = reviewRepository.save(review);
+
+    updateContentStatistics(content);
 
     eventPublisher.publishEvent(new ReviewCreatedEvent(savedReview.getId(), userId, contentId));
 
@@ -120,8 +128,13 @@ public class ReviewServiceImpl implements ReviewService {
           Map.of("reviewId", reviewId, "userId", userId));
     }
 
+    Content content = review.getTargetContent();
+    entityManager.lock(content, LockModeType.PESSIMISTIC_WRITE);
+
     // 리뷰 업데이트
     review.update(request.text(), request.rating());
+
+    updateContentStatistics(content);
 
     return reviewMapper.toDto(review);
   }
@@ -145,8 +158,15 @@ public class ReviewServiceImpl implements ReviewService {
           Map.of("reviewId", reviewId, "userId", userId));
     }
 
+    // 삭제 이후 통계를 갱신하기 위해 콘텐츠를 먼저 참조
+    Content content = review.getTargetContent();
+    entityManager.lock(content, LockModeType.PESSIMISTIC_WRITE);
+
     // 리뷰 삭제
     reviewRepository.delete(review);
+
+    // 삭제된 리뷰를 제외한 통계를 다시 계산
+    updateContentStatistics(content);
   }
 
   private void validateFindAllRequest(
@@ -179,6 +199,13 @@ public class ReviewServiceImpl implements ReviewService {
           ReviewErrorCode.INVALID_REVIEW_VALUE,
           Map.of("limit", "limit은 1 이상 " + MAX_REVIEW_PAGE_LIMIT + " 이하여야 합니다."));
     }
+  }
+
+  private void updateContentStatistics(Content content) {
+
+    ReviewStatistics statistics = reviewRepository.findStatisticsByTargetContentId(content.getId());
+
+    content.updateStatistics(statistics.averageRating(), Math.toIntExact(statistics.reviewCount()));
   }
 
   private Instant parseCursor(String cursor) {
