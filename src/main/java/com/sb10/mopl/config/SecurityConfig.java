@@ -78,7 +78,6 @@ public class SecurityConfig {
     pathMatcher("/api-docs/**"),
     pathMatcher("/swagger-ui/**"),
     pathMatcher("/swagger-ui.html"),
-    pathMatcher("/api/test/batch/**"), // FIXME: 나중에 지워야 할 부분,
     methodAndPathMatcher(HttpMethod.OPTIONS, "/**"),
     methodAndPathMatcher(HttpMethod.POST, "/api/users"),
     methodAndPathMatcher(HttpMethod.POST, "/api/auth/sign-in"),
@@ -132,8 +131,7 @@ public class SecurityConfig {
       throws Exception {
     http.csrf(
             csrf ->
-                csrf.ignoringRequestMatchers("/api/test/batch/**") // FIXME: 나중에 지워야 할 부분,
-                    .csrfTokenRepository(csrfTokenRepository())
+                csrf.csrfTokenRepository(csrfTokenRepository())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
         .cors(Customizer.withDefaults())
         .sessionManagement(
