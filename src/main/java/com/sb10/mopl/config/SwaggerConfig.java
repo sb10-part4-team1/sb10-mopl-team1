@@ -19,6 +19,7 @@ import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import java.util.List;
 import java.util.Map;
 import org.springdoc.core.customizers.OpenApiCustomizer;
@@ -42,6 +43,10 @@ public class SwaggerConfig {
                 .title("모두의 플리 API 문서")
                 .description("모두의 플리 프로젝트의 Swagger API 문서입니다.")
                 .version("1.0"))
+        .servers(
+            List.of(
+                new Server().url("https://mopl-sb10.click").description("운영 서버"),
+                new Server().url("http://localhost:8080").description("로컬 서버")))
         .components(
             new Components()
                 .addSecuritySchemes(
