@@ -1,10 +1,13 @@
 package com.sb10.mopl.common.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -91,6 +94,41 @@ class S3StorageServiceTest {
 
       // that: S3Template.deleteObject 호출되었는지 검증한다
       verify(s3Template).deleteObject("my-test-bucket", "uploads/test-image.jpg");
+    }
+
+    @Test
+    @DisplayName("null이거나 /uploads/를 포함하지 않는 URL 전달 시 예외 없이 안전하게 무시된다")
+    void delete_success_whenUrlIsInvalidOrNull() {
+      // when & that: null, 빈값, 다른 경로 URL 전달 시 안전 무시 검증한다
+      assertThatCode(() -> s3StorageService.delete(null)).doesNotThrowAnyException();
+      assertThatCode(() -> s3StorageService.delete("   ")).doesNotThrowAnyException();
+      assertThatCode(() -> s3StorageService.delete("https://cdn.mopl.com/other/path.png"))
+          .doesNotThrowAnyException();
+      verify(s3Template, never()).deleteObject(any(), any());
+    }
+
+    @Test
+    @DisplayName("S3 Key 탈옥(Path Traversal) 공격 시도 URL 전달 시 S3 삭제 없이 안전하게 경고 후 차단된다")
+    void delete_ignores_whenPathTraversalAttempted() {
+      // given: uploads/ 상위 디렉터리 이탈을 시도하는 공격 URL 준비
+      String attackUrl = "https://cdn.mopl.com/uploads/../secret.txt";
+
+      // when: delete 호출
+      s3StorageService.delete(attackUrl);
+
+      // that: S3Template.deleteObject가 호출되지 않고 차단되었는지 검증한다
+      verify(s3Template, never()).deleteObject(any(), any());
+    }
+
+    @Test
+    @DisplayName("S3Template.deleteObject 수행 중 S3 예외가 발생해도 예외가 상위로 전파되지 않고 안전하게 로그 처리된다")
+    void delete_success_whenS3ExceptionOccurs() {
+      // given: deleteObject 호출 시 예외 발생 모킹
+      doThrow(new RuntimeException("S3 Delete Failed")).when(s3Template).deleteObject(any(), any());
+
+      // when & that: 예외 없이 무시되는지 검증한다
+      assertThatCode(() -> s3StorageService.delete("https://cdn.mopl.com/uploads/test.jpg"))
+          .doesNotThrowAnyException();
     }
   }
 

@@ -77,6 +77,22 @@ class LocalStorageServiceTest {
       assertThatCode(() -> localStorageService.delete("http://external.com/image.png"))
           .doesNotThrowAnyException();
     }
+
+    @Test
+    @DisplayName("상위 디렉터리 탈옥(Path Traversal) 공격 시도 URL 전달 시 파일 삭제 없이 안전하게 경고 후 차단된다")
+    void delete_ignores_whenPathTraversalAttempted() throws Exception {
+      // given: 임시 디렉터리 외부에 상위 보안 파일 생성
+      Path secretFile = tempDir.resolve("secret.txt");
+      Files.write(secretFile, "secret data".getBytes());
+      assertThat(Files.exists(secretFile)).isTrue();
+
+      // when: uploads 하위에서 상위로 이탈하는 Path Traversal URL 전달
+      String attackUrl = "/uploads/../secret.txt";
+      localStorageService.delete(attackUrl);
+
+      // that: 상위 secret.txt 파일이 삭제되지 않고 안전하게 보존되었는지 검증한다
+      assertThat(Files.exists(secretFile)).isTrue();
+    }
   }
 
   @Nested

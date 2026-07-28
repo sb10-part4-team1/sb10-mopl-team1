@@ -68,7 +68,12 @@ public class LocalStorageService implements ImageStorageService {
 
     try {
       String fileName = fileUrl.substring("/uploads/".length());
-      Path filePath = Paths.get(uploadDir).resolve(fileName);
+      Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+      Path filePath = uploadRoot.resolve(fileName).normalize();
+      if (!filePath.startsWith(uploadRoot)) {
+        log.warn("잘못된 삭제 경로 시도 감지 - URL: {}", fileUrl);
+        return;
+      }
       Files.deleteIfExists(filePath);
       log.info("로컬 이미지 파일 삭제 완료 - Path: {}", filePath);
     } catch (IOException e) {

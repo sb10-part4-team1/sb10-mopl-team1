@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 public final class ImageValidator {
 
   private static final List<String> ALLOWED_EXTENSIONS =
-      List.of(".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg");
+      List.of(".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp");
 
   private ImageValidator() {
     // 인스턴스화 방지

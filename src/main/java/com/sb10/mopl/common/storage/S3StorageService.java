@@ -4,6 +4,7 @@ import com.sb10.mopl.common.storage.exception.StorageErrorCode;
 import com.sb10.mopl.common.storage.exception.StorageException;
 import io.awspring.cloud.s3.S3Template;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-/*
- * AWS S3에 파일을 직접 업로드하는 운영 환경 전용 이미지 스토리지 서비스 구현체입니다.
- * Spring Cloud AWS 3.x의 S3Template을 활용하여 안전하게 클라우드 스토리징을 수행합니다.
- */
+/* AWS S3 전용 이미지 동기 스토리지 서비스 구현체입니다. */
 @Slf4j
 @Service
 @Profile({"dev", "prod"})
@@ -53,9 +51,11 @@ public class S3StorageService implements ImageStorageService {
     String s3Key = "uploads/" + savedFilename;
 
     try {
+      // 2. S3 동기 업로드 수행
       s3Template.upload(bucket, s3Key, file.getInputStream());
-      log.info("AWS S3 파일 업로드 성공 - 버킷: {}, 키: {}", bucket, s3Key);
+      log.info("AWS S3 동기 파일 업로드 성공 - Bucket: {}, Key: {}", bucket, s3Key);
 
+      // 3. 클라이언트 접근 URL 반환
       if (endpoint != null && !endpoint.isBlank()) {
         return endpoint + "/" + s3Key;
       }
@@ -72,20 +72,23 @@ public class S3StorageService implements ImageStorageService {
 
   @Override
   public void delete(String fileUrl) {
-    if (fileUrl == null || fileUrl.isBlank()) {
+    if (fileUrl == null || fileUrl.isBlank() || !fileUrl.contains("/uploads/")) {
       return;
     }
 
     try {
-      String s3Key;
-      if (fileUrl.contains("/uploads/")) {
-        s3Key = "uploads/" + fileUrl.substring(fileUrl.indexOf("/uploads/") + "/uploads/".length());
-      } else {
+      String s3Key =
+          "uploads/" + fileUrl.substring(fileUrl.indexOf("/uploads/") + "/uploads/".length());
+      String normalizedKey = Paths.get(s3Key).normalize().toString();
+
+      // uploads/ 경로 이탈 시도 감지 차단
+      if (!normalizedKey.startsWith("uploads/")) {
+        log.warn("AWS S3 잘못된 삭제 경로 시도 감지 - URL: {}", fileUrl);
         return;
       }
 
-      s3Template.deleteObject(bucket, s3Key);
-      log.info("AWS S3 파일 삭제 완료 - Bucket: {}, Key: {}", bucket, s3Key);
+      s3Template.deleteObject(bucket, normalizedKey);
+      log.info("AWS S3 파일 삭제 완료 - Bucket: {}, Key: {}", bucket, normalizedKey);
     } catch (Exception e) {
       log.error("AWS S3 파일 삭제 실패 - URL: {}", fileUrl, e);
     }
