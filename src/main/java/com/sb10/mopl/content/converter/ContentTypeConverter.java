@@ -13,7 +13,7 @@ public class ContentTypeConverter implements Converter<String, ContentType> {
 
   @Override
   public ContentType convert(String source) {
-    if (source.isBlank()) {
+    if (source == null || source.isBlank()) {
       return null;
     }
     String trimmed = source.trim();

@@ -205,8 +205,12 @@ public class BatchAutoRecoveryScheduler {
    * KST 01:00에 실행되는 정기 배치가 실패했을 때, KST 02:00부터 07:00 사이에만 복구를 허용합니다.
    * 07:00 이후에는 TMDB 데이터 갱신(KST 09:00) 전 안전 버퍼를 위해 복구를 차단합니다.
    */
-  private boolean isRecoveryUnavailableTime() {
-    int hour = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).getHour();
+  boolean isRecoveryUnavailableTime() {
+    return isRecoveryUnavailableTime(ZonedDateTime.now(ZoneId.of("Asia/Seoul")));
+  }
+
+  boolean isRecoveryUnavailableTime(ZonedDateTime now) {
+    int hour = now.getHour();
     if (hour < 2 || hour >= 7) {
       log.debug("[RECOVERY] 복구 허용 시간대(KST 02:00~07:00) 외로 스케줄러 스킵 - 현재 KST {}:xx", hour);
       return true;
