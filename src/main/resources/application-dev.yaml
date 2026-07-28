@@ -12,6 +12,12 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:your_dev_password}
 
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID}
+        secret-key: ${AWS_SECRET_ACCESS_KEY}
+
   batch:
     jdbc:
       initialize-schema: never # 개발 도커 DB이므로 배치 메타 테이블 자동 초기화 방지
