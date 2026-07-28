@@ -281,7 +281,7 @@ class ContentTest {
     }
 
     @Test
-    @DisplayName("수정 시 설명이 공백이거나 null일 경우 예외를 발생시킨다")
+    @DisplayName("수정 시 설명이 공백일 경우 예외를 발생시킨다")
     void update_fail_whenDescriptionIsBlank() {
       // given: 기존 콘텐츠와 유효하지 않은 설명들을 준비한다
       Content content = Content.create("기생충", ContentType.MOVIE, "설명", "https://image.url");
@@ -298,7 +298,7 @@ class ContentTest {
     }
 
     @Test
-    @DisplayName("수정 시 썸네일 URL이 공백이거나 null일 경우 예외를 발생시킨다")
+    @DisplayName("수정 시 썸네일 URL이 공백일 경우 예외를 발생시킨다")
     void update_fail_whenThumbnailUrlIsBlank() {
       // given: 기존 콘텐츠와 공백 URL을 준비한다
       Content content = Content.create("기생충", ContentType.MOVIE, "설명", "https://image.url");

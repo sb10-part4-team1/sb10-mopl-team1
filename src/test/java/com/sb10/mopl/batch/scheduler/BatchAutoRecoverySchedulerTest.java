@@ -81,6 +81,34 @@ class BatchAutoRecoverySchedulerTest {
       assertThat(recoveryScheduler.isRecoveryUnavailableTime(morningTime)).isTrue();
       assertThat(recoveryScheduler.isRecoveryUnavailableTime(nightTime)).isTrue();
     }
+
+    @Test
+    @DisplayName("KST 02시 정각(하한 경계값)일 때 복구 허용(false) 상태를 반환한다")
+    void isRecoveryUnavailableTime_returnsFalse_atLowerBoundary() {
+      // given: KST 02시 정각 시각 준비
+      ZonedDateTime boundaryTime =
+          ZonedDateTime.of(2026, 7, 27, 2, 0, 0, 0, ZoneId.of("Asia/Seoul"));
+
+      // when: 시간 검사 수행
+      boolean unavailable = recoveryScheduler.isRecoveryUnavailableTime(boundaryTime);
+
+      // that: 복구가 가능(false)한지 검증한다
+      assertThat(unavailable).isFalse();
+    }
+
+    @Test
+    @DisplayName("KST 07시 정각(상한 경계값)일 때 복구 불허(true) 상태를 반환한다")
+    void isRecoveryUnavailableTime_returnsTrue_atUpperBoundary() {
+      // given: KST 07시 정각 시각 준비
+      ZonedDateTime boundaryTime =
+          ZonedDateTime.of(2026, 7, 27, 7, 0, 0, 0, ZoneId.of("Asia/Seoul"));
+
+      // when: 시간 검사 수행
+      boolean unavailable = recoveryScheduler.isRecoveryUnavailableTime(boundaryTime);
+
+      // that: 복구가 불허(true)되는지 검증한다
+      assertThat(unavailable).isTrue();
+    }
   }
 
   @Nested

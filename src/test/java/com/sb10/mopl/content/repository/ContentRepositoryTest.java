@@ -275,19 +275,27 @@ class ContentRepositoryTest {
       // given: 생성 시각이 서로 다른 3개의 콘텐츠를 저장한다
       Instant now = Instant.now();
       Content c1 = Content.create("1번째 콘텐츠", ContentType.MOVIE, "설명", "/url1");
-      org.springframework.test.util.ReflectionTestUtils.setField(
-          c1, "createdAt", now.minusSeconds(20));
-
       Content c2 = Content.create("2번째 콘텐츠", ContentType.MOVIE, "설명", "/url2");
-      org.springframework.test.util.ReflectionTestUtils.setField(
-          c2, "createdAt", now.minusSeconds(10));
-
       Content c3 = Content.create("3번째 콘텐츠", ContentType.MOVIE, "설명", "/url3");
-      org.springframework.test.util.ReflectionTestUtils.setField(c3, "createdAt", now);
 
       contentRepository.saveAll(List.of(c1, c2, c3));
-
       em.flush();
+
+      em.createQuery("UPDATE Content c SET c.createdAt = :createdAt WHERE c.id = :id")
+          .setParameter("createdAt", now.minusSeconds(20))
+          .setParameter("id", c1.getId())
+          .executeUpdate();
+
+      em.createQuery("UPDATE Content c SET c.createdAt = :createdAt WHERE c.id = :id")
+          .setParameter("createdAt", now.minusSeconds(10))
+          .setParameter("id", c2.getId())
+          .executeUpdate();
+
+      em.createQuery("UPDATE Content c SET c.createdAt = :createdAt WHERE c.id = :id")
+          .setParameter("createdAt", now)
+          .setParameter("id", c3.getId())
+          .executeUpdate();
+
       em.clear();
 
       // when: limit = 2로 첫 페이지 조회 (생성일 오름차순)

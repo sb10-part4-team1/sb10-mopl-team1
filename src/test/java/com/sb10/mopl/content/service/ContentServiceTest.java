@@ -477,15 +477,17 @@ class ContentServiceTest {
     @Test
     @DisplayName("시청자 수 정합성 보정 로직 실행 시 repository 메서드를 호출하고 갱신 건수를 리턴한다")
     void syncWatcherCount_success_whenRepositorySyncsData() {
-      // given: repository에서 10건의 정합성이 갱신되었음을 모킹한다
+      // given: repository에서 활성 시청자 10건, 고스트 시청자 3건의 정합성이 갱신되었음을 모킹한다
       when(contentRepository.syncActiveWatcherCount()).thenReturn(10);
+      when(contentRepository.cleanupGhostWatcherCount()).thenReturn(3);
 
       // when: 서비스 레이어의 syncWatcherCount 호출
       int updatedCount = contentService.syncWatcherCount();
 
-      // that: repository 메서드가 1회 호출되고 갱신 건수가 10인지 검증한다
-      assertThat(updatedCount).isEqualTo(10);
+      // that: repository 메서드가 각각 1회 호출되고 합산 갱신 건수가 13인지 검증한다
+      assertThat(updatedCount).isEqualTo(13);
       verify(contentRepository).syncActiveWatcherCount();
+      verify(contentRepository).cleanupGhostWatcherCount();
     }
   }
 }

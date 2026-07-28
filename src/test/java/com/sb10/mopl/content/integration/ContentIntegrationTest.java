@@ -16,6 +16,7 @@ import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.content.repository.TagRepository;
 import com.sb10.mopl.user.entity.UserRole;
+import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
@@ -47,13 +48,12 @@ class ContentIntegrationTest {
   @Autowired private ObjectMapper objectMapper;
   @Autowired private ContentRepository contentRepository;
   @Autowired private TagRepository tagRepository;
+  @Autowired private EntityManager em;
 
   @BeforeEach
   void setUp() {
     SecurityContextHolder.clearContext();
     TestSecurityContextHolder.clearContext();
-    contentRepository.deleteAll();
-    tagRepository.deleteAll();
   }
 
   @AfterEach
@@ -108,6 +108,8 @@ class ContentIntegrationTest {
               .getContentAsString();
 
       UUID createdId = UUID.fromString(objectMapper.readTree(responseString).get("id").asText());
+      em.flush();
+      em.clear();
       assertThat(contentRepository.findById(createdId)).isPresent();
 
       // 2. [상세 조회] 생성된 콘텐츠 단건 상세 조회

@@ -3,6 +3,7 @@ package com.sb10.mopl.content.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -265,8 +266,9 @@ class ContentControllerTest {
       // when: 콘텐츠 삭제 API 호출
       var resultActions = mockMvc.perform(delete("/api/contents/" + mockId));
 
-      // that: 204 No Content 응답 확인
+      // that: 204 No Content 응답 확인 및 서비스 호출 검증
       resultActions.andExpect(status().isNoContent());
+      verify(contentService).delete(mockId);
     }
 
     @Test
