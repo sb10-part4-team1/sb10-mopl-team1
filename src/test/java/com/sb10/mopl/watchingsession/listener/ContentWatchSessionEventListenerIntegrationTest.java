@@ -3,6 +3,7 @@ package com.sb10.mopl.watchingsession.listener;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sb10.mopl.auth.repository.JwtSessionRepository;
 import com.sb10.mopl.auth.security.jwt.JwtProvider;
 import com.sb10.mopl.auth.security.principal.MoplUserDetails;
@@ -12,12 +13,16 @@ import com.sb10.mopl.content.entity.ContentType;
 import com.sb10.mopl.content.repository.ContentRepository;
 import com.sb10.mopl.user.entity.User;
 import com.sb10.mopl.user.repository.UserRepository;
+import com.sb10.mopl.watchingsession.dto.ChangeType;
+import com.sb10.mopl.watchingsession.dto.WatchingSessionChange;
 import com.sb10.mopl.watchingsession.entity.WatchingSession;
 import com.sb10.mopl.watchingsession.repository.WatchingSessionRepository;
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -32,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
@@ -69,7 +75,9 @@ class ContentWatchSessionEventListenerIntegrationTest {
     userRepository.deleteAll();
 
     stompClient = new WebSocketStompClient(new StandardWebSocketClient());
-    stompClient.setMessageConverter(new MappingJackson2MessageConverter());
+    MappingJackson2MessageConverter messageConverter = new MappingJackson2MessageConverter();
+    messageConverter.getObjectMapper().registerModule(new JavaTimeModule());
+    stompClient.setMessageConverter(messageConverter);
   }
 
   @AfterEach
@@ -179,6 +187,42 @@ class ContentWatchSessionEventListenerIntegrationTest {
     assertThat(watchingSessionRepository.findAll()).isEmpty();
     assertThat(contentRepository.findById(content.getId()).orElseThrow().getWatcherCount())
         .isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("구독 시점에 본인의 JOIN 결과를 구독 응답으로 직접 받는다")
+  void subscribe_receivesOwnJoinResultAsDirectReply() throws Exception {
+    User user = createUser("direct-reply@example.com");
+    Content content = createContent("직접응답테스트");
+    String token = issueAccessToken(user);
+
+    StompSession session = connect(token);
+    CompletableFuture<WatchingSessionChange> received = new CompletableFuture<>();
+
+    session.subscribe(
+        "/sub/contents/" + content.getId() + "/watch",
+        new StompFrameHandler() {
+          @Override
+          public Type getPayloadType(StompHeaders headers) {
+            return WatchingSessionChange.class;
+          }
+
+          @Override
+          public void handleFrame(StompHeaders headers, Object payload) {
+            received.complete((WatchingSessionChange) payload);
+          }
+        });
+
+    WatchingSessionChange change = received.get(5, TimeUnit.SECONDS);
+
+    // REST 목록 조회 등 다른 요청과 경합할 필요 없이, 구독 자체의 응답만으로 본인의 참여 사실을 확정적으로 받는다.
+    assertThat(change.type()).isEqualTo(ChangeType.JOIN);
+    assertThat(change.watchingSession().watcher().userId()).isEqualTo(user.getId());
+    assertThat(change.watchingSession().content().id()).isEqualTo(content.getId());
+    assertThat(change.watcherCount()).isEqualTo(1);
+
+    session.disconnect();
+    Thread.sleep(300);
   }
 
   @Test

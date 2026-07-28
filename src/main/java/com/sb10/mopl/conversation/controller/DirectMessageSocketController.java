@@ -3,6 +3,7 @@ package com.sb10.mopl.conversation.controller;
 import com.sb10.mopl.auth.exception.AuthErrorCode;
 import com.sb10.mopl.auth.security.principal.AuthenticatedUser;
 import com.sb10.mopl.common.exception.MoplException;
+import com.sb10.mopl.common.realtime.StompFanOutPublisher;
 import com.sb10.mopl.conversation.dto.DirectMessageDto;
 import com.sb10.mopl.conversation.dto.DirectMessageSendRequest;
 import com.sb10.mopl.conversation.service.ConversationService;
@@ -15,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
@@ -26,7 +26,7 @@ import org.springframework.stereotype.Controller;
 public class DirectMessageSocketController {
 
   private final ConversationService conversationService;
-  private final SimpMessagingTemplate messagingTemplate;
+  private final StompFanOutPublisher stompFanOutPublisher;
 
   // 메시지 전송(SEND /pub/conversations/{conversationId}/direct-messages)
   @MessageMapping("/conversations/{conversationId}/direct-messages")
@@ -40,8 +40,7 @@ public class DirectMessageSocketController {
         conversationService.sendDirectMessage(sender.id(), conversationId, request);
 
     // 메시지 수신(SUBSCRIBE /sub/conversations/{conversationId}/direct-messages)
-    messagingTemplate.convertAndSend(
-        "/sub/conversations/" + conversationId + "/direct-messages", dto);
+    stompFanOutPublisher.publish("/sub/conversations/" + conversationId + "/direct-messages", dto);
   }
 
   // CONNECT 시점에 StompChannelInterceptor가 세션에 부여한 Principal에서 발신자를 꺼낸다.
