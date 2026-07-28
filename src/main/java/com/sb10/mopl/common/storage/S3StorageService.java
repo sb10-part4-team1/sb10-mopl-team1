@@ -3,7 +3,6 @@ package com.sb10.mopl.common.storage;
 import com.sb10.mopl.common.storage.exception.StorageErrorCode;
 import com.sb10.mopl.common.storage.exception.StorageException;
 import io.awspring.cloud.s3.S3Template;
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.UUID;
@@ -61,7 +60,7 @@ public class S3StorageService implements ImageStorageService {
       }
       return String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, region, s3Key);
 
-    } catch (IOException e) {
+    } catch (Exception e) {
       log.error("AWS S3 파일 업로드 실패", e);
       throw new StorageException(
           StorageErrorCode.FILE_UPLOAD_ERROR,
