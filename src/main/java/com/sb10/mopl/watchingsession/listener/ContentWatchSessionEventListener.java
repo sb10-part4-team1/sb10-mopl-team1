@@ -31,11 +31,10 @@ import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
  * 콘텐츠 시청 세션(/sub/contents/{contentId}/watch)의 구독 생명주기를 감지해 시청 참여(JOIN)/이탈(LEAVE)을 기록하고 같은 토픽 구독자에게
  * 브로드캐스트합니다.
  *
- * <p>구독(SUBSCRIBE)은 {@link SubscribeMapping}으로 처리합니다. 반환값은 구독을 요청한 클라이언트에게 직접 응답으로
- * 전달되므로, REST 시청 세션 조회와 이 구독이 서로 다른 요청이라 도착 순서를 보장할 수 없더라도 "내가 방금 시청을 시작했다"는 사실은
- * 브로드캐스트 수신 여부와 무관하게 항상 받을 수 있다. 이미 구독 중이던 다른 클라이언트에게는 별도로 브로드캐스트하므로, 방금 구독한 본인은
- * 직접 응답과 브로드캐스트를 중복으로 받을 수 있는데(등록 시점에 따라 달라짐) 둘 다 같은 내용이라 화면 반영은 watcherId 기준으로
- * upsert하면 문제없다.
+ * <p>구독(SUBSCRIBE)은 {@link SubscribeMapping}으로 처리합니다. 반환값은 구독을 요청한 클라이언트에게 직접 응답으로 전달되므로, REST 시청
+ * 세션 조회와 이 구독이 서로 다른 요청이라 도착 순서를 보장할 수 없더라도 "내가 방금 시청을 시작했다"는 사실은 브로드캐스트 수신 여부와 무관하게 항상 받을 수 있다. 이미
+ * 구독 중이던 다른 클라이언트에게는 별도로 브로드캐스트하므로, 방금 구독한 본인은 직접 응답과 브로드캐스트를 중복으로 받을 수 있는데(등록 시점에 따라 달라짐) 둘 다 같은
+ * 내용이라 화면 반영은 watcherId 기준으로 upsert하면 문제없다.
  *
  * <p>구독 해제(UNSUBSCRIBE)와 연결 종료(DISCONNECT)에는 destination 정보가 없으므로, 구독 시점에 (sessionId,
  * subscriptionId)를 기준으로 어떤 콘텐츠를 보고 있었는지 메모리에 추적해 둡니다. subscriptionId는 하나의 STOMP 연결 내에서만 유일하므로(예: 서로

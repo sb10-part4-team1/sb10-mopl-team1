@@ -40,8 +40,7 @@ public class DirectMessageSocketController {
         conversationService.sendDirectMessage(sender.id(), conversationId, request);
 
     // 메시지 수신(SUBSCRIBE /sub/conversations/{conversationId}/direct-messages)
-    stompFanOutPublisher.publish(
-        "/sub/conversations/" + conversationId + "/direct-messages", dto);
+    stompFanOutPublisher.publish("/sub/conversations/" + conversationId + "/direct-messages", dto);
   }
 
   // CONNECT 시점에 StompChannelInterceptor가 세션에 부여한 Principal에서 발신자를 꺼낸다.
