@@ -33,7 +33,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   @Override
   public void configureMessageBroker(MessageBrokerRegistry registry) {
     // publish prefix
-    registry.setApplicationDestinationPrefixes("/pub");
+    // /sub도 함께 등록해 SUBSCRIBE 프레임이 @SubscribeMapping 컨트롤러(구독 시점 즉시 응답)로도
+    // 라우팅되게 한다. 이 매핑이 없는 다른 /sub 토픽(chat, DM 등)은 기존처럼 브로커가 그대로 처리한다.
+    registry.setApplicationDestinationPrefixes("/pub", "/sub");
 
     // Subscribe prefix
     // todo: redis 기반 fan-out으로 전환
